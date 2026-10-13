@@ -1,0 +1,15 @@
+{
+  "title": "Hex lattice: Ink net",
+  "description": "A fine bone-white net on ink black; gentle strain, almost no glow, slow drift.",
+  "accuracy": "kinematic elasticity (prescribed displacement)",
+  "min_class": "weak",
+  "values": {
+    "palette": "ink-bone",
+    "density": "10",
+    "strain": "0.35",
+    "wave-speed": "0.6",
+    "junctions": "0.08",
+    "strut-width": "0.8",
+    "drift": "0.6"
+  }
+}

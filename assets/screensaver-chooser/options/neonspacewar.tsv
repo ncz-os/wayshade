@@ -1,0 +1,16 @@
+mode	enum	melee			melee,classic	Mode	melee: battles between alien races with their own ships, weapons and special abilities. classic: the original rock field.	Look	NCZ_NEONSPACEWAR_MODE
+preset	string					Scene	A named set of the options below (see --list-presets); options you set yourself still win.	Look	NCZ_NEONSPACEWAR_PRESET
+randomize	enum	auto			auto,off	Randomize	auto: every option you or the scene leave unset is drawn from the seed at launch (planet size and gravity, boundary, matchups, palette, glow, trails), so each run differs and the seed reproduces it. off: the defaults.	Look	NCZ_NEONSPACEWAR_RANDOMIZE
+races	string	needle,armour,ring,insect,crescent,ram,lance			needle,armour,ring,insect,crescent,ram,lance	Races	Which races may fight (at least two): the needle (spread shot, blink), the armour block (plasma, shield), the ring (homing darts, mines), the insect (chain lightning, drones), the crescent (boomerang, cloak), the ram (flak, tractor) and the lance (piercing lance, repulse).	Battles	NCZ_NEONSPACEWAR_RACES
+matchups	enum	mix			mix,duel,teams,ffa	Matchups	mix: mostly duels, sometimes two against two or three-way. duel, teams or ffa: only that kind (three-way needs three races).	Battles	NCZ_NEONSPACEWAR_MATCHUPS
+time-limit	float	90	30	180		Time limit	Seconds a battle may last; then the side with the most hull left wins.	Battles	NCZ_NEONSPACEWAR_TIME_LIMIT
+gravity	float	1	0	3		Planet gravity	Planet mass, as a multiple of the default; 0 turns the pull off.	Arena	NCZ_NEONSPACEWAR_GRAVITY
+planet-size	float	1	0.5	2		Planet size	Planet radius, as a multiple of the default.	Arena	NCZ_NEONSPACEWAR_PLANET_SIZE
+boundary	float	1	0	3		Closing boundary	How fast the arena closes after 12 s without a hit, as a multiple of the default; 0 never closes it.	Arena	NCZ_NEONSPACEWAR_BOUNDARY
+palette	enum	race			race,ember,ice,phosphor	Palette	race: each race in its own colour. ember, ice, phosphor: every race drawn from one colour family.	Look	NCZ_NEONSPACEWAR_PALETTE
+glow	float	1	0	2		Glow	Strength of the glow around every line; the lines themselves stay sharp.	Look	NCZ_NEONSPACEWAR_GLOW
+trails	float	1	0	2		Engine trails	Strength of the trail each ship leaves.	Look	NCZ_NEONSPACEWAR_TRAILS
+quality	enum	auto			auto,low,high	Quality	auto: fewer particles and a smaller glow buffer on weak GPUs. Hull edges are always drawn at full resolution.	System	NCZ_NEONSPACEWAR_QUALITY
+camera	enum	auto			auto,fixed	Camera	auto: follows the fight, zooming in as the ships close and out as they part, with a punch-in on each kill. fixed: the whole arena, no zoom.	Look	NCZ_NEONSPACEWAR_CAMERA
+zoom	float	0.28	0.1	0.4		Closest zoom	How close the auto camera may get, as the largest share of the screen height one ship may fill.	Look	NCZ_NEONSPACEWAR_ZOOM
+seed	int	0	0	4.29497e+09		Random seed	Fixes the matchups and every battle so a run can be reproduced; 0 = random.	System	NCZ_NEONSPACEWAR_SEED

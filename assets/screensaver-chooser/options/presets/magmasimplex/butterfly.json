@@ -1,0 +1,12 @@
+{
+  "title": "Butterfly",
+  "description": "Electric cyan, magenta and yellow in a six-fold mirror, pulsing slowly.",
+  "accuracy": "artistic",
+  "min_class": "mid",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-neon-pulse",
+    "kaleidoscope": "6",
+    "projector-mask": "off"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "title": "Roundhouse",
+  "description": "Swinging London: a large bright round dish with a cool interior, ice blue, white and violet dye.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-roundhouse",
+    "kaleidoscope": "0",
+    "projector-mask": "disc",
+    "projector-mask-size": "0.80"
+  }
+}

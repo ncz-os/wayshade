@@ -1,0 +1,12 @@
+{
+  "title": "Chitin: Nave",
+  "description": "An arched vault of ribs receding upward, conduit runs crossing them, pores on the plates.",
+  "accuracy": "procedural approximation",
+  "min_class": "mid",
+  "values": {
+    "form": "nave",
+    "palette": "bone-charcoal",
+    "sheen": "0.35",
+    "relief": "1.1"
+  }
+}

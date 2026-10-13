@@ -1,0 +1,9 @@
+{
+  "title": "Red in amber",
+  "description": "Red-orange wax in amber liquid, the colours of a real lamp measured from footage.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "palette": "footage-red-in-amber"
+  }
+}

@@ -1,0 +1,33 @@
+ncz-screensavers (0.8.12) unstable; urgency=medium
+
+  * Lock-hosted saver (ncz-screensaver-feed): cool-by-default operation. While
+    the screen is locked the saver runs a short intro at a low, capped frame
+    rate (8 fps, half resolution) and then freezes, handing the lock its last
+    frame to keep. A thermal governor pauses rendering if a sensor approaches
+    about 85 C and resumes when it cools.
+  * The freeze is fail-closed and portable: the feed freezes only with a lock
+    that understands the HOLD message. Against an older lock it keeps the low
+    frame rate and the thermal governor and never sends HOLD.
+  * Off-screen renderer: a GBM EGL platform fallback so the lock-hosted saver
+    animates on Arm Mali proprietary drivers. Mesa still uses the surfaceless
+    path unchanged.
+  * ncz-screensaver-feed --print-policy prints the compiled-in policy defaults.
+
+ -- Jason Perlow <jperlow@gmail.com>  Mon, 12 Oct 2026 12:35:00 -0400
+
+ncz-screensavers (0.8.11) unstable; urgency=medium
+
+  * ncz-screensaver-feed: the producer half of the lock-hosted screensaver.
+    Every hack binary gains an off-screen mode that renders into an FBO
+    through EGL surfaceless or a device platform, with no compositor.
+  * ncz-screensaver-idled: delegated mode. When a lock renderer is configured
+    the daemon no longer starts its own wlr-layer-shell saver; at the saver
+    delay it asks the session to lock and the lock hosts the saver.
+
+ -- Jason Perlow <jperlow@gmail.com>  Sun, 11 Oct 2026 20:00:00 -0400
+
+ncz-screensavers (0.7.3) unstable; urgency=medium
+
+  * First public source release.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 20:00:00 -0400

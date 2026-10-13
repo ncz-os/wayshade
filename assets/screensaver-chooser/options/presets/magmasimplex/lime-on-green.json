@@ -1,0 +1,9 @@
+{
+  "title": "Lime in green",
+  "description": "Pale, milky lime wax in glowing green liquid.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "palette": "lime-on-green"
+  }
+}

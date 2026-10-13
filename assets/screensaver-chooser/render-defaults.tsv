@@ -1,0 +1,4 @@
+# Render height caps used when render-scale-mode is auto and max-render-height is 0. Columns (tab separated): key, max height in pixels, note.
+# sky1-arm64 matches the Cix Sky1 boards (ACPI CIXH devices); igpu-large applies when an integrated GPU drives a display taller than 1440 px. Discrete GPUs get no cap.
+sky1-arm64	1080	Mali-G720 at native 4K stutters in shader screensavers
+igpu-large	1080	integrated GPU on a display taller than 1440 px

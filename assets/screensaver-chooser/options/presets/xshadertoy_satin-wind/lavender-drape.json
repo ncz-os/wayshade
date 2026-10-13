@@ -1,0 +1,12 @@
+{
+  "title": "Satin: Lavender drape",
+  "description": "Many narrow folds of pale lavender, gently swaying.",
+  "accuracy": "analytic height field, not a cloth simulation",
+  "min_class": "weak",
+  "values": {
+    "palette": "fog-lavender",
+    "folds": "1.45",
+    "billow": "0.5",
+    "wind": "0.8"
+  }
+}

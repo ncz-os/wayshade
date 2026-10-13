@@ -1,0 +1,13 @@
+{
+  "title": "Fillmore",
+  "description": "Haight-Ashbury: a white-hot dish filling most of the screen, pulsing, red and magenta dye splats with satellite droplets, as in 1969 concert footage. fillmore-small keeps the original small dish.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-fillmore-splat",
+    "kaleidoscope": "0",
+    "projector-mask": "dish",
+    "dynamics": "0.7"
+  }
+}

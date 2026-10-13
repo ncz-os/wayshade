@@ -1,0 +1,13 @@
+{
+  "title": "Satin: Pearl, still air",
+  "description": "Cool grey satin barely moving; only the slow swelling of the fold groups over minutes.",
+  "accuracy": "analytic height field, not a cloth simulation",
+  "min_class": "weak",
+  "values": {
+    "palette": "pearl-grey",
+    "wind": "0.35",
+    "tension": "0.25",
+    "billow": "0.5",
+    "sheen": "0.45"
+  }
+}

@@ -1,0 +1,11 @@
+style	enum	auto			auto,classic,enhanced	Style	classic: faithful port of the xscreensaver original. enhanced: same hack with anti-aliasing, soft lighting, glow and smooth palettes. auto: enhanced on GPUs that can afford it, classic otherwise.	Look	NCZ_CRACKBERG_STYLE
+speed	float	1	0.1	4		Animation speed	Time scale of the animation. 1 matches the original xscreensaver pace.	Motion	NCZ_CRACKBERG_SPEED
+seed	int	0	0	1e+09		Random seed	Seed for the random choices (0 = new every launch). The same seed repeats the same run.	Motion	NCZ_CRACKBERG_SEED
+nsubdivs	int	4	1	5		Tile detail	Subdivisions per terrain tile; each step quadruples the triangles (xscreensaver -nsubdivs).	Density	NCZ_CRACKBERG_NSUBDIVS
+visibility	float	0.6	0.2	1		Visibility	How far ahead terrain is generated; larger sees farther but draws more (xscreensaver -visibility).	Density	NCZ_CRACKBERG_VISIBILITY
+scheme	enum	random			random,plain,ice,magma,vomit	Color scheme	Terrain color scheme (xscreensaver -color).	Look	NCZ_CRACKBERG_SCHEME
+crack	bool	true				Crack	Tiles grow, fall or spin into place instead of appearing at once (xscreensaver -crack).	Motion	NCZ_CRACKBERG_CRACK
+water	bool	true				Water	Flood the low ground (xscreensaver -water).	Look	NCZ_CRACKBERG_WATER
+flat	bool	true				Flat shading	One lighting value per triangle, for the faceted look (xscreensaver -flat).	Look	NCZ_CRACKBERG_FLAT
+bloom	float	1	0	3		Glow	Strength of the soft glow around bright areas (enhanced style only). 0 turns the glow pass off.	Look	NCZ_CRACKBERG_BLOOM
+antialias	bool	true				Anti-aliasing	Smooth edges (enhanced style only).	Look	NCZ_CRACKBERG_ANTIALIAS

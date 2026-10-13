@@ -1,0 +1,12 @@
+{
+  "title": "Technicolor",
+  "description": "Swinging London: wide fields of green, magenta, orange, cream and deep dye, many hues at once.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-technicolor",
+    "kaleidoscope": "0",
+    "projector-mask": "off"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "title": "Caustics on stone: Noon shallows",
+  "description": "A bright, sharp caustic net on warm sandstone in shallow water, with fine wind ripples over the swell.",
+  "accuracy": "analytic small-slope caustics, compressed",
+  "min_class": "weak",
+  "values": {
+    "palette": "native",
+    "focus": "0.7",
+    "depth": "0.25",
+    "ripples": "0.7",
+    "ripple-scale": "1",
+    "sun": "1.1"
+  }
+}

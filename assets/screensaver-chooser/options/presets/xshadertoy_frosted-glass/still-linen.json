@@ -1,0 +1,14 @@
+{
+  "title": "Frosted Glass: Still Linen",
+  "description": "Nearly still fluted glass, heavy frost, two soft lights.",
+  "accuracy": "analytic model",
+  "min_class": "weak",
+  "values": {
+    "style": "fluted",
+    "palette": "linen-ochre",
+    "frost": "0.8",
+    "motion": "0.15",
+    "sources": "2",
+    "refraction": "0.35"
+  }
+}

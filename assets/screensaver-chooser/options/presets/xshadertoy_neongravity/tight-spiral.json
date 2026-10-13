@@ -1,0 +1,13 @@
+{
+  "title": "Tight Spiral",
+  "description": "Spokes wound tightly toward the centre.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "swirl": "1.0",
+    "spokes": "0.8",
+    "rings": "0.7",
+    "bodies": "8",
+    "palette": "graphite-coral"
+  }
+}

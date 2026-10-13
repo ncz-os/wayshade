@@ -1,0 +1,9 @@
+style	enum	auto			auto,classic,enhanced	Style	classic: faithful port of the xscreensaver original. enhanced: same hack with anti-aliasing, soft lighting, glow and smooth palettes. auto: enhanced on GPUs that can afford it, classic otherwise.	Look	NCZ_HEXSTRUT_STYLE
+speed	float	1	0.1	4		Animation speed	Time scale of the animation. 1 matches the original xscreensaver pace.	Motion	NCZ_HEXSTRUT_SPEED
+seed	int	0	0	1e+09		Random seed	Seed for the random choices (0 = new every launch). The same seed repeats the same run.	Motion	NCZ_HEXSTRUT_SEED
+count	int	20	4	60		Density	Hexagons across the field (xscreensaver -count).	Density	NCZ_HEXSTRUT_COUNT
+thickness	float	0.2	0.05	1.7		Strut thickness	Thickness of the struts (xscreensaver -thickness).	Look	NCZ_HEXSTRUT_THICKNESS
+spin	bool	true				Spin	Slowly rotate the whole field (xscreensaver -spin).	Motion	NCZ_HEXSTRUT_SPIN
+wander	bool	true				Wander	Slowly drift the whole field (xscreensaver -wander).	Motion	NCZ_HEXSTRUT_WANDER
+bloom	float	1	0	3		Glow	Strength of the soft glow around bright areas (enhanced style only). 0 turns the glow pass off.	Look	NCZ_HEXSTRUT_BLOOM
+antialias	bool	true				Anti-aliasing	Smooth edges (enhanced style only).	Look	NCZ_HEXSTRUT_ANTIALIAS

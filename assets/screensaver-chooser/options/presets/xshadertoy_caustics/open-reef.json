@@ -1,0 +1,12 @@
+{
+  "title": "Caustics: Open reef",
+  "description": "Sharp sunlight gathering in a few wandering patches over a dark teal floor, with a softer deeper floor below.",
+  "accuracy": "analytic small-slope caustics, artistic composition",
+  "min_class": "weak",
+  "values": {
+    "palette": "native",
+    "focus": "0.7",
+    "clustering": "0.65",
+    "depth": "0.4"
+  }
+}

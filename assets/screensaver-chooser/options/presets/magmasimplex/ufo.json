@@ -1,0 +1,12 @@
+{
+  "title": "UFO",
+  "description": "Swinging London: white droplets drifting in a dark violet field, spacey and slow.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-ufo",
+    "kaleidoscope": "0",
+    "projector-mask": "off"
+  }
+}

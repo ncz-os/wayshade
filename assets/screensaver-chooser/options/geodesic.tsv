@@ -1,0 +1,9 @@
+style	enum	auto			auto,classic,enhanced	Style	classic: faithful port of the xscreensaver original. enhanced: same hack with anti-aliasing, soft lighting, glow and smooth palettes. auto: enhanced on GPUs that can afford it, classic otherwise.	Look	NCZ_GEODESIC_STYLE
+speed	float	1	0.1	4		Animation speed	Time scale of the animation. 1 matches the original xscreensaver pace.	Motion	NCZ_GEODESIC_SPEED
+seed	int	0	0	1e+09		Random seed	Seed for the random choices (0 = new every launch). The same seed repeats the same run.	Motion	NCZ_GEODESIC_SEED
+mode	enum	mesh			mesh,solid,stellated,stellated2,random	Mode	mesh: framed faces; solid; stellated: faces grow points; stellated2: faces dent inward; random: changes each cycle (xscreensaver -mode).	Look	NCZ_GEODESIC_MODE
+count	int	4	1	6		Detail levels	Number of frequencies to cycle through; the highest has 20 x 4^(count-1) faces (xscreensaver -count).	Density	NCZ_GEODESIC_COUNT
+spin	bool	true				Spin	Rotate the sphere (xscreensaver -spin).	Motion	NCZ_GEODESIC_SPIN
+wander	bool	true				Wander	Drift the sphere around the screen (xscreensaver -wander).	Motion	NCZ_GEODESIC_WANDER
+bloom	float	1	0	3		Glow	Strength of the soft glow around bright areas (enhanced style only). 0 turns the glow pass off.	Look	NCZ_GEODESIC_BLOOM
+antialias	bool	true				Anti-aliasing	Smooth edges (enhanced style only).	Look	NCZ_GEODESIC_ANTIALIAS

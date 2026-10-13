@@ -1,0 +1,14 @@
+{
+  "title": "Quiet Well",
+  "description": "A few slow bodies over a sparse lattice.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "bodies": "4",
+    "infall": "0.2",
+    "rings": "0.3",
+    "spokes": "0.3",
+    "swirl": "0.2",
+    "palette": "slate-ice"
+  }
+}

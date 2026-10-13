@@ -1,0 +1,13 @@
+{
+  "title": "Tide pool: Windy shallows",
+  "description": "Wind chop breaks the light into a fine lace with more glints on the crests.",
+  "accuracy": "analytic small-slope optics, procedural floor",
+  "min_class": "weak",
+  "values": {
+    "palette": "lagoon-sand",
+    "chop": "0.9",
+    "glints": "0.8",
+    "depth": "0.35",
+    "stones": "0.35"
+  }
+}

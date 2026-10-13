@@ -1,0 +1,11 @@
+style	enum	auto			auto,classic,enhanced	Style	classic: faithful port of the xscreensaver original. enhanced: same hack with anti-aliasing, soft lighting, glow and smooth palettes. auto: enhanced on GPUs that can afford it, classic otherwise.	Look	NCZ_VORONOI_STYLE
+speed	float	1	0.1	4		Animation speed	Time scale of the animation. 1 matches the original xscreensaver pace.	Motion	NCZ_VORONOI_SPEED
+seed	int	0	0	1e+09		Random seed	Seed for the random choices (0 = new every launch). The same seed repeats the same run.	Motion	NCZ_VORONOI_SEED
+points	int	25	3	100		Points per burst	How many sites are added each time the field restarts (xscreensaver -points).	Motion	NCZ_VORONOI_POINTS
+point-size	float	9	0	40		Marker size	Size of the rotating markers in pixels at 1080 lines; 0 hides them (xscreensaver -point-size).	Look	NCZ_VORONOI_POINT_SIZE
+point-speed	float	1	0	10		Drift	How fast the sites accelerate while drifting (xscreensaver -point-speed).	Motion	NCZ_VORONOI_POINT_SPEED
+point-delay	float	0.05	0.01	2		Add delay (s)	Seconds between new sites while a burst is being added (xscreensaver -point-delay).	Motion	NCZ_VORONOI_POINT_DELAY
+zoom-speed	float	1	0.1	5		Zoom speed	Speed of the outward zoom (xscreensaver -zoom-speed).	Motion	NCZ_VORONOI_ZOOM_SPEED
+zoom-delay	float	15	2	300		Zoom delay (s)	Seconds of drifting between zooms (xscreensaver -zoom-delay).	Motion	NCZ_VORONOI_ZOOM_DELAY
+bloom	float	1	0	3		Glow	Strength of the soft glow around bright areas (enhanced style only). 0 turns the glow pass off.	Look	NCZ_VORONOI_BLOOM
+antialias	bool	true				Anti-aliasing	Smooth edges (enhanced style only).	Look	NCZ_VORONOI_ANTIALIAS

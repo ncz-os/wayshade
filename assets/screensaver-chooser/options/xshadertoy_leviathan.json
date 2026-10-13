@@ -1,0 +1,225 @@
+{
+  "id": "xshadertoy_leviathan",
+  "options": [
+    {
+      "id": "preset",
+      "label": "Preset",
+      "type": "string",
+      "default": "",
+      "range": null,
+      "group": "Look",
+      "description": "Named bundle of options (see --list-presets): applied above the saved config file and below environment and command line. Empty = none.",
+      "env": "NCZ_LEVIATHAN_PRESET"
+    },
+    {
+      "id": "hull",
+      "label": "Hull",
+      "type": "enum",
+      "default": "auto",
+      "range": [
+        "auto",
+        "slab",
+        "tiered",
+        "long"
+      ],
+      "group": "Vessel",
+      "description": "Proportions of the vessel. slab: broad and flat. tiered: a tall superstructure over a deep drop. long: lean and very long. auto: drawn per chapter.",
+      "env": "NCZ_LEVIATHAN_HULL"
+    },
+    {
+      "id": "landmark",
+      "label": "Landmark",
+      "type": "enum",
+      "default": "auto",
+      "range": [
+        "auto",
+        "ring",
+        "fins"
+      ],
+      "group": "Vessel",
+      "description": "The one structure each vessel is remembered by: a ring the runway passes under, or three tall fins on the superstructure. auto: drawn per chapter.",
+      "env": "NCZ_LEVIATHAN_LANDMARK"
+    },
+    {
+      "id": "palette",
+      "label": "Window palette",
+      "type": "enum",
+      "default": "auto",
+      "range": [
+        "auto",
+        "warm",
+        "cool",
+        "sodium",
+        "white",
+        "harmonic"
+      ],
+      "group": "Look",
+      "description": "Colour family of the windows and lights. harmonic: a colourway generated per chapter (windows at one hue and near its complement; the gate follows it). auto: drawn per chapter among all of them.",
+      "env": "NCZ_LEVIATHAN_PALETTE"
+    },
+    {
+      "id": "aperture-side",
+      "label": "Vessel side",
+      "type": "enum",
+      "default": "auto",
+      "range": [
+        "auto",
+        "left",
+        "right"
+      ],
+      "group": "Vessel",
+      "description": "Which side of the frame the vessel appears on, and so which side the runway and aperture are on. auto: drawn per chapter.",
+      "env": "NCZ_LEVIATHAN_APERTURE_SIDE"
+    },
+    {
+      "id": "planet",
+      "label": "Planet",
+      "type": "enum",
+      "default": "auto",
+      "range": [
+        "auto",
+        "ocean",
+        "desert",
+        "ice",
+        "giant",
+        "none"
+      ],
+      "group": "Look",
+      "description": "The world below the vessel, or none (stars only). auto: drawn per chapter.",
+      "env": "NCZ_LEVIATHAN_PLANET"
+    },
+    {
+      "id": "interior",
+      "label": "Interior",
+      "type": "enum",
+      "default": "auto",
+      "range": [
+        "auto",
+        "hangar",
+        "foundry"
+      ],
+      "group": "Look",
+      "description": "Light inside the hall: hangar (cool daylight shafts) or foundry (amber shafts). auto: drawn per chapter.",
+      "env": "NCZ_LEVIATHAN_INTERIOR"
+    },
+    {
+      "id": "chapter-length",
+      "label": "Chapter length (arc s)",
+      "type": "int",
+      "default": 0,
+      "range": [
+        0,
+        900
+      ],
+      "group": "Timing",
+      "description": "Length of one chapter in arc seconds, 380 to 900; the extra time goes to the quiet room. 0 = automatic (390 to 420, from the seed).",
+      "env": "NCZ_LEVIATHAN_CHAPTER_LENGTH"
+    },
+    {
+      "id": "arc-scale",
+      "label": "Arc scale",
+      "type": "float",
+      "default": 1.0,
+      "range": [
+        0.7,
+        2.0
+      ],
+      "group": "Timing",
+      "description": "Wall seconds per arc second: 2 plays the whole arc (and every motion in it) at half speed, 0.7 at about 1.4 times the speed. The lower limit keeps every blinking light at or below 1 Hz.",
+      "env": "NCZ_LEVIATHAN_ARC_SCALE"
+    },
+    {
+      "id": "gate-hue",
+      "label": "Gate hue (degrees)",
+      "type": "int",
+      "default": -1,
+      "range": [
+        -1,
+        359
+      ],
+      "group": "Look",
+      "description": "Starting hue of the gate's colour path, 0 to 359; it still drifts slowly (<= 0.03 Hz). -1 = automatic.",
+      "env": "NCZ_LEVIATHAN_GATE_HUE"
+    },
+    {
+      "id": "gate-intensity",
+      "label": "Gate intensity",
+      "type": "float",
+      "default": 1.0,
+      "range": [
+        0.3,
+        1.0
+      ],
+      "group": "Look",
+      "description": "Contrast and saturation of the gate, 0.3 to 1. The gate never exceeds a display value of 0.85 or a mean near 0.45 at any setting.",
+      "env": "NCZ_LEVIATHAN_GATE_INTENSITY"
+    },
+    {
+      "id": "star-density",
+      "label": "Star density",
+      "type": "float",
+      "default": 1.0,
+      "range": [
+        0.25,
+        2.0
+      ],
+      "group": "Look",
+      "description": "Multiplier on the number of visible stars.",
+      "env": "NCZ_LEVIATHAN_STAR_DENSITY"
+    },
+    {
+      "id": "randomize",
+      "label": "Randomize",
+      "type": "enum",
+      "default": "auto",
+      "range": [
+        "auto",
+        "fixed"
+      ],
+      "group": "System",
+      "description": "auto: every chapter re-seeds at the end of the quiet room (new vessel, palette, planet, side). fixed: every chapter repeats the first one.",
+      "env": "NCZ_LEVIATHAN_RANDOMIZE"
+    },
+    {
+      "id": "quality",
+      "label": "Quality",
+      "type": "enum",
+      "default": "auto",
+      "range": [
+        "auto",
+        "weak",
+        "mid",
+        "strong"
+      ],
+      "group": "System",
+      "description": "Detail tier. auto follows the GPU class of this machine (NCZ_SHADER_QUALITY still overrides it).",
+      "env": "NCZ_LEVIATHAN_QUALITY"
+    },
+    {
+      "id": "start-time",
+      "label": "Start at (arc s)",
+      "type": "float",
+      "default": 0.0,
+      "range": [
+        0.0,
+        900.0
+      ],
+      "group": "System",
+      "description": "Testing and captures: begin the run this many arc seconds into the first chapter (for example 45 for the hull pass, 200 for the hall, 300 for the gate). 0 = from the start.",
+      "env": "NCZ_LEVIATHAN_START_TIME"
+    },
+    {
+      "id": "seed",
+      "label": "Random seed",
+      "type": "int",
+      "default": 0,
+      "range": [
+        0,
+        999999
+      ],
+      "group": "System",
+      "description": "Fixes the run's randomness so a run can be repeated exactly (with the same preset and options). 0 = a new seed (1 to 999999) every run; the seed in use is logged to standard error, so any run can be replayed with --seed.",
+      "env": "NCZ_LEVIATHAN_SEED"
+    }
+  ]
+}

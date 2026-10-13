@@ -1,0 +1,12 @@
+{
+  "title": "Grape",
+  "description": "Royal blue dye with white marbling and cyan inks, ringed oil discs drifting through.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-royal-white",
+    "kaleidoscope": "0",
+    "projector-mask": "off"
+  }
+}

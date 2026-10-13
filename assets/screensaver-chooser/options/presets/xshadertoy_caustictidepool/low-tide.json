@@ -1,0 +1,13 @@
+{
+  "title": "Tide pool: Low tide",
+  "description": "Shallow, clear water over sand and scattered stones in bright sun; a sharp net of light.",
+  "accuracy": "analytic small-slope optics, procedural floor",
+  "min_class": "weak",
+  "values": {
+    "palette": "native",
+    "focus": "0.7",
+    "depth": "0.3",
+    "stones": "0.5",
+    "chop": "0.5"
+  }
+}

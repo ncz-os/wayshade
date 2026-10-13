@@ -1,0 +1,399 @@
+{
+  "id": "xshadertoy_satin-wind",
+  "options": [
+    {
+      "id": "preset",
+      "type": "string",
+      "label": "Preset",
+      "default": "",
+      "group": "Look",
+      "level": "basic",
+      "description": "Named scene (see --list-presets): applied above the saved config file and below environment and command line. Empty = none.",
+      "env": "NCZ_XSHADERTOY_SATIN_WIND_PRESET"
+    },
+    {
+      "id": "palette",
+      "type": "enum",
+      "label": "Palette",
+      "default": "auto",
+      "choices": [
+        "auto",
+        "native",
+        "navy-cream",
+        "ink-bone",
+        "midnight-amber",
+        "deep-teal-pearl",
+        "aubergine-rose",
+        "forest-moss",
+        "slate-ice",
+        "charcoal-copper",
+        "obsidian-jade",
+        "indigo-saffron",
+        "graphite-coral",
+        "night-aurora",
+        "polar-violet",
+        "sea-glass",
+        "ember-night",
+        "plum-gold",
+        "prussian-silver",
+        "oxblood-linen",
+        "ultramarine-cream",
+        "moss-lilac",
+        "abyss-cyan",
+        "lagoon-sand",
+        "oxygen-green",
+        "crimson-arc",
+        "polar-teal",
+        "bone-charcoal",
+        "gunmetal",
+        "verdigris-iron",
+        "slate-bone",
+        "steel-green",
+        "charcoal-verdigris",
+        "travertine",
+        "carrara",
+        "warm-limestone",
+        "sandstone-rose",
+        "plaster-sage",
+        "linen-ochre",
+        "pearl-grey",
+        "celadon",
+        "blush-clay",
+        "oat-indigo",
+        "slate-paper",
+        "honey-marble",
+        "camel-silk",
+        "fog-lavender",
+        "rosso-levanto",
+        "verde-alpi",
+        "calacatta-gold",
+        "nero-marquina",
+        "amethyst-quartz",
+        "malachite",
+        "lapis",
+        "sienna-onyx",
+        "grey-bardiglio"
+      ],
+      "group": "Look",
+      "level": "basic",
+      "description": "Color roles (background, body, accent, accent2). auto: drawn from this saver's family with the run seed. native: the saver's own colors. Any name from the shared role table.",
+      "env": "NCZ_XSHADERTOY_SATIN_WIND_PALETTE",
+      "choice_groups": [
+        {
+          "label": "Automatic",
+          "choices": [
+            "auto",
+            "native"
+          ]
+        },
+        {
+          "label": "Dark grounds",
+          "choices": [
+            "navy-cream",
+            "ink-bone",
+            "midnight-amber",
+            "deep-teal-pearl",
+            "aubergine-rose",
+            "forest-moss",
+            "slate-ice",
+            "charcoal-copper",
+            "obsidian-jade",
+            "indigo-saffron",
+            "graphite-coral",
+            "night-aurora",
+            "polar-violet",
+            "sea-glass",
+            "ember-night",
+            "plum-gold",
+            "prussian-silver",
+            "oxblood-linen",
+            "ultramarine-cream",
+            "moss-lilac",
+            "abyss-cyan",
+            "lagoon-sand",
+            "oxygen-green",
+            "crimson-arc",
+            "polar-teal",
+            "bone-charcoal",
+            "gunmetal",
+            "verdigris-iron",
+            "slate-bone",
+            "steel-green",
+            "charcoal-verdigris"
+          ]
+        },
+        {
+          "label": "Light materials",
+          "choices": [
+            "travertine",
+            "carrara",
+            "warm-limestone",
+            "sandstone-rose",
+            "plaster-sage",
+            "linen-ochre",
+            "pearl-grey",
+            "celadon",
+            "blush-clay",
+            "oat-indigo",
+            "slate-paper",
+            "honey-marble",
+            "camel-silk",
+            "fog-lavender"
+          ]
+        },
+        {
+          "label": "Stone and mineral",
+          "choices": [
+            "rosso-levanto",
+            "verde-alpi",
+            "calacatta-gold",
+            "nero-marquina",
+            "amethyst-quartz",
+            "malachite",
+            "lapis",
+            "sienna-onyx",
+            "grey-bardiglio"
+          ]
+        }
+      ],
+      "choice_labels": {
+        "auto": "Drawn from the seed",
+        "native": "The saver's own colors",
+        "navy-cream": "Navy Cream",
+        "ink-bone": "Ink Bone",
+        "midnight-amber": "Midnight Amber",
+        "deep-teal-pearl": "Deep Teal Pearl",
+        "aubergine-rose": "Aubergine Rose",
+        "forest-moss": "Forest Moss",
+        "slate-ice": "Slate Ice",
+        "charcoal-copper": "Charcoal Copper",
+        "obsidian-jade": "Obsidian Jade",
+        "indigo-saffron": "Indigo Saffron",
+        "graphite-coral": "Graphite Coral",
+        "night-aurora": "Night Aurora",
+        "polar-violet": "Polar Violet",
+        "sea-glass": "Sea Glass",
+        "ember-night": "Ember Night",
+        "plum-gold": "Plum Gold",
+        "prussian-silver": "Prussian Silver",
+        "oxblood-linen": "Oxblood Linen",
+        "ultramarine-cream": "Ultramarine Cream",
+        "moss-lilac": "Moss Lilac",
+        "abyss-cyan": "Abyss Cyan",
+        "lagoon-sand": "Lagoon Sand",
+        "oxygen-green": "Oxygen Green",
+        "crimson-arc": "Crimson Arc",
+        "polar-teal": "Polar Teal",
+        "bone-charcoal": "Bone Charcoal",
+        "gunmetal": "Gunmetal",
+        "verdigris-iron": "Verdigris Iron",
+        "slate-bone": "Slate Bone",
+        "steel-green": "Steel Green",
+        "charcoal-verdigris": "Charcoal Verdigris",
+        "travertine": "Travertine",
+        "carrara": "Carrara",
+        "warm-limestone": "Warm Limestone",
+        "sandstone-rose": "Sandstone Rose",
+        "plaster-sage": "Plaster Sage",
+        "linen-ochre": "Linen Ochre",
+        "pearl-grey": "Pearl Grey",
+        "celadon": "Celadon",
+        "blush-clay": "Blush Clay",
+        "oat-indigo": "Oat Indigo",
+        "slate-paper": "Slate Paper",
+        "honey-marble": "Honey Marble",
+        "camel-silk": "Camel Silk",
+        "fog-lavender": "Fog Lavender",
+        "rosso-levanto": "Rosso Levanto",
+        "verde-alpi": "Verde Alpi",
+        "calacatta-gold": "Calacatta Gold",
+        "nero-marquina": "Nero Marquina",
+        "amethyst-quartz": "Amethyst Quartz",
+        "malachite": "Malachite",
+        "lapis": "Lapis",
+        "sienna-onyx": "Sienna Onyx",
+        "grey-bardiglio": "Grey Bardiglio"
+      }
+    },
+    {
+      "id": "palette-cycle",
+      "type": "float",
+      "label": "Palette cycle (min)",
+      "default": 0.0,
+      "range": [
+        0.0,
+        60.0
+      ],
+      "group": "Look",
+      "level": "advanced",
+      "description": "Minutes between slow cross-fades to another palette of the same family (interpolated in Oklab: lightness moves steadily from one palette to the other, never through grey). 0 = keep one palette.",
+      "env": "NCZ_XSHADERTOY_SATIN_WIND_PALETTE_CYCLE"
+    },
+    {
+      "id": "speed",
+      "type": "float",
+      "label": "Speed",
+      "default": 1.0,
+      "range": [
+        0.25,
+        3.0
+      ],
+      "group": "Motion",
+      "level": "basic",
+      "description": "Time scale of every motion.",
+      "env": "NCZ_XSHADERTOY_SATIN_WIND_SPEED"
+    },
+    {
+      "id": "evolution",
+      "type": "float",
+      "label": "Evolution",
+      "default": 1.0,
+      "range": [
+        0.0,
+        3.0
+      ],
+      "group": "Motion",
+      "level": "advanced",
+      "description": "Pace of the slow director: seeded keyframes about every minute that change structure over minutes. 0 holds the opening structure.",
+      "env": "NCZ_XSHADERTOY_SATIN_WIND_EVOLUTION"
+    },
+    {
+      "id": "folds",
+      "type": "float",
+      "label": "Fold count",
+      "default": 1.0,
+      "range": [
+        0.6,
+        1.6
+      ],
+      "group": "Cloth",
+      "level": "advanced",
+      "description": "How many folds cross the frame (relative).",
+      "env": "NCZ_XSHADERTOY_SATIN_WIND_FOLDS"
+    },
+    {
+      "id": "billow",
+      "type": "float",
+      "label": "Billow",
+      "default": 0.6,
+      "range": [
+        0.2,
+        1.0
+      ],
+      "group": "Cloth",
+      "level": "advanced",
+      "description": "Depth of the folds.",
+      "env": "NCZ_XSHADERTOY_SATIN_WIND_BILLOW"
+    },
+    {
+      "id": "asymmetry",
+      "type": "float",
+      "label": "Asymmetry",
+      "default": 0.55,
+      "range": [
+        0.0,
+        1.0
+      ],
+      "group": "Cloth",
+      "level": "advanced",
+      "description": "How unevenly the folds are spaced: bunched on one side, open on the other.",
+      "env": "NCZ_XSHADERTOY_SATIN_WIND_ASYMMETRY"
+    },
+    {
+      "id": "tension",
+      "type": "float",
+      "label": "Tension waves",
+      "default": 0.45,
+      "range": [
+        0.0,
+        1.0
+      ],
+      "group": "Wind",
+      "level": "advanced",
+      "description": "Strength of the waves that travel down the cloth, swelling and flattening the folds as they pass.",
+      "env": "NCZ_XSHADERTOY_SATIN_WIND_TENSION"
+    },
+    {
+      "id": "wind",
+      "type": "float",
+      "label": "Wind",
+      "default": 1.0,
+      "range": [
+        0.0,
+        2.0
+      ],
+      "group": "Wind",
+      "level": "advanced",
+      "description": "Speed of the traveling waves and the fold sway. 0 = still air; the director still reshapes the fold groups over minutes.",
+      "env": "NCZ_XSHADERTOY_SATIN_WIND_WIND"
+    },
+    {
+      "id": "wrinkles",
+      "type": "float",
+      "label": "Wrinkles",
+      "default": 0.3,
+      "range": [
+        0.0,
+        1.0
+      ],
+      "group": "Cloth",
+      "level": "advanced",
+      "description": "Strength of the weak transverse wrinkles crossing the folds.",
+      "env": "NCZ_XSHADERTOY_SATIN_WIND_WRINKLES"
+    },
+    {
+      "id": "sheen",
+      "type": "float",
+      "label": "Sheen",
+      "default": 0.55,
+      "range": [
+        0.0,
+        1.0
+      ],
+      "group": "Look",
+      "level": "advanced",
+      "description": "Strength of the satin highlight along the threads.",
+      "env": "NCZ_XSHADERTOY_SATIN_WIND_SHEEN"
+    },
+    {
+      "id": "randomize",
+      "type": "bool",
+      "label": "Randomize",
+      "default": true,
+      "group": "System",
+      "level": "advanced",
+      "description": "Draw every option you have not set (and the palette) from the run seed, inside ranges chosen to stay coherent. Off: defaults.",
+      "env": "NCZ_XSHADERTOY_SATIN_WIND_RANDOMIZE"
+    },
+    {
+      "id": "quality",
+      "type": "enum",
+      "label": "Quality",
+      "default": "auto",
+      "choices": [
+        "auto",
+        "low",
+        "medium",
+        "high"
+      ],
+      "group": "System",
+      "level": "advanced",
+      "description": "Detail tier. auto follows the GPU class of this machine (NCZ_SHADER_QUALITY still overrides it).",
+      "env": "NCZ_XSHADERTOY_SATIN_WIND_QUALITY"
+    },
+    {
+      "id": "seed",
+      "type": "int",
+      "label": "Random seed",
+      "default": 0,
+      "range": [
+        0,
+        999999
+      ],
+      "group": "System",
+      "level": "basic",
+      "description": "Fixes the run's randomness so it can be replayed exactly (same options). 0 = a new seed (1 to 999999) every run; the seed in use is logged.",
+      "env": "NCZ_XSHADERTOY_SATIN_WIND_SEED"
+    }
+  ]
+}

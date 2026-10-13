@@ -1,0 +1,12 @@
+# Hacks that are legitimately sparse: thin line art, a grid, or a chart on a black
+# field. Columns (tab separated): id, tile floor, reason. Consumed by test gates
+# only; hacks.tsv keeps its four columns because the chooser plugin requires exactly four.
+# Criterion for a listed hack: healthy (alive, clean exit) AND moving AND not black AND
+# lit-tile coverage >= its floor, measured the same way as the 15 percent pixel gate
+# (grim -s 0.125, 8x8 tiles, channel > 16). Floors sit at or under the measured minimum
+# over a run (see docs/SPARSE-HACKS.md) and far above an empty frame, which scores 0.
+hyprsaver_geometry_gles3	0.10	rotating wireframe polyhedra, lines only
+hyprsaver_hypercube_gles3	0.10	4D tesseract wireframe, lines only
+hyprsaver_ticker_gles3	0.10	candlestick chart on black
+hyprsaver_arccoil_gles3	0.10	three electrodes and thin lightning arcs on black
+cubestorm_gles3	0.10	tube of wire cubes drifting over black (upstream xscreensaver behavior)

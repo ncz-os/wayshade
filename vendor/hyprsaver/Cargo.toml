@@ -1,0 +1,75 @@
+[package]
+name = "hyprsaver"
+version = "0.4.5"
+edition = "2021"
+authors = ["Mara Vexa"]
+description = "A Wayland-native screensaver for Hyprland — fractal shaders on wlr-layer-shell overlays"
+license = "MIT"
+repository = "https://github.com/maravexa/hyprsaver"
+readme = "README.md"
+keywords = ["wayland", "screensaver", "glsl", "hyprland", "opengl"]
+categories = ["graphics", "rendering"]
+rust-version = "1.88"
+exclude = [
+    ".github/**",
+    "examples/hyprsaver.toml",
+    "examples/hypridle.conf",
+    "examples/hyprland.conf",
+    "*.tar.gz",
+    "CLAUDE.md",
+    "PKGBUILD",
+    "flake.nix",
+    "flake.lock",
+    "deny.toml",
+    "rustfmt.toml",
+]
+
+[dependencies]
+smithay-client-toolkit = "0.19"
+glow = "0.14"
+glutin = "0.32"
+raw-window-handle = "0.6"
+calloop = "0.13"
+calloop-wayland-source = "0.3"
+wayland-client = "0.31"
+wayland-protocols-wlr = "0.3"
+toml = "0.8"
+serde = { version = "1", features = ["derive"] }
+clap = { version = "4", features = ["derive"] }
+notify = "7"
+signal-hook = "0.3"
+log = "0.4"
+env_logger = "0.11"
+dirs = "5"
+anyhow = "1"
+libc = "0.2"
+bytemuck = "1"
+khronos-egl = { version = "6", features = ["dynamic"] }
+wayland-egl = "0.32"
+image = { version = "0.25", default-features = false, features = ["png"] }
+egui = "0.29"
+egui_glow = "0.29"
+webp-animation = "0.9"
+
+[dev-dependencies]
+tempfile = "3"
+
+[build-dependencies]
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+[profile.release]
+opt-level = 2
+lto = "thin"
+
+# Cross-reference for the AUR PKGBUILD maintainer.
+# crate source URL pattern:
+#   https://crates.io/api/v1/crates/hyprsaver/${pkgver}/download
+[package.metadata.aur]
+package = "hyprsaver"
+aur-url = "https://aur.archlinux.org/packages/hyprsaver"
+crates-io = "https://crates.io/crates/hyprsaver"
+
+[package.metadata.generate-rpm]
+assets = [
+  { source = "target/release/hyprsaver", dest = "/usr/bin/hyprsaver", mode = "755" },
+]

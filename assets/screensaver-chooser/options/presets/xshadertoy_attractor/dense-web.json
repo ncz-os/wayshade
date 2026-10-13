@@ -1,0 +1,14 @@
+{
+  "title": "Attractor: Dense Web",
+  "description": "The web form: a fine net of short strands.",
+  "accuracy": "procedural approximation",
+  "min_class": "mid",
+  "values": {
+    "form": "web",
+    "palette": "obsidian-jade",
+    "trajectories": "10",
+    "whisker": "0.35",
+    "thickness": "0.3",
+    "glow": "0.35"
+  }
+}

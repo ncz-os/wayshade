@@ -1,0 +1,1686 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: MIT
+#
+# NCZ-OS "Screensaver & Lock" settings/chooser window.
+#
+# Desktop entry: launcher/dev.ncz.screensaver.desktop
+# Application id: dev.ncz.screensaver
+# GSettings schema: dev.ncz.screensaver (config/dev.ncz.screensaver.gschema.xml)
+#
+# GTK 4 + libadwaita via python3-gi. Edits the same GSettings schema the
+# Singularity "screensaver-chooser" plugin already uses, so the two stay
+# in sync. Catalog from $NCZ_SCREENSAVER_CATALOG or one of the standard
+# TSV paths; installed-binary lookup from $NCZ_SCREENSAVER_DIRS or the
+# standard search dirs.
+#
+# Testing hooks:
+#   --dump       : JSON dump of live settings + catalog, no window, no display.
+#   --self-test  : Drive the live UI, assert GSettings, exit 0/1/2.
+#
+# Environment overrides follow docs/LAUNCHER-DESIGN.md sec. 3.
+
+from __future__ import annotations
+
+import argparse
+import contextlib
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+
+# Prefer the new GL renderer on labwc/wlroots when not explicitly requested.
+os.environ.setdefault("GSK_RENDERER", "ngl")
+
+import gi
+
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+
+from gi.repository import Adw, Gio, GLib, GObject, Gtk
+
+SCHEMA_ID = "dev.ncz.screensaver"
+APP_ID = "dev.ncz.screensaver"
+
+# Default lookup paths (catalog then binary dirs).
+CATALOG_CANDIDATES = [
+    os.environ.get("NCZ_SCREENSAVER_CATALOG"),
+    "/usr/share/ncz-screensavers/hacks.tsv",
+    "/usr/share/ncz-screensaver-chooser/hacks.tsv",
+]
+HACK_DIR_CANDIDATES = [
+    os.environ.get("NCZ_SCREENSAVER_DIRS"),
+    "/usr/lib/ncz-screensavers",
+    "/usr/libexec/ncz-screensavers",
+    "/opt/ncz-screensavers/bin",
+]
+
+# Branding: NCZ red accent. The previous 57-screensaver app defaulted to dark.
+NCZ_ACCENT = "#e0121f"
+
+# Mode nick <-> GSettings mapping.
+MODE_NICKS = ("off", "one", "random", "playlist")
+MODE_LABEL = {
+    "off": "Off",
+    "one": "One screensaver",
+    "random": "Random rotation",
+    "playlist": "Playlist",
+}
+# Black hole color choices.
+COLOR_NICKS = (
+    "stylized",
+    "kipthorne",
+    "faithful",
+    "singularity",
+    "slingshot",
+    "whitehole",
+    "eht",
+    "psychedelic",
+    "synthwave",
+    "cygnus",
+)
+RENDER_PRESETS = (
+    ("auto", "Auto (recommended)", ("auto", 1.0, 0)),
+    ("high", "High (native resolution)", ("fixed", 1.0, 0)),
+    ("balanced", "Balanced (75%)", ("fixed", 0.75, 0)),
+    ("fast", "Fast (50%, 1080p cap)", ("fixed", 0.5, 1080)),
+)
+POOL_NICKS = ("auto", "weak", "mid", "all")
+POOL_LABEL = {
+    "auto": "Automatic (recommended)",
+    "weak": "Only screensavers that run well on weak graphics chips",
+    "mid": "Also screensavers that need a mid-range GPU",
+    "all": "All screensavers",
+}
+# Legacy stored values mapped to their current nick when reading.
+POOL_ALIASES = {"igpu-only": "weak"}
+GOOD_TITLE = "Works well on this graphics chip"
+FLAGGED_TITLE = "May run poorly on this graphics chip"
+FLAG_BADGE = "May stutter"
+FLAG_TOOLTIP = (
+    "This screensaver is heavier than this graphics chip handles smoothly. "
+    "It may stutter; the note shows what was measured on similar hardware."
+)
+CLASS_TITLE = {"weak": "Weak", "mid": "Mid-range", "strong": "Strong"}
+VENDOR_LABEL = {"nvidia": "NVIDIA", "amd": "AMD", "intel": "Intel"}
+GPU_AUTO_HINT = (
+    "Automatic keeps light screensavers on the display GPU and sends heavy ones "
+    "to the best other GPU. On battery, Automatic keeps everything on the "
+    "display GPU."
+)
+COLOR_LABEL = {
+    "stylized": "Stylized",
+    "kipthorne": "Kip Thorne (blackbody)",
+    "faithful": "Faithful (blackbody + Doppler)",
+    "singularity": "Singularity",
+    "slingshot": "Slingshot",
+    "whitehole": "White hole",
+    "eht": "Event Horizon Telescope (orange ring)",
+    "psychedelic": "Psychedelic (flowing rainbow)",
+    "synthwave": "Synthwave (magenta and pink)",
+    "cygnus": "Cygnus (NCZ-OS magenta and cyan)",
+}
+# UI bounds in minutes.
+MINUTES_MIN = 1
+MINUTES_MAX = 240
+LOCK_MINUTES_MIN = 0
+LOCK_MINUTES_MAX = 240
+DISPLAY_MINUTES_MIN = 0
+DISPLAY_MINUTES_MAX = 240
+
+
+# ---------------------------------------------------------------------------
+# Catalog / installed-hack helpers
+# ---------------------------------------------------------------------------
+
+
+def catalog_path() -> str | None:
+    """Return the first existing TSV catalog file."""
+    for c in CATALOG_CANDIDATES:
+        if c and os.path.isfile(c):
+            return c
+    return None
+
+
+def hack_dirs() -> list[str]:
+    """Return the de-duplicated list of dirs to search for hack binaries."""
+    env = HACK_DIR_CANDIDATES[0]
+    raw = env.split(":") if env else HACK_DIR_CANDIDATES[1:]
+    seen: set[str] = set()
+    keep: list[str] = []
+    for d in raw:
+        if d and d not in seen and os.path.isdir(d):
+            seen.add(d)
+            keep.append(d)
+    return keep
+
+
+def load_catalog() -> list[dict]:
+    """Parse the TSV catalog into list[{id,title,group}] dicts."""
+    path = catalog_path()
+    if not path:
+        return []
+    rows: list[dict] = []
+    try:
+        with open(path, encoding="utf-8") as f:
+            for raw in f:
+                line = raw.rstrip("\n")
+                if not line or line.startswith("#"):
+                    continue
+                fields = line.split("\t")
+                if len(fields) < 3:
+                    continue
+                rows.append({"id": fields[0], "title": fields[1], "group": fields[2]})
+    except OSError:
+        return []
+    return rows
+
+
+def load_broken() -> dict[str, tuple[str, str]]:
+    """{hack id: (status, reason)} from broken.tsv; empty when not installed."""
+    for path in (
+        os.environ.get("NCZ_SCREENSAVER_BROKEN", ""),
+        "/usr/share/ncz-screensavers/broken.tsv",
+        "/usr/share/ncz-screensaver-chooser/broken.tsv",
+    ):
+        if path and os.path.isfile(path):
+            out: dict[str, tuple[str, str]] = {}
+            with open(path, encoding="utf-8") as f:
+                for line in f:
+                    fields = line.rstrip("\n").split("\t")
+                    if (
+                        len(fields) >= 3
+                        and not line.startswith("#")
+                        and fields[1] in ("broken", "suspect")
+                    ):
+                        out[fields[0]] = (fields[1], fields[2])
+            return out
+    return {}
+
+
+def cli_cmd() -> list[str]:
+    """Argv prefix of the launcher CLI; NCZ_SCREENSAVER_CLI overrides (tests)."""
+    return [os.environ.get("NCZ_SCREENSAVER_CLI") or "ncz-screensaver"]
+
+
+def cli_json(args: list[str]):
+    """Run a launcher command that prints JSON; None on any failure."""
+    try:
+        proc = subprocess.run(
+            cli_cmd() + args, capture_output=True, text=True, timeout=15, check=False
+        )
+        return json.loads(proc.stdout)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+
+
+def normalize_pool(value: str) -> str:
+    """Map legacy pool-gpu-class values (igpu-only) to the current nicks."""
+    value = POOL_ALIASES.get(value, value)
+    return value if value in POOL_NICKS else "auto"
+
+
+def short_renderer(name: str) -> str:
+    """'Mesa Intel(R) UHD Graphics 630 (CFL GT2)' -> 'Mesa Intel UHD Graphics 630'."""
+    name = name.replace("(R)", "").replace("(TM)", "")
+    name = re.sub(r"\s*\([^)]*\)\s*$", "", name)
+    return re.sub(r"\s+", " ", name).strip()
+
+
+def class_summary(status: dict | None, gpus: list[dict] | None) -> str:
+    """Text for the 'Graphics chips' row from status/gpus JSON.
+
+    Per-GPU verdict (UX requirement, operator 2026-09-30): the panel GPU is
+    GPU0 and any offload candidates are GPU1..N. The plain class name from
+    the cache (`status.gpu_class`) is only used as a fallback when the
+    launcher did not include the per-GPU verdict (older builds).
+    """
+    if not status:
+        return "Not measured yet"
+    rows = status.get("gpu_verdict_rows") if isinstance(status, dict) else None
+    if isinstance(rows, list) and rows:
+        parts = []
+        for r in rows:
+            cls = r.get("class") if isinstance(r, dict) else None
+            label = CLASS_TITLE.get(cls, (cls or "Unknown").title())
+            ms = r.get("ms") if isinstance(r, dict) else None
+            extra = ""
+            if isinstance(ms, (int, float)) and ms:
+                extra = f" ({ms:.1f} ms on the calibration test)"
+            elif isinstance(r, dict) and r.get("renderer"):
+                extra = f" (estimated from {short_renderer(r['renderer'])})"
+            parts.append(f"{r.get('index', 'GPU?')} ({label}){extra}")
+        return ", ".join(parts)
+    cls = status.get("gpu_class") if isinstance(status, dict) else None
+    if not cls:
+        return "Not measured yet"
+    parts = []
+    ms = status.get("gpu_class_score_ms")
+    if ms and status.get("gpu_class_source") == "calibration":
+        parts.append(f"{ms:.1f} ms on the calibration test")
+    else:
+        parts.append("estimated from the chip name")
+    # Pick the panel GPU explicitly (display=True) rather than gpus[0] so the
+    # renderer string matches what the per-GPU verdict path uses. Mirrors
+    # `gpus --json`'s `display` flag ordering.
+    disp = next((g for g in gpus or [] if g.get("display")), None)
+    if disp and disp.get("renderer"):
+        parts.append(short_renderer(disp["renderer"]))
+    return f"{CLASS_TITLE.get(cls, cls.title())} ({'; '.join(parts)})"
+
+
+def prime_offload_text(status: dict | None) -> str:
+    """Plain-English description of the PRIME offload policy, or ''.
+
+    Surfaces the explanation the launcher embeds in `status.prime_offload`.
+    Empty when the field is absent or the launcher is older than 0.7.11.
+    A current launcher explains unsupported single-GPU layouts. It never implies a software
+    rendering fallback on a GPU system.
+    """
+    if not isinstance(status, dict):
+        return ""
+    return str(status.get("prime_offload") or "").strip()
+
+
+def gpu_choices(gpus: list[dict] | None, stored: str) -> list[tuple[str, str]]:
+    """(value, label) rows for the Screensaver GPU combo."""
+    out = [("auto", "Automatic"), ("off", "Off (use the display GPU)")]
+    for g in gpus or []:
+        if g.get("display"):
+            continue
+        vendor = VENDOR_LABEL.get(g.get("vendor", ""), str(g.get("vendor", "")).title())
+        cls = CLASS_TITLE.get(g.get("class", ""), g.get("class", "unknown"))
+        out.append(
+            (g["id"], f"{vendor} {g.get('driver', '')} ({cls})".replace("  ", " "))
+        )
+    if stored == "prime":
+        out.append(("prime", "Always the best other GPU (legacy)"))
+    elif stored not in dict(out):
+        out.append((stored, f"{stored} (not found)"))
+    return out
+
+
+def load_overlay() -> dict[str, dict]:
+    """{hack id: row} from `ncz-screensaver list --json`; empty if unavailable."""
+    rows = cli_json(["list", "--json"])
+    if not isinstance(rows, list):
+        return {}
+    return {r["id"]: r for r in rows if isinstance(r, dict) and "id" in r}
+
+
+def compute_groups(
+    catalog: list[dict],
+    overlay: dict[str, dict],
+    installed: dict[str, bool],
+    known: dict[str, tuple[str, str]],
+    show_all: bool,
+) -> list[dict]:
+    """Group model shared by the window and --dump.
+
+    Each group: {title, collapsed, expander, rows}; each row: id, title, group,
+    flagged, badge, subtitle, tooltip, issue, issue_reason, installed.
+    """
+    rows = []
+    for r in catalog:
+        ov = overlay.get(r["id"], {})
+        flagged = bool(ov.get("flagged"))
+        issue = ov.get("issue") or (known[r["id"]][0] if r["id"] in known else "")
+        reason = ov.get("issue_reason") or (
+            known[r["id"]][1] if r["id"] in known else ""
+        )
+        ok = installed.get(r["id"], False)
+        expect = ov.get("expect") or ""
+        if not ok:
+            sub = "not installed"
+        elif flagged:
+            sub = expect or "may stutter on this graphics chip"
+        else:
+            sub = r["group"]
+        rows.append(
+            {
+                "id": r["id"],
+                "title": r["title"],
+                "group": r["group"],
+                "flagged": flagged,
+                "badge": FLAG_BADGE if flagged else "",
+                "subtitle": sub,
+                "tooltip": FLAG_TOOLTIP if flagged else "",
+                "expect": expect,
+                "issue": issue,
+                "issue_reason": reason,
+                "installed": ok,
+            }
+        )
+    if not any(r["flagged"] for r in rows):
+        groups: dict[str, list[dict]] = {}
+        for r in rows:
+            r["subtitle"] = r["subtitle"] if not r["installed"] else r["id"]
+            groups.setdefault(r["group"], []).append(r)
+        return [
+            {"title": g, "collapsed": False, "expander": False, "rows": v}
+            for g, v in groups.items()
+        ]
+    order = {g: i for i, g in enumerate(dict.fromkeys(r["group"] for r in rows))}
+
+    def key(r: dict):
+        return (order[r["group"]], r["title"].lower())
+
+    good = sorted((r for r in rows if not r["flagged"]), key=key)
+    bad = sorted((r for r in rows if r["flagged"]), key=key)
+    out = []
+    if good:
+        out.append(
+            {"title": GOOD_TITLE, "collapsed": False, "expander": False, "rows": good}
+        )
+    out.append(
+        {
+            "title": FLAGGED_TITLE,
+            "collapsed": not show_all,
+            "expander": True,
+            "rows": bad,
+        }
+    )
+    return out
+
+
+def flag_warning(row: dict) -> str:
+    """Body text of the confirmation shown before running a flagged hack."""
+    note = f" ({row['expect']})" if row.get("expect") else ""
+    return f"This screensaver may stutter on this graphics chip{note}. Run it anyway?"
+
+
+def load_option_schema(hack_id: str) -> list[dict]:
+    """Rows of options/<hack>.tsv (same format the launcher reads)."""
+    base = os.environ.get(
+        "NCZ_SCREENSAVER_OPTIONS", "/usr/share/ncz-screensavers/options"
+    )
+    short = hack_id.removesuffix("_gles3")
+    for stem in (hack_id, short):
+        path = os.path.join(base, f"{stem}.tsv")
+        if not os.path.isfile(path):
+            continue
+        rows = []
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                c = (line.rstrip("\n").split("\t") + [""] * 10)[:10]
+                if (
+                    not line.strip()
+                    or line.startswith("#")
+                    or c[1] not in ("bool", "int", "float", "enum", "string")
+                ):
+                    continue
+                rows.append(
+                    {
+                        "name": c[0],
+                        "type": c[1],
+                        "default": c[2],
+                        "min": c[3],
+                        "max": c[4],
+                        "choices": [x for x in c[5].split(",") if x],
+                        "label": c[6] or c[0],
+                        "description": c[7],
+                        "group": c[8] or "General",
+                    }
+                )
+        return rows
+    return []
+
+
+class OptionsDialog(Adw.Window):
+    """Generated editor for one screensaver's options: apply, reset, preview."""
+
+    def __init__(
+        self, parent: Gtk.Window, settings: Gio.Settings, hack: dict, schema: list[dict]
+    ):
+        super().__init__(
+            transient_for=parent, modal=True, title=f"{hack['title']} options"
+        )
+        self.set_default_size(520, 640)
+        self._settings = settings
+        self._hack_id = hack["id"]
+        self._schema = schema
+        stored = settings.get_value("hack-options").unpack()
+        self._pending: dict[str, str] = dict(stored.get(self._hack_id, {}))
+        self._widgets: dict[str, Gtk.Widget] = {}
+
+        toolbar = Adw.ToolbarView()
+        header = Adw.HeaderBar()
+        toolbar.add_top_bar(header)
+        reset = Gtk.Button.new_with_label("Reset to defaults")
+        reset.connect("clicked", self._on_reset)
+        header.pack_start(reset)
+        preview = Gtk.Button.new_with_label("Preview")
+        preview.connect("clicked", self._on_preview)
+        header.pack_end(preview)
+        apply_btn = Gtk.Button.new_with_label("Apply")
+        apply_btn.add_css_class("suggested-action")
+        apply_btn.connect("clicked", self._on_apply)
+        header.pack_end(apply_btn)
+
+        page = Adw.PreferencesPage()
+        groups: dict[str, Adw.PreferencesGroup] = {}
+        for row in schema:
+            grp = groups.get(row["group"])
+            if grp is None:
+                grp = Adw.PreferencesGroup.new()
+                grp.set_title(row["group"])
+                page.add(grp)
+                groups[row["group"]] = grp
+            widget = self._make_row(row)
+            self._widgets[row["name"]] = widget
+            grp.add(widget)
+        toolbar.set_content(page)
+        self.set_content(toolbar)
+
+    def _value(self, row: dict) -> str:
+        return self._pending.get(row["name"], row["default"])
+
+    def _make_row(self, row: dict) -> Gtk.Widget:
+        kind, name = row["type"], row["name"]
+        if kind == "bool":
+            w = Adw.SwitchRow.new()
+            w.set_active(self._value(row) == "true")
+            w.connect(
+                "notify::active",
+                lambda r, _p: self._set(name, "true" if r.get_active() else "false"),
+            )
+        elif kind == "enum":
+            w = Adw.ComboRow.new()
+            w.set_model(Gtk.StringList.new(row["choices"]))
+            cur = self._value(row)
+            w.set_selected(row["choices"].index(cur) if cur in row["choices"] else 0)
+            w.connect(
+                "notify::selected",
+                lambda r, _p: self._set(name, row["choices"][r.get_selected()]),
+            )
+        elif kind in ("int", "float"):
+            lo, hi = float(row["min"] or 0), float(row["max"] or 100)
+            is_float = kind == "float"
+            step = (0.05 if hi - lo <= 10 else 0.5) if is_float else 1
+            adj = Gtk.Adjustment(
+                value=float(self._value(row) or lo),
+                lower=lo,
+                upper=hi,
+                step_increment=step,
+                page_increment=step * 10,
+            )
+            w = Adw.SpinRow(adjustment=adj, digits=2 if is_float else 0)
+            w.connect(
+                "notify::value",
+                lambda r, _p: self._set(
+                    name,
+                    f"{r.get_value():.2f}" if is_float else str(int(r.get_value())),
+                ),
+            )
+        else:
+            w = Adw.EntryRow.new()
+            w.set_text(self._value(row))
+            w.connect("changed", lambda r: self._set(name, r.get_text()))
+        w.set_title(row["label"])
+        if row["description"] and hasattr(w, "set_subtitle"):
+            w.set_subtitle(row["description"])
+        return w
+
+    def _set(self, name: str, value: str) -> None:
+        self._pending[name] = value
+
+    def _on_apply(self, _btn: Gtk.Button) -> None:
+        stored = self._settings.get_value("hack-options").unpack()
+        stored = {k: dict(v) for k, v in stored.items()}
+        stored[self._hack_id] = dict(self._pending)
+        self._settings.set_value("hack-options", GLib.Variant("a{sa{ss}}", stored))
+        self.close()
+
+    def _on_reset(self, _btn: Gtk.Button) -> None:
+        self._pending.clear()
+        for row in self._schema:
+            w = self._widgets[row["name"]]
+            kind = row["type"]
+            if kind == "bool":
+                w.set_active(row["default"] == "true")
+            elif kind == "enum":
+                w.set_selected(
+                    row["choices"].index(row["default"])
+                    if row["default"] in row["choices"]
+                    else 0
+                )
+            elif kind in ("int", "float"):
+                w.set_value(float(row["default"] or 0))
+            else:
+                w.set_text(row["default"])
+        self._pending.clear()
+
+    def _on_preview(self, _btn: Gtk.Button) -> None:
+        cmd = ["ncz-screensaver", "preview", self._hack_id, "--seconds", "30"]
+        for k, v in self._pending.items():
+            cmd += ["--option", f"{k}={v}"]
+        with contextlib.suppress(GLib.Error):
+            Gio.Subprocess.new(cmd, Gio.SubprocessFlags.NONE)
+
+
+def is_installed(hack_id: str, dirs: list[str]) -> bool:
+    """Return True when an executable named hack_id exists in any search dir."""
+    return any(os.path.isfile(os.path.join(d, hack_id)) for d in dirs)
+
+
+def build_catalog_view(catalog: list[dict], dirs: list[str]) -> list[dict]:
+    """Combine the catalog with installation status; used by --dump."""
+    return [{**row, "installed": is_installed(row["id"], dirs)} for row in catalog]
+
+
+# ---------------------------------------------------------------------------
+# GSettings access
+# ---------------------------------------------------------------------------
+
+
+def open_settings() -> Gio.Settings | None:
+    """Open the dev.ncz.screensaver schema; None if missing.
+
+    Gio.Settings.new() aborts the process when the schema is missing, so
+    look up the schema first via Gio.SettingsSchemaSource.
+    """
+    try:
+        src = Gio.SettingsSchemaSource.get_default()
+    except GLib.Error as e:
+        sys.stderr.write(f"settings: no schema source: {e}\n")
+        return None
+    if src is None:
+        sys.stderr.write("settings: no default schema source\n")
+        return None
+    schema = src.lookup(SCHEMA_ID, True)
+    if schema is None:
+        sys.stderr.write(f"settings: schema '{SCHEMA_ID}' not installed\n")
+        return None
+    try:
+        return Gio.Settings.new_full(schema, None, None)
+    except GLib.Error as e:
+        sys.stderr.write(f"settings: cannot open '{SCHEMA_ID}': {e}\n")
+        return None
+
+
+def build_model(settings: Gio.Settings, catalog: list[dict], dirs: list[str]) -> dict:
+    """Everything the window and --dump derive from the launcher CLI."""
+    installed = {r["id"]: is_installed(r["id"], dirs) for r in catalog}
+    overlay = load_overlay()
+    show_all = settings.get_boolean("show-all-hacks")
+    groups = compute_groups(catalog, overlay, installed, load_broken(), show_all)
+    status = cli_json(["status", "--json"])
+    gpus = cli_json(["gpus", "--json"])
+    gpus = gpus if isinstance(gpus, list) else None
+    return {
+        "groups": groups,
+        "status": status if isinstance(status, dict) else None,
+        "gpus": gpus,
+        "show_all_switch": any(g["expander"] for g in groups),
+        "installed": installed,
+    }
+
+
+def read_dump(
+    settings: Gio.Settings, catalog_view: list[dict], model: dict | None = None
+) -> dict:
+    """Compose the JSON shape required by --dump."""
+    pool = settings.get_strv("random-hacks")
+    model = model or {}
+    stored_gpu = settings.get_string("gpu-offload")
+    return {
+        "mode": settings.get_string("mode"),
+        "hack_id": settings.get_string("hack-id"),
+        "random_hacks": pool,
+        "idle_minutes": settings.get_int("hack-idle-delay") // 60,
+        "catalog": [
+            {
+                "id": r["id"],
+                "title": r["title"],
+                "group": r["group"],
+                "installed": r["installed"],
+                "enabled": (not pool) or r["id"] in pool,
+            }
+            for r in catalog_view
+        ],
+        "color": settings.get_string("blackhole-color-mode"),
+        "gpu_offload": stored_gpu,
+        "gpu_choices": [
+            {"value": v, "label": lbl}
+            for v, lbl in gpu_choices(model.get("gpus"), stored_gpu)
+        ],
+        "pool_gpu_class": normalize_pool(settings.get_string("pool-gpu-class")),
+        "pool_gpu_class_stored": settings.get_string("pool-gpu-class"),
+        "pool_choices": [{"value": n, "label": POOL_LABEL[n]} for n in POOL_NICKS],
+        "show_all_hacks": settings.get_boolean("show-all-hacks"),
+        "show_all_switch": model.get("show_all_switch", False),
+        "gpu_class_summary": class_summary(model.get("status"), model.get("gpus")),
+        "gpu_verdict": (
+            (model.get("status") or {}).get("gpu_verdict", "")
+            if isinstance(model.get("status"), dict)
+            else ""
+        ),
+        "prime_offload": prime_offload_text(model.get("status")),
+        "groups": [
+            {
+                "title": g["title"],
+                "collapsed": g["collapsed"],
+                "rows": [
+                    {k: r[k] for k in ("id", "flagged", "badge", "subtitle")}
+                    for r in g["rows"]
+                ],
+            }
+            for g in model.get("groups", [])
+        ],
+        "render": [
+            settings.get_string("render-scale-mode"),
+            settings.get_double("render-scale"),
+            settings.get_int("max-render-height"),
+        ],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Subprocess helpers
+# ---------------------------------------------------------------------------
+
+
+def run_cli_async(args: list[str], done=None) -> None:
+    """Run a launcher command in the background; done(text) gets its output."""
+    try:
+        proc = Gio.Subprocess.new(
+            cli_cmd() + args,
+            Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE,
+        )
+    except GLib.Error as e:
+        if done:
+            done(str(e))
+        return
+
+    def finished(p: Gio.Subprocess, res: Gio.AsyncResult) -> None:
+        try:
+            _ok, out, _err = p.communicate_utf8_finish(res)
+        except GLib.Error as e:
+            out = str(e)
+        if done:
+            done((out or "").strip())
+
+    proc.communicate_utf8_async(None, None, finished)
+
+
+def run_subprocess(args: list[str]) -> None:
+    """Run a `ncz-screensaver` command non-blocking via Gio.Subprocess."""
+    flags = Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
+    try:
+        proc = Gio.Subprocess.new(cli_cmd() + args[1:], flags)
+    except GLib.Error as e:
+        sys.stderr.write(f"spawn {args}: {e}\n")
+        return
+    # Drain pipes asynchronously so the child never blocks on full buffers.
+    proc.communicate_utf8_async(None, None, None)
+
+
+def preview_blackhole() -> None:
+    run_subprocess(["ncz-screensaver", "preview", "blackhole_gles3", "--seconds", "20"])
+
+
+def preview_hack(hack_id: str) -> None:
+    run_subprocess(["ncz-screensaver", "preview", hack_id, "--seconds", "15"])
+
+
+def stop_preview() -> None:
+    run_subprocess(["ncz-screensaver", "stop"])
+
+
+# ---------------------------------------------------------------------------
+# Main window
+# ---------------------------------------------------------------------------
+
+
+class ScreensaverWindow(Adw.ApplicationWindow):
+    """The single Screensaver & Lock settings/chooser window."""
+
+    def __init__(
+        self,
+        app: Adw.Application,
+        settings: Gio.Settings,
+        autocalibrate: bool = True,
+    ) -> None:
+        super().__init__(application=app)
+        self._settings = settings
+        self._status: dict | None = None
+        self._gpus: list[dict] | None = None
+        self._gpu_values: list[str] = ["auto", "off"]
+        self._flagged_expander: Adw.ExpanderRow | None = None
+        # Guard flag: skip writes triggered by our own GSettings callbacks so
+        # external "changed" handlers do not produce feedback loops.
+        self._suppress_changed = False
+
+        self.set_title("Screensaver & Lock")
+        self.set_default_size(720, 760)
+        # Default to dark, mirroring the 57-screensaver look.
+        self.add_css_class("night")
+
+        toolbar = Adw.ToolbarView()
+        header = Adw.HeaderBar()
+
+        stop_btn = Gtk.Button.new_with_label("Stop preview")
+        stop_btn.set_valign(Gtk.Align.CENTER)
+        stop_btn.connect("clicked", lambda *_a: stop_preview())
+        header.pack_end(stop_btn)
+
+        self._search = Gtk.SearchEntry()
+        self._search.set_placeholder_text("Search hacks…")
+        self._search.set_valign(Gtk.Align.CENTER)
+        self._search.set_hexpand(True)
+        header.pack_start(self._search)
+
+        toolbar.add_top_bar(header)
+
+        page = Adw.PreferencesPage()
+        toolbar.set_content(page)
+        self._toasts = Adw.ToastOverlay()
+        self._toasts.set_child(toolbar)
+        self.set_content(self._toasts)
+
+        self._build_screensaver_group(page)
+        self._build_lock_group(page)
+        self._build_color_group(page)
+        self._build_gpu_group(page)
+        self._build_verify_group(page)
+        self._build_hack_groups(page)
+
+        self._search.connect("search-changed", self._on_search_changed)
+        self._connect_settings_signals()
+        self._refresh_from_settings()
+        if autocalibrate:
+            self._maybe_autocalibrate()
+
+    # ---- groups -----------------------------------------------------------
+
+    def _build_screensaver_group(self, page: Adw.PreferencesPage) -> None:
+        grp = Adw.PreferencesGroup.new()
+        grp.set_title("Screensaver")
+        page.add(grp)
+
+        self._mode_row = Adw.ComboRow.new()
+        self._mode_row.set_title("Mode")
+        self._mode_model = Gtk.StringList.new([MODE_LABEL[n] for n in MODE_NICKS])
+        self._mode_row.set_model(self._mode_model)
+        self._mode_row.connect("notify::selected", self._on_mode_changed)
+        grp.add(self._mode_row)
+
+        self._idle_row = Adw.SpinRow.new_with_range(MINUTES_MIN, MINUTES_MAX, 1)
+        self._idle_row.set_title("Start after (minutes)")
+        self._idle_row.set_subtitle(
+            "Minutes of inactivity before the screensaver starts"
+        )
+        self._idle_row.connect("changed", self._on_idle_changed)
+        grp.add(self._idle_row)
+
+        self._cycle_row = Adw.SpinRow.new_with_range(MINUTES_MIN, MINUTES_MAX, 1)
+        self._cycle_row.set_title("Rotate every (minutes)")
+        self._cycle_row.set_subtitle("Each hack runs this long in random / playlist")
+        self._cycle_row.connect("changed", self._on_cycle_changed)
+        grp.add(self._cycle_row)
+
+        self._pool_row = Adw.ComboRow.new()
+        self._pool_row.set_title("Screensavers used in random mode")
+        self._pool_row.set_model(
+            Gtk.StringList.new([POOL_LABEL[n] for n in POOL_NICKS])
+        )
+        self._pool_row.connect("notify::selected", self._on_pool_class_changed)
+        grp.add(self._pool_row)
+
+    def _build_lock_group(self, page: Adw.PreferencesPage) -> None:
+        grp = Adw.PreferencesGroup.new()
+        grp.set_title("Lock and display")
+        page.add(grp)
+
+        self._lock_enabled_row = Adw.SwitchRow.new()
+        self._lock_enabled_row.set_title("Lock after screensaver")
+        self._lock_enabled_row.connect("notify::active", self._on_lock_enabled_changed)
+        grp.add(self._lock_enabled_row)
+
+        self._lock_delay_row = Adw.SpinRow.new_with_range(
+            LOCK_MINUTES_MIN, LOCK_MINUTES_MAX, 1
+        )
+        self._lock_delay_row.set_title("Lock after (minutes)")
+        self._lock_delay_row.connect("changed", self._on_lock_delay_changed)
+        grp.add(self._lock_delay_row)
+
+        self._lock_on_suspend_row = Adw.SwitchRow.new()
+        self._lock_on_suspend_row.set_title("Lock on suspend")
+        self._lock_on_suspend_row.connect(
+            "notify::active", self._on_lock_on_suspend_changed
+        )
+        grp.add(self._lock_on_suspend_row)
+
+        self._display_off_row = Adw.SpinRow.new_with_range(
+            DISPLAY_MINUTES_MIN, DISPLAY_MINUTES_MAX, 1
+        )
+        self._display_off_row.set_title("Turn display off after (minutes)")
+        self._display_off_row.set_subtitle("0 = never")
+        self._display_off_row.connect("changed", self._on_display_off_changed)
+        grp.add(self._display_off_row)
+
+    def _build_color_group(self, page: Adw.PreferencesPage) -> None:
+        grp = Adw.PreferencesGroup.new()
+        grp.set_title("Black hole color")
+        page.add(grp)
+
+        self._color_row = Adw.ComboRow.new()
+        self._color_row.set_title("Color model")
+        # The dropdown labels are recomputed in _refresh_color_combo() once
+        # the live settings value is known; populate with the canonical three
+        # nicks first.
+        self._color_model = Gtk.StringList.new([COLOR_LABEL[n] for n in COLOR_NICKS])
+        self._color_row.set_model(self._color_model)
+        self._color_row.connect("notify::selected", self._on_color_changed)
+        grp.add(self._color_row)
+
+        preview_row = Adw.ActionRow.new()
+        preview_row.set_title("Preview black hole")
+        preview_row.set_subtitle(
+            "Run blackhole_gles3 for 20 seconds with the selected color model"
+        )
+        btn = Gtk.Button.new_with_label("Preview black hole")
+        btn.set_valign(Gtk.Align.CENTER)
+        btn.connect("clicked", lambda *_a: preview_blackhole())
+        preview_row.add_suffix(btn)
+        preview_row.set_activatable_widget(btn)
+        grp.add(preview_row)
+
+    def _build_gpu_group(self, page: Adw.PreferencesPage) -> None:
+        grp = Adw.PreferencesGroup.new()
+        grp.set_title("Graphics")
+        grp.set_description(
+            "Hybrid-GPU laptops: run the screensavers on the discrete GPU. "
+            "Only the screensaver process is offloaded; the desktop stays on its GPU."
+        )
+        page.add(grp)
+        self._render_row = Adw.ComboRow.new()
+        self._render_row.set_title("Render quality")
+        self._render_row.set_subtitle(
+            "Lower quality renders shader screensavers at a smaller size: less GPU load, less stutter on 4K screens"
+        )
+        self._render_row.set_model(
+            Gtk.StringList.new([p[1] for p in RENDER_PRESETS] + ["Custom"])
+        )
+        self._render_row.connect("notify::selected", self._on_render_changed)
+        grp.add(self._render_row)
+        self._render_height_row = Adw.SpinRow.new_with_range(0, 8192, 10)
+        self._render_height_row.set_title("Maximum render height (advanced)")
+        self._render_height_row.set_subtitle(
+            "Pixels; 0 lets Auto decide (choose High for no cap)"
+        )
+        self._render_height_row.connect("changed", self._on_render_height_changed)
+        grp.add(self._render_height_row)
+        self._class_row = Adw.ActionRow.new()
+        self._class_row.set_title("Graphics chips")
+        self._class_btn = Gtk.Button.new_with_label("Recalibrate")
+        self._class_btn.set_valign(Gtk.Align.CENTER)
+        self._class_btn.connect("clicked", self._on_recalibrate)
+        self._class_row.add_suffix(self._class_btn)
+        grp.add(self._class_row)
+        self._gpu_row = Adw.ComboRow.new()
+        self._gpu_row.set_title("Screensaver GPU")
+        self._gpu_row.set_subtitle(GPU_AUTO_HINT)
+        self._gpu_row.set_model(Gtk.StringList.new([]))
+        self._gpu_row.connect("notify::selected", self._on_gpu_changed)
+        grp.add(self._gpu_row)
+        # Read-only: plain-English description of the PRIME render-offload
+        # policy. Created once; the subtitle is refreshed in _load_status.
+        # Hidden only when the launcher is older than 0.7.11 and has no
+        # explanation. Current launchers explain single-GPU layouts.
+        # UX requirement, operator 2026-09-30.
+        self._prime_row = Adw.ActionRow.new()
+        self._prime_row.set_title("PRIME render offload")
+        self._prime_row.set_visible(False)
+        grp.add(self._prime_row)
+        self._load_status()
+
+    def _build_verify_group(self, page: Adw.PreferencesPage) -> None:
+        grp = Adw.PreferencesGroup.new()
+        grp.set_title("Detect black screensavers")
+        page.add(grp)
+
+        self._verify_row = Adw.SwitchRow.new()
+        self._verify_row.set_title(
+            "Treat a fully black frame as a failure and move to the next hack"
+        )
+        self._verify_row.connect("notify::active", self._on_verify_changed)
+        grp.add(self._verify_row)
+
+    def _build_hack_groups(self, page: Adw.PreferencesPage) -> None:
+        """One Adw.PreferencesGroup per catalog group; rows are action rows."""
+        self._catalog = load_catalog()
+        self._dirs = hack_dirs()
+        self._installed = {
+            row["id"]: is_installed(row["id"], self._dirs) for row in self._catalog
+        }
+
+        model = build_model(self._settings, self._catalog, self._dirs)
+        self._groups = model["groups"]
+        self._by_id = {r["id"]: r for g in self._groups for r in g["rows"]}
+
+        self._rows_by_id: dict[str, dict] = {}
+        self._first_radio: Gtk.CheckButton | None = None
+
+        if model["show_all_switch"]:
+            sgrp = Adw.PreferencesGroup.new()
+            page.add(sgrp)
+            self._show_all_row = Adw.SwitchRow.new()
+            self._show_all_row.set_title("Show all screensavers")
+            self._show_all_row.set_subtitle(
+                "Also list screensavers that may run poorly on this graphics chip"
+            )
+            self._show_all_row.connect("notify::active", self._on_show_all_changed)
+            sgrp.add(self._show_all_row)
+        else:
+            self._show_all_row = None
+
+        for g in self._groups:
+            grp = Adw.PreferencesGroup.new()
+            page.add(grp)
+            if g["expander"]:
+                exp = Adw.ExpanderRow.new()
+                exp.set_title(f"{g['title']} ({len(g['rows'])})")
+                exp.set_expanded(not g["collapsed"])
+                grp.add(exp)
+                self._flagged_expander = exp
+                add = exp.add_row
+            else:
+                grp.set_title(f"{g['title']} ({len(g['rows'])})")
+                add = grp.add
+
+            for r in g["rows"]:
+                installed = r["installed"]
+                ar = Adw.ActionRow.new()
+                ar.set_title(r["title"])
+                ar.set_subtitle(r["subtitle"])
+                if r["flagged"]:
+                    badge = Gtk.Label.new(r["badge"])
+                    badge.add_css_class("warning")
+                    badge.set_valign(Gtk.Align.CENTER)
+                    badge.set_tooltip_text(r["tooltip"])
+                    ar.add_suffix(badge)
+                    ar.set_tooltip_text(r["tooltip"])
+                if r["issue"]:
+                    flag = Gtk.Label.new(
+                        "Known issue" if r["issue"] == "broken" else "Under review"
+                    )
+                    flag.add_css_class("warning")
+                    flag.set_valign(Gtk.Align.CENTER)
+                    flag.set_tooltip_text(r["issue_reason"])
+                    ar.add_suffix(flag)
+                if not installed:
+                    # Dim rows whose binary is missing; they cannot be previewed.
+                    ar.add_css_class("dimmed")
+                add(ar)
+
+                # Prefix: a radio Gtk.CheckButton (group behavior) only shown
+                # when the current mode is "one"; visibility is toggled in
+                # _refresh_radio().
+                radio = Gtk.CheckButton.new()
+                radio.set_valign(Gtk.Align.CENTER)
+                if self._first_radio is None:
+                    self._first_radio = radio
+                else:
+                    radio.set_group(self._first_radio)
+                radio.connect("toggled", self._on_radio_toggled, r["id"])
+                ar.add_prefix(radio)
+
+                # Suffix: a Gtk.Switch indicating membership in random-hacks.
+                # When random-hacks is empty every switch shows on; toggling
+                # one off materializes the full list minus that id, and if the
+                # resulting list equals the whole catalog it is stored as [].
+                sw = Gtk.Switch.new()
+                sw.set_valign(Gtk.Align.CENTER)
+                sw.connect("notify::active", self._on_pool_toggled, r["id"])
+                if not installed:
+                    sw.set_sensitive(False)
+                ar.add_suffix(sw)
+
+                btn = Gtk.Button.new_with_label("Preview")
+                btn.set_valign(Gtk.Align.CENTER)
+                if installed:
+                    btn.connect("clicked", self._on_preview_clicked, r["id"])
+                else:
+                    btn.set_sensitive(False)
+                ar.add_suffix(btn)
+
+                schema = load_option_schema(r["id"]) if installed else []
+                if schema:
+                    obtn = Gtk.Button.new_with_label("Options")
+                    obtn.set_valign(Gtk.Align.CENTER)
+                    obtn.connect("clicked", self._on_options_clicked, r, schema)
+                    ar.add_suffix(obtn)
+
+                self._rows_by_id[r["id"]] = {"row": ar, "radio": radio, "switch": sw}
+
+    # ---- settings signal wiring ------------------------------------------
+
+    def _connect_settings_signals(self) -> None:
+        # Listen to every key we read so external CLI/plugin writes refresh
+        # the UI; the guard flag prevents our own writes from echoing back.
+        for key in (
+            "mode",
+            "hack-id",
+            "random-hacks",
+            "hack-idle-delay",
+            "cycle-delay",
+            "lock-enabled",
+            "lock-delay",
+            "lock-on-suspend",
+            "display-off-delay",
+            "blackhole-color-mode",
+            "verify-render",
+            "gpu-offload",
+            "pool-gpu-class",
+            "show-all-hacks",
+            "render-scale-mode",
+            "render-scale",
+            "max-render-height",
+        ):
+            self._settings.connect(f"changed::{key}", self._on_setting_changed)
+
+    # ---- refresh helpers --------------------------------------------------
+
+    def _refresh_from_settings(self) -> None:
+        """Push current GSettings state into all widgets."""
+        self._suppress_changed = True
+        try:
+            mode = self._settings.get_string("mode")
+            self._mode_row.set_selected(_safe_index(MODE_NICKS, mode))
+            self._idle_row.set_value(self._settings.get_int("hack-idle-delay") // 60)
+            self._cycle_row.set_value(self._settings.get_int("cycle-delay") // 60)
+            self._lock_enabled_row.set_active(
+                self._settings.get_boolean("lock-enabled")
+            )
+            self._lock_delay_row.set_value(self._settings.get_int("lock-delay") // 60)
+            self._lock_on_suspend_row.set_active(
+                self._settings.get_boolean("lock-on-suspend")
+            )
+            self._display_off_row.set_value(
+                self._settings.get_int("display-off-delay") // 60
+            )
+            self._verify_row.set_active(self._settings.get_boolean("verify-render"))
+            self._pool_row.set_selected(
+                _safe_index(
+                    list(POOL_NICKS),
+                    normalize_pool(self._settings.get_string("pool-gpu-class")),
+                )
+            )
+            self._refresh_render()
+            self._refresh_gpu_combo(self._settings.get_string("gpu-offload"))
+            show_all = self._settings.get_boolean("show-all-hacks")
+            if self._show_all_row is not None:
+                self._show_all_row.set_active(show_all)
+            if self._flagged_expander is not None:
+                self._flagged_expander.set_expanded(show_all)
+            self._refresh_color_combo(self._settings.get_string("blackhole-color-mode"))
+            self._refresh_pool_switches()
+            self._refresh_radio()
+        finally:
+            self._suppress_changed = False
+
+    def _refresh_gpu_combo(self, stored: str) -> None:
+        """Rebuild the GPU combo from the launcher's GPU list."""
+        choices = gpu_choices(self._gpus, stored)
+        self._gpu_values = [v for v, _l in choices]
+        model = self._gpu_row.get_model()
+        model.splice(0, model.get_n_items(), [lbl for _v, lbl in choices])
+        self._gpu_row.set_selected(_safe_index(self._gpu_values, stored))
+
+    def _load_status(self) -> None:
+        """Fetch class/GPU info from the CLI and update the class row."""
+        status = cli_json(["status", "--json"])
+        gpus = cli_json(["gpus", "--json"])
+        self._status = status if isinstance(status, dict) else None
+        self._gpus = gpus if isinstance(gpus, list) else None
+        self._class_row.set_subtitle(class_summary(self._status, self._gpus))
+        # PRIME render offload row: current launchers explain unsupported
+        # layouts; older launchers may omit the field.
+        prime = prime_offload_text(self._status)
+        if prime:
+            self._prime_row.set_subtitle(prime)
+            self._prime_row.set_visible(True)
+        else:
+            self._prime_row.set_subtitle("")
+            self._prime_row.set_visible(False)
+
+    def _reload_class(self) -> None:
+        self._load_status()
+        self._suppress_changed = True
+        try:
+            self._refresh_gpu_combo(self._settings.get_string("gpu-offload"))
+        finally:
+            self._suppress_changed = False
+
+    def _maybe_autocalibrate(self) -> None:
+        """Measure once at startup when the class is only a table guess."""
+        st = self._status
+        if st is None or st.get("running"):
+            return
+        if st.get("gpu_class_source") not in (None, "table"):
+            return
+        self._class_btn.set_sensitive(False)
+
+        def done(_text: str) -> None:
+            self._class_btn.set_sensitive(True)
+            self._reload_class()
+
+        run_cli_async(["calibrate"], done)
+
+    def _on_recalibrate(self, _btn: Gtk.Button) -> None:
+        self._class_btn.set_sensitive(False)
+
+        def done(text: str) -> None:
+            self._class_btn.set_sensitive(True)
+            self._reload_class()
+            lines = [ln for ln in text.splitlines() if ln.strip()]
+            msg = lines[-1] if lines else "Calibration finished"
+            self._toasts.add_toast(Adw.Toast.new(msg))
+
+        run_cli_async(["calibrate", "--force"], done)
+
+    def _on_show_all_changed(
+        self, row: Adw.SwitchRow, pspec: GObject.ParamSpec
+    ) -> None:
+        self._write_bool("show-all-hacks", row, pspec)
+        if self._flagged_expander is not None:
+            self._flagged_expander.set_expanded(row.get_active())
+
+    def _refresh_color_combo(self, current: str) -> None:
+        """Rebuild the color combo entries; preserve the current value."""
+        labels = [COLOR_LABEL[n] for n in COLOR_NICKS]
+        nicks = list(COLOR_NICKS)
+        if current not in nicks:
+            nicks.append(current)
+            labels.append(f"Custom: {current}")
+        self._color_model.splice(0, self._color_model.get_n_items(), labels)
+        self._color_row.set_selected(_safe_index(nicks, current))
+        # Stash nick list for the change handler.
+        self._color_nicks = nicks
+
+    def _refresh_pool_switches(self) -> None:
+        """Update each hack's random-pool switch from current random-hacks."""
+        pool = set(self._settings.get_strv("random-hacks"))
+        active = not pool  # Empty pool means every hack is "enabled".
+        for hack_id, entry in self._rows_by_id.items():
+            entry["switch"].set_active(active or hack_id in pool)
+
+    def _refresh_radio(self) -> None:
+        """Update the radio widget states and visibility."""
+        mode = self._settings.get_string("mode")
+        show_radio = mode == "one"
+        current_hack = self._settings.get_string("hack-id")
+        for hack_id, entry in self._rows_by_id.items():
+            radio = entry["radio"]
+            radio.set_visible(show_radio)
+            radio.set_sensitive(show_radio and self._installed[hack_id])
+            if hack_id == current_hack:
+                radio.set_active(True)
+
+    # ---- mode / color change handlers ------------------------------------
+
+    def _write_combo(
+        self,
+        row: Adw.ComboRow,
+        _pspec: GObject.ParamSpec,
+        nicks: tuple[str, ...] | list[str],
+        key: str,
+    ) -> None:
+        """Write the selected combo entry into a string GSettings key."""
+        if self._suppress_changed:
+            return
+        idx = row.get_selected()
+        if 0 <= idx < len(nicks):
+            self._settings.set_string(key, nicks[idx])
+
+    def _on_mode_changed(self, row: Adw.ComboRow, pspec: GObject.ParamSpec) -> None:
+        self._write_combo(row, pspec, MODE_NICKS, "mode")
+
+    def _on_color_changed(self, row: Adw.ComboRow, pspec: GObject.ParamSpec) -> None:
+        nicks = getattr(self, "_color_nicks", list(COLOR_NICKS))
+        self._write_combo(row, pspec, nicks, "blackhole-color-mode")
+
+    # ---- integer/minute rows ---------------------------------------------
+
+    def _write_int_minutes(self, key: str, row: Adw.SpinRow) -> None:
+        """Write a minutes-bound SpinRow value into an integer GSettings key."""
+        if self._suppress_changed:
+            return
+        self._settings.set_int(key, int(row.get_value()) * 60)
+
+    def _write_bool(
+        self, key: str, row: Adw.SwitchRow, _pspec: GObject.ParamSpec
+    ) -> None:
+        """Write a SwitchRow active state into a boolean GSettings key."""
+        if self._suppress_changed:
+            return
+        self._settings.set_boolean(key, row.get_active())
+
+    def _on_idle_changed(self, row: Adw.SpinRow) -> None:
+        self._write_int_minutes("hack-idle-delay", row)
+
+    def _on_cycle_changed(self, row: Adw.SpinRow) -> None:
+        self._write_int_minutes("cycle-delay", row)
+
+    def _on_lock_enabled_changed(
+        self, row: Adw.SwitchRow, pspec: GObject.ParamSpec
+    ) -> None:
+        self._write_bool("lock-enabled", row, pspec)
+
+    def _on_lock_delay_changed(self, row: Adw.SpinRow) -> None:
+        self._write_int_minutes("lock-delay", row)
+
+    def _on_lock_on_suspend_changed(
+        self, row: Adw.SwitchRow, pspec: GObject.ParamSpec
+    ) -> None:
+        self._write_bool("lock-on-suspend", row, pspec)
+
+    def _on_display_off_changed(self, row: Adw.SpinRow) -> None:
+        self._write_int_minutes("display-off-delay", row)
+
+    def _render_state(self) -> tuple[str, float, int]:
+        return (
+            self._settings.get_string("render-scale-mode"),
+            round(self._settings.get_double("render-scale"), 2),
+            self._settings.get_int("max-render-height"),
+        )
+
+    def _refresh_render(self) -> None:
+        state = self._render_state()
+        idx = next(
+            (i for i, p in enumerate(RENDER_PRESETS) if p[2] == state),
+            len(RENDER_PRESETS),
+        )
+        self._render_row.set_selected(idx)
+        self._render_height_row.set_value(state[2])
+
+    def _on_render_changed(self, row: Adw.ComboRow, _pspec: GObject.ParamSpec) -> None:
+        if self._suppress_changed:
+            return
+        idx = row.get_selected()
+        if idx >= len(RENDER_PRESETS):
+            return
+        mode, scale, height = RENDER_PRESETS[idx][2]
+        self._settings.set_string("render-scale-mode", mode)
+        self._settings.set_double("render-scale", scale)
+        self._settings.set_int("max-render-height", height)
+
+    def _on_render_height_changed(self, row: Adw.SpinRow) -> None:
+        if self._suppress_changed:
+            return
+        self._settings.set_int("max-render-height", int(row.get_value()))
+
+    def _on_pool_class_changed(
+        self, row: Adw.ComboRow, pspec: GObject.ParamSpec
+    ) -> None:
+        if self._suppress_changed:
+            return
+        idx = row.get_selected()
+        if 0 <= idx < len(POOL_NICKS):
+            self._settings.set_string("pool-gpu-class", POOL_NICKS[idx])
+
+    def _on_gpu_changed(self, row: Adw.ComboRow, pspec: GObject.ParamSpec) -> None:
+        if self._suppress_changed:
+            return
+        idx = row.get_selected()
+        if 0 <= idx < len(self._gpu_values):
+            self._settings.set_string("gpu-offload", self._gpu_values[idx])
+
+    def _on_verify_changed(self, row: Adw.SwitchRow, pspec: GObject.ParamSpec) -> None:
+        self._write_bool("verify-render", row, pspec)
+
+    # ---- hack rows --------------------------------------------------------
+
+    def _on_radio_toggled(self, btn: Gtk.CheckButton, hack_id: str) -> None:
+        if self._suppress_changed:
+            return
+        if not btn.get_active():
+            # Radio buttons fire toggled for both new and old; ignore the
+            # deactivation so the choice isn't clobbered when another row
+            # becomes active.
+            return
+        info = self._by_id.get(hack_id)
+        if info and info["flagged"]:
+            self._confirm_flagged(
+                info,
+                lambda: self._settings.set_string("hack-id", hack_id),
+                self._revert_radio,
+            )
+            return
+        self._settings.set_string("hack-id", hack_id)
+
+    def _revert_radio(self) -> None:
+        self._suppress_changed = True
+        try:
+            self._refresh_radio()
+        finally:
+            self._suppress_changed = False
+
+    def _confirm_flagged(self, info: dict, proceed, cancel=None) -> None:
+        """Ask before running a hack flagged as too heavy; user may proceed."""
+        dlg = Adw.MessageDialog.new(self, "Run this screensaver?", flag_warning(info))
+        dlg.add_response("cancel", "Cancel")
+        dlg.add_response("run", "Run anyway")
+        dlg.set_default_response("cancel")
+        dlg.set_close_response("cancel")
+
+        def answered(_d: Adw.MessageDialog, resp: str) -> None:
+            if resp == "run":
+                proceed()
+            elif cancel:
+                cancel()
+
+        dlg.connect("response", answered)
+        dlg.present()
+
+    def _on_pool_toggled(
+        self, sw: Gtk.Switch, _pspec: GObject.ParamSpec, hack_id: str
+    ) -> None:
+        if self._suppress_changed:
+            return
+        all_ids = [r["id"] for r in self._catalog]
+        current = self._settings.get_strv("random-hacks")
+        # If the pool is empty today, toggling a switch materializes the full
+        # set minus (or plus) the toggled id.
+        if not current:
+            new_pool = (
+                list(all_ids)
+                if sw.get_active()
+                else [i for i in all_ids if i != hack_id]
+            )
+        else:
+            new_pool = list(current)
+            if sw.get_active() and hack_id not in new_pool:
+                new_pool.append(hack_id)
+            elif not sw.get_active() and hack_id in new_pool:
+                new_pool.remove(hack_id)
+        # Preserve catalog order; if the result covers everything store [].
+        ordered = [i for i in all_ids if i in set(new_pool)]
+        if set(ordered) == set(all_ids):
+            self._settings.set_strv("random-hacks", [])
+        else:
+            self._settings.set_strv("random-hacks", ordered)
+
+    def _on_options_clicked(
+        self, _btn: Gtk.Button, hack: dict, schema: list[dict]
+    ) -> None:
+        OptionsDialog(self, self._settings, hack, schema).present()
+
+    def _on_preview_clicked(self, _btn: Gtk.Button, hack_id: str) -> None:
+        info = self._by_id.get(hack_id)
+        if info and info["flagged"]:
+            self._confirm_flagged(info, lambda: preview_hack(hack_id))
+            return
+        preview_hack(hack_id)
+
+    def _on_search_changed(self, entry: Gtk.SearchEntry) -> None:
+        needle = entry.get_text().strip().lower()
+        for e in self._rows_by_id.values():
+            title = e["row"].get_title().lower()
+            e["row"].set_visible(not needle or needle in title)
+
+    # ---- external "changed" handler ---------------------------------------
+
+    def _on_setting_changed(self, _settings: Gio.Settings, _key: str) -> None:
+        if self._suppress_changed:
+            return
+        self._refresh_from_settings()
+
+
+def _safe_index(values: list[str], value: str) -> int:
+    """Return the index of value in values, or 0 if absent."""
+    try:
+        return values.index(value)
+    except ValueError:
+        return 0
+
+
+# ---------------------------------------------------------------------------
+# Application factory
+# ---------------------------------------------------------------------------
+
+
+class ScreensaverApp(Adw.Application):
+    """Adwaita application; one window, the settings UI."""
+
+    def __init__(self, settings: Gio.Settings, autocalibrate: bool = True) -> None:
+        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.FLAGS_NONE)
+        self._settings = settings
+        self._autocalibrate = autocalibrate
+
+    def do_activate(self) -> None:  # type: ignore[override]
+        ScreensaverWindow(
+            self, self._settings, autocalibrate=self._autocalibrate
+        ).present()
+
+
+# ---------------------------------------------------------------------------
+# --self-test
+# ---------------------------------------------------------------------------
+
+
+def _has_display() -> bool:
+    """Return True if a Wayland or X display is reachable."""
+    if not (os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY")):
+        return False
+    try:
+        from gi.repository import Gdk  # noqa: WPS433
+
+        Gdk.Display()
+        return True
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def run_self_test() -> int:
+    """Drive the live UI via GLib timeouts and assert each step.
+
+    Returns 0 on all-pass, 1 on any failure, 2 if no display is available.
+    """
+    settings = open_settings()
+    if settings is None:
+        print("FAIL schema: dev.ncz.screensaver not installed")
+        return 1
+    if not _has_display():
+        return 2
+
+    app = ScreensaverApp(settings, autocalibrate=False)
+
+    # Snapshot every key we may touch so we can restore at the end.
+    saved = {
+        "mode": settings.get_string("mode"),
+        "hack-id": settings.get_string("hack-id"),
+        "random-hacks": settings.get_strv("random-hacks"),
+        "hack-idle-delay": settings.get_int("hack-idle-delay"),
+        "blackhole-color-mode": settings.get_string("blackhole-color-mode"),
+    }
+
+    results: list[tuple[str, bool]] = []
+    state = {"step": 0}
+
+    def first_installed_id() -> str | None:
+        for row in load_catalog():
+            if is_installed(row["id"], hack_dirs()):
+                return row["id"]
+        return None
+
+    def win():
+        w = app.get_active_window()
+        assert w is not None, "self-test window not realized"
+        return w
+
+    def driver() -> bool:
+        # Step 0: set mode to "random" through the UI path.
+        if state["step"] == 0:
+            w = win()
+            w._mode_row.set_selected(MODE_NICKS.index("random"))
+            w._on_mode_changed(w._mode_row, None)
+            results.append(
+                (
+                    "mode-set",
+                    settings.get_string("mode") == "random",
+                )
+            )
+            state["step"] = 1
+            return True
+        # Step 1: toggle the first installed hack's random-pool switch off
+        # then on; verify both intermediate states.
+        if state["step"] == 1:
+            w = win()
+            target_id = first_installed_id()
+            if target_id is None or target_id not in w._rows_by_id:
+                results.append(("pool-toggle", False))
+            else:
+                sw = w._rows_by_id[target_id]["switch"]
+                sw.set_active(False)
+                w._on_pool_toggled(sw, None, target_id)
+                after_off = settings.get_strv("random-hacks")
+                sw.set_active(True)
+                w._on_pool_toggled(sw, None, target_id)
+                after_on = settings.get_strv("random-hacks")
+                results.append(
+                    (
+                        "pool-toggle",
+                        target_id not in after_off
+                        and (not after_on or target_id in after_on),  # [] = all enabled
+                    )
+                )
+            state["step"] = 2
+            return True
+        # Step 2: change color to kipthorne then restore.
+        if state["step"] == 2:
+            w = win()
+            nicks = getattr(w, "_color_nicks", list(COLOR_NICKS))
+            if "kipthorne" in nicks:
+                w._color_row.set_selected(nicks.index("kipthorne"))
+                w._on_color_changed(w._color_row, None)
+            set_ok = settings.get_string("blackhole-color-mode") == "kipthorne"
+            original = saved["blackhole-color-mode"]
+            if original in nicks:
+                w._color_row.set_selected(nicks.index(original))
+                w._on_color_changed(w._color_row, None)
+            restore_ok = settings.get_string("blackhole-color-mode") == original
+            results.append(("color-set", set_ok))
+            results.append(("color-restore", restore_ok))
+            state["step"] = 3
+            return True
+        # Step 3: change the idle spin row and restore.
+        if state["step"] == 3:
+            w = win()
+            saved_delay = saved["hack-idle-delay"]
+            new_delay = saved_delay + 60 if saved_delay < 84000 else 60
+            w._idle_row.set_value(new_delay // 60)
+            w._on_idle_changed(w._idle_row)
+            set_ok = settings.get_int("hack-idle-delay") == new_delay
+            w._idle_row.set_value(saved_delay // 60)
+            w._on_idle_changed(w._idle_row)
+            restore_ok = settings.get_int("hack-idle-delay") == saved_delay
+            results.append(("idle-set", set_ok))
+            results.append(("idle-restore", restore_ok))
+            state["step"] = 99
+            return True
+        return False
+
+    GLib.timeout_add(50, driver)
+    app.register(None)  # activate() needs a registered application
+    app.activate()
+
+    # Run the main loop until either the sequence finishes or 30 s elapse.
+    deadline = time.monotonic() + 30.0
+    context = GLib.MainContext.default()
+    while time.monotonic() < deadline and state["step"] != 99:
+        context.iteration(True)
+        if len(results) >= 6:
+            break
+
+    # Restore everything we touched (last write wins in GSettings, so order is
+    # irrelevant; use the snapshot).
+    try:
+        settings.set_strv("random-hacks", saved["random-hacks"])
+        settings.set_string("blackhole-color-mode", saved["blackhole-color-mode"])
+        settings.set_int("hack-idle-delay", saved["hack-idle-delay"])
+        settings.set_string("hack-id", saved["hack-id"])
+        settings.set_string("mode", saved["mode"])
+    except GLib.Error as e:
+        print(f"FAIL restore: {e}")
+
+    failed = False
+    for label, ok in results:
+        print(f"{'PASS' if ok else 'FAIL'} {label}")
+        failed = failed or not ok
+
+    app.quit()
+    return 1 if failed else 0
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    p = argparse.ArgumentParser(prog="ncz-screensaver-settings")
+    p.add_argument("--dump", action="store_true", help="Print settings JSON and exit")
+    p.add_argument(
+        "--self-test",
+        action="store_true",
+        help="Drive the live UI, assert GSettings, exit 0/1/2",
+    )
+    return p.parse_args(argv)
+
+
+def _run_error_window(app: Adw.Application, title: str, description: str) -> int:
+    """Show a friendly status page when launched without a usable schema."""
+
+    def on_activate(_a: Adw.Application) -> None:
+        win = Adw.ApplicationWindow.new(app)
+        win.set_title("Screensaver & Lock")
+        win.set_default_size(520, 360)
+        toolbar = Adw.ToolbarView()
+        header = Adw.HeaderBar()
+        toolbar.add_top_bar(header)
+        page = Adw.StatusPage.new()
+        page.set_title(title)
+        page.set_description(description)
+        page.set_icon_name("preferences-desktop-screensaver-error")
+        toolbar.set_content(page)
+        win.set_content(toolbar)
+        win.present()
+
+    app.connect("activate", on_activate)
+    return app.run(None)
+
+
+def main(argv: list[str]) -> int:
+    args = parse_args(argv)
+    settings = open_settings()
+    if settings is None:
+        if args.dump:
+            sys.stdout.write(json.dumps({"error": "schema-missing"}) + "\n")
+            return 1
+        app = Adw.Application.new(APP_ID, Gio.ApplicationFlags.FLAGS_NONE)
+        return _run_error_window(
+            app,
+            "GSettings schema missing",
+            "The dev.ncz.screensaver schema is not installed.",
+        )
+
+    if args.dump:
+        raw = load_catalog()
+        catalog = build_catalog_view(raw, hack_dirs())
+        model = build_model(settings, raw, hack_dirs())
+        sys.stdout.write(
+            json.dumps(read_dump(settings, catalog, model), indent=2) + "\n"
+        )
+        return 0
+
+    if args.self_test:
+        return run_self_test()
+
+    return ScreensaverApp(settings).run(None)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

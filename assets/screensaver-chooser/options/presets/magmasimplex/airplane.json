@@ -1,0 +1,12 @@
+{
+  "title": "Airplane",
+  "description": "Pink, purple and teal dyes blooming into each other, slow breathing.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-holo-pink-teal",
+    "kaleidoscope": "0",
+    "projector-mask": "off"
+  }
+}

@@ -1,0 +1,10 @@
+style	enum	auto			auto,classic,enhanced	Style	classic: faithful port of the xscreensaver original. enhanced: same hack with anti-aliasing, soft lighting, glow and smooth palettes. auto: enhanced on GPUs that can afford it, classic otherwise.	Look	NCZ_CUBESTORM_STYLE
+speed	float	1	0.1	4		Animation speed	Time scale of the animation. 1 matches the original xscreensaver pace.	Motion	NCZ_CUBESTORM_SPEED
+seed	int	0	0	1e+09		Random seed	Seed for the random choices (0 = new every launch). The same seed repeats the same run.	Motion	NCZ_CUBESTORM_SEED
+count	int	4	1	12		Cubes	Number of cubes leading the trail (xscreensaver -count).	Density	NCZ_CUBESTORM_COUNT
+length	int	200	20	1000		Trail length	How many past cube positions are kept (xscreensaver -length).	Density	NCZ_CUBESTORM_LENGTH
+thickness	float	0.06	0.01	0.5		Frame thickness	Thickness of the cube frame edges (xscreensaver -thickness).	Look	NCZ_CUBESTORM_THICKNESS
+spin	bool	true				Spin	Tumble the cubes (xscreensaver -spin).	Motion	NCZ_CUBESTORM_SPIN
+wander	bool	true				Wander	Let the trail wander around the screen (xscreensaver -wander).	Motion	NCZ_CUBESTORM_WANDER
+bloom	float	1	0	3		Glow	Strength of the soft glow around bright areas (enhanced style only). 0 turns the glow pass off.	Look	NCZ_CUBESTORM_BLOOM
+antialias	bool	true				Anti-aliasing	Smooth edges (enhanced style only).	Look	NCZ_CUBESTORM_ANTIALIAS

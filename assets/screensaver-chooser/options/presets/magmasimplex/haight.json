@@ -1,0 +1,12 @@
+{
+  "title": "Haight",
+  "description": "Haight-Ashbury: bright yellow dye with big dark-red circles and swarms of small red bubbles, in the projector's round throw.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-yellow-red",
+    "kaleidoscope": "0",
+    "projector-mask": "soft"
+  }
+}

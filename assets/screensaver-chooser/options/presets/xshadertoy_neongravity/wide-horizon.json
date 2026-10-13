@@ -1,0 +1,12 @@
+{
+  "title": "Wide Horizon",
+  "description": "A large dark disc, bodies grazing its edge.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "horizon": "0.9",
+    "bodies": "7",
+    "trail": "0.6",
+    "palette": "deep-teal-pearl"
+  }
+}

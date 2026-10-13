@@ -1,0 +1,898 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+#
+# ncz-screensaver-feed - the producer half of the NCZ lock-hosted screensaver.
+#
+# While the session is locked, ext-session-lock-v1 presents exactly one client's
+# surface, so a screensaver process cannot draw underneath the lock. The NCZ
+# lock client (built with -Dlock_framesrc=enabled) instead imports a buffer file
+# descriptor that a separate process sends over an AF_UNIX SOCK_SEQPACKET
+# socket, and presents it on its own per-output lock surface. This program is
+# that separate process.
+#
+# It owns the lock's frame-source socket (SINGULARITY_LOCK_RENDERER_SOCKET) as
+# the "saver" side of the protocol, and for each lock output runs ONE hack
+# binary in off-screen mode (src/ncz_feed_render.c; selected by NCZ_FEED_SOCKET)
+# as a child. It relays the child's frames to the lock, one buffer in flight,
+# exactly as lock_framesrc_testsrc.c would.
+#
+# Everything about WHICH hack runs and HOW it is configured is reused from the
+# ncz-screensaver launcher (catalog, mode one|random|playlist, pool, per-hack
+# options, GPU offload, render scale). This file does not re-implement any of
+# that: it loads the launcher module and calls its functions.
+#
+# Failure containment: this process is arbitrary third-party-adjacent code from
+# the lock's point of view. If it crashes, hangs or sends garbage, the lock
+# drops back to its own prompt and stays locked. The feed never signals the
+# lock; it only ever exits.
+#
+# Wire format: the shared, dependency-free lock_framesrc_proto.h (installed next
+# to this script as lock_framesrc_proto.h; constants below mirror it exactly).
+
+import argparse
+import array
+import contextlib
+import errno
+import glob
+import os
+import select
+import selectors
+import shutil
+import signal
+import socket
+import struct
+import subprocess
+import sys
+import time
+from importlib.machinery import SourceFileLoader
+from pathlib import Path
+
+# --- protocol constants (must match include/lock_framesrc_proto.h) ---------
+LFS_MAGIC = 0x4C465331
+LFS_VERSION = 1
+LFS_MAX_MSG = 4096
+LFS_TRANSPORT_SHM = 0x1
+LFS_TRANSPORT_DMABUF = 0x2
+LFS_HELLO, LFS_FRAME, LFS_BYE = 1, 2, 3
+LFS_HOLD = 4                 # saver -> lock: freeze here, keep the last frame
+LFS_WELCOME, LFS_READY, LFS_STOP = 0x80, 0x81, 0x82
+# WELCOME message-header capability bit. A lock that understands LFS_HOLD sets
+# it; a lock built before HOLD existed sends 0. We only ever send HOLD when the
+# WELCOME we received carried this bit, so a new feed never trips an old lock.
+LFS_FLAG_HOLD = 0x0001
+LFS_FMT_ARGB8888, LFS_FMT_XRGB8888 = 0, 1
+_MSG = struct.Struct("<IHHI")          # lfs_msg
+_HELLO = struct.Struct("<III")         # lfs_hello
+_WELCOME = struct.Struct("<III")       # lfs_welcome
+_OUTPUT = struct.Struct("<IIII")       # lfs_output
+_FRAME = struct.Struct("<IIIIIIIII")   # lfs_frame
+_ACK = struct.Struct("<I")             # lfs_ack
+
+# --- lock-hosted saver policy ---------------------------------------------
+# The lock holds the screen for a long time and no human is watching it, so the
+# saver is run deliberately cheaply:
+#   * a CONSIDERABLY lower frame rate than a desktop saver (default 8 fps);
+#   * a reduced render resolution, nearest-neighbour upscaled by the child;
+#   * the saver runs only a short intro and then FREEZES on EVERY system, amd64
+#     and arm64, Mac and PC, every GPU: after the intro it sends the lock a HOLD
+#     and stops rendering, so the GPU and CPU go idle while the lock keeps
+#     showing the last frame (still held, still fail-closed).
+# All three are overridable (see /etc/ncz/lock-renderer.env and the test seams).
+DEFAULT_LOCK_FPS = 8
+BATTERY_LOCK_FPS = 6
+DEFAULT_RENDER_DIV = 2
+DEFAULT_FREEZE_AFTER_S = 15.0
+DEFAULT_FREEZE_MODE = "always"   # operator policy: freeze on every system
+FALLBACK_AFTER = 2.0        # s without a real frame -> keep the lock's watchdog fed
+READY_TIMEOUT = 2.5         # s awaiting READY from a live lock
+CHILD_HELLO_TIMEOUT = 5.0   # s for a spawned child to connect + HELLO
+
+# Apple Macs with a T2 security chip: MacBookPro/MacBookAir/iMac/Macmini/MacPro
+# with the AMD dGPU always-on. Detected from the DMI product name, the t2smc
+# hwmon, or the 106b:1802 PCI device. The detection is a plain function so it
+# can be unit-tested against a fake sysroot.
+_T2_DMI_PREFIXES = ("MacBookPro", "MacBookAir", "MacBook", "iMac", "Macmini", "MacPro")
+
+
+def _first_line(path):
+    try:
+        with open(path, "r", errors="replace") as f:
+            return f.readline().strip()
+    except OSError:
+        return ""
+
+
+def _int_env(name, default, lo, hi):
+    raw = os.environ.get(name)
+    if raw is None or raw == "":
+        return default
+    try:
+        v = int(float(raw))
+    except ValueError:
+        return default
+    return max(lo, min(hi, v))
+
+
+def apple_t2(root="/"):
+    """True when this host is an Apple T2 Mac (by DMI name, t2smc or 106b:1802).
+
+    `root` is a sysroot prefix; NCZ_FEED_THERMAL_ROOT / NCZ_FEED_PCI_ROOT /
+    NCZ_FEED_DMI_ROOT override the three probes independently so tests can use
+    fixtures without a Mac. Never reads amdgpu debugfs."""
+    dmi_root = os.environ.get("NCZ_FEED_DMI_ROOT") or os.path.join(root, "sys/class/dmi/id")
+    pn = _first_line(os.path.join(dmi_root, "product_name"))
+    if pn.startswith(_T2_DMI_PREFIXES):
+        return True
+
+    hroot = os.environ.get("NCZ_FEED_THERMAL_ROOT") or os.path.join(root, "sys/class/hwmon")
+    for namep in glob.glob(os.path.join(hroot, "hwmon*", "name")):
+        if "t2smc" in _first_line(namep):
+            return True
+
+    proot = os.environ.get("NCZ_FEED_PCI_ROOT") or os.path.join(root, "sys/bus/pci/devices")
+    for dev in glob.glob(os.path.join(proot, "*")):
+        vendor = _first_line(os.path.join(dev, "vendor"))
+        device = _first_line(os.path.join(dev, "device"))
+        if vendor == "0x106b" and device == "0x1802":
+            return True
+    return False
+
+
+def choose_lock_fps():
+    """Frames/second while the lock is held. NCZ_SAVER_LOCK_FPS wins; the legacy
+    NCZ_FEED_FPS is honoured next; then 8 (6 on battery, never quieter than 1)."""
+    if "NCZ_SAVER_LOCK_FPS" in os.environ:
+        return _int_env("NCZ_SAVER_LOCK_FPS", DEFAULT_LOCK_FPS, 1, 240)
+    if "NCZ_FEED_FPS" in os.environ:
+        return _int_env("NCZ_FEED_FPS", DEFAULT_LOCK_FPS, 1, 240)
+    try:
+        if not LAUNCHER.ac_online():
+            return BATTERY_LOCK_FPS
+    except Exception:
+        pass
+    return DEFAULT_LOCK_FPS
+
+
+def choose_render_div():
+    """Render divisor (>=1) for the off-screen child; 2 = half resolution."""
+    return _int_env("NCZ_SAVER_RENDER_DIV", DEFAULT_RENDER_DIV, 1, 8)
+
+
+def choose_freeze(mode=None, is_t2=None):
+    """Whether to freeze after the intro. NCZ_SAVER_FREEZE=auto|always|never;
+    default always (operator policy: after the intro the saver freezes on every
+    system). auto is retained as an optional Apple-T2-only hint; never restores
+    the old always-render behaviour for debugging."""
+    m = (mode if mode is not None else os.environ.get("NCZ_SAVER_FREEZE", DEFAULT_FREEZE_MODE)).strip().lower()
+    if m == "always":
+        return True
+    if m == "never":
+        return False
+    t2 = apple_t2() if is_t2 is None else is_t2
+    return bool(t2)
+
+
+def freeze_after_s():
+    raw = os.environ.get("NCZ_SAVER_FREEZE_AFTER_S")
+    try:
+        v = float(raw) if raw not in (None, "") else DEFAULT_FREEZE_AFTER_S
+    except ValueError:
+        v = DEFAULT_FREEZE_AFTER_S
+    return max(0.0, v)
+
+
+def policy_defaults():
+    """The COMPILED-IN defaults, independent of the environment. The
+    installed-target verifier runs `--print-policy` on the shipped binary and
+    asserts these, so the operator policy cannot silently regress to the old
+    60 fps always-render behaviour."""
+    return {
+        "lock_fps": DEFAULT_LOCK_FPS,
+        "render_div": DEFAULT_RENDER_DIV,
+        "freeze": DEFAULT_FREEZE_MODE,
+        "freeze_after_s": DEFAULT_FREEZE_AFTER_S,
+        "battery_lock_fps": BATTERY_LOCK_FPS,
+    }
+
+
+def print_policy(stream=None):
+    d = policy_defaults()
+    stream = stream or sys.stdout
+    stream.write(
+        "ncz-feed-policy lock_fps=%d render_div=%d freeze=%s freeze_after_s=%g "
+        "battery_lock_fps=%d\n"
+        % (d["lock_fps"], d["render_div"], d["freeze"], d["freeze_after_s"],
+           d["battery_lock_fps"])
+    )
+    stream.flush()
+
+
+def log(msg):
+    sys.stderr.write(f"ncz-screensaver-feed: {msg}\n")
+    sys.stderr.flush()
+
+
+# --------------------------------------------------------------------------
+# Load the launcher module for catalog/plan/env reuse (do not fork its logic).
+# --------------------------------------------------------------------------
+def load_launcher():
+    cands = []
+    env = os.environ.get("NCZ_SCREENSAVER_LAUNCHER")
+    if env:
+        cands.append(env)
+    w = shutil.which("ncz-screensaver")
+    if w:
+        cands.append(w)
+    here = Path(os.path.realpath(__file__)).parent
+    cands += [
+        str(here / "ncz-screensaver"),
+        "/usr/bin/ncz-screensaver",
+        "/usr/local/bin/ncz-screensaver",
+    ]
+    for c in cands:
+        if c and os.path.isfile(c):
+            loader = SourceFileLoader("ncz_screensaver_launcher", c)
+            mod = loader.load_module()  # noqa: S301 - a known local file
+            return mod
+    raise SystemExit("ncz-screensaver-feed: cannot locate the ncz-screensaver launcher")
+
+
+LAUNCHER = load_launcher()
+
+
+# --------------------------------------------------------------------------
+# fd-passing I/O (SCM_RIGHTS) on SOCK_SEQPACKET
+# --------------------------------------------------------------------------
+def send_packet(sock, data, fd=None):
+    if fd is None:
+        sock.sendmsg([data])
+        return
+    fds = array.array("i", [fd])
+    sock.sendmsg([data], [(socket.SOL_SOCKET, socket.SCM_RIGHTS, fds)])
+
+
+def recv_packet(sock, maxlen=LFS_MAX_MSG):
+    """Return (data, [fds]) for one message. None when nothing is pending.
+    Raises EOFError when the peer closed."""
+    try:
+        data, ancdata, _flags, _addr = sock.recvmsg(
+            maxlen, socket.CMSG_SPACE(4 * 4)
+        )
+    except BlockingIOError:
+        return None
+    except (ConnectionResetError, BrokenPipeError, OSError):
+        raise EOFError from None
+    if not data:
+        raise EOFError
+    fds = []
+    for level, ctype, cdata in ancdata:
+        if level == socket.SOL_SOCKET and ctype == socket.SCM_RIGHTS:
+            arr = array.array("i")
+            arr.frombytes(cdata[: len(cdata) - (len(cdata) % 4)])
+            fds.extend(arr.tolist())
+    return data, fds
+
+
+def encode_msg(mtype, payload=b""):
+    return _MSG.pack(LFS_MAGIC, mtype, 0, len(payload)) + payload
+
+
+def decode_header(data):
+    if len(data) < _MSG.size:
+        return None
+    magic, mtype, _flags, length = _MSG.unpack_from(data, 0)
+    if magic != LFS_MAGIC:
+        return None
+    payload = data[_MSG.size : _MSG.size + length]
+    return mtype, payload
+
+
+def decode_header_full(data):
+    """Like decode_header, but also return the message-header `flags` field.
+
+    The flags carry the LFS_FLAG_* capability bits (currently LFS_FLAG_HOLD in
+    WELCOME). The saver's own messages use decode_header (flags are always 0
+    there); only the lock -> saver path needs the flags."""
+    if len(data) < _MSG.size:
+        return None
+    magic, mtype, flags, length = _MSG.unpack_from(data, 0)
+    if magic != LFS_MAGIC:
+        return None
+    payload = data[_MSG.size : _MSG.size + length]
+    return mtype, flags, payload
+
+
+# --------------------------------------------------------------------------
+# Off-screen renderer child (one per lock output)
+# --------------------------------------------------------------------------
+class Renderer:
+    """One off-screen hack process bound to one lock output."""
+
+    def __init__(self, feed, index, output, hack_id, fps):
+        self.feed = feed
+        self.index = index
+        self.output = output            # dict: name_hash, bw, bh, scale_120
+        self.hack_id = hack_id
+        self.fps = fps
+        self.proc = None
+        self.conn = None
+        self.listen = None
+        self.listen_path = None
+        self.pending = None             # (child_seq, meta_dict, fd) awaiting the lock
+        self.last_fd = None             # dup of the last frame, for gap re-send
+        self.last_sent_ms = 0.0
+        self.opened_at = 0.0
+        self.hello_seen = False
+        self.restarts = 0
+
+    # -- lifecycle --
+    def start(self):
+        self.stop(quiet=True)
+        spath = str(
+            self.feed.rt / f"feed-{os.getpid()}-{self.index}.sock"
+        )
+        with contextlib.suppress(OSError):
+            os.unlink(spath)
+        self.listen = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
+        self.listen.bind(spath)
+        self.listen.listen(1)
+        self.listen.setblocking(False)
+        self.listen_path = spath
+        self.feed.sel.register(self.listen, selectors.EVENT_READ, ("listen", self))
+
+        binary = LAUNCHER.find_binary(self.hack_id)
+        if not binary:
+            log(f"no executable for {self.hack_id}")
+            return False
+        env = LAUNCHER.build_child_env(self.hack_id, self.feed.settings)
+        env["NCZ_FEED_SOCKET"] = spath
+        env["NCZ_FEED_FPS"] = str(self.fps)
+        env["NCZ_FEED_RENDER_DIV"] = str(self.feed.render_div)
+        # A child must never outlive the feed.
+        self.proc = subprocess.Popen(
+            [binary],
+            env=env,
+            stdin=subprocess.DEVNULL,
+            stdout=self.feed.logfile,
+            stderr=self.feed.logfile,
+            start_new_session=True,
+            preexec_fn=LAUNCHER.set_pdeathsig,
+        )
+        self.opened_at = time.monotonic()
+        self.hello_seen = False
+        log(f"out {self.index}: started {self.hack_id} pid={self.proc.pid}")
+        return True
+
+    def stop(self, quiet=False):
+        if self.listen is not None:
+            with contextlib.suppress(Exception):
+                self.feed.sel.unregister(self.listen)
+            with contextlib.suppress(Exception):
+                self.listen.close()
+            self.listen = None
+            if self.listen_path:
+                with contextlib.suppress(OSError):
+                    os.unlink(self.listen_path)
+        if self.conn is not None:
+            try:
+                send_packet(self.conn, encode_msg(LFS_STOP, _ACK.pack(0)))
+            except OSError:
+                pass
+            with contextlib.suppress(Exception):
+                self.feed.sel.unregister(self.conn)
+            with contextlib.suppress(Exception):
+                self.conn.close()
+            self.conn = None
+        if self.proc is not None and self.proc.poll() is None:
+            try:
+                os.killpg(self.proc.pid, signal.SIGTERM)
+            except OSError:
+                pass
+            try:
+                self.proc.wait(timeout=1.0)
+            except Exception:
+                with contextlib.suppress(OSError):
+                    os.killpg(self.proc.pid, signal.SIGKILL)
+        self.proc = None
+        if self.pending is not None:
+            with contextlib.suppress(OSError):
+                os.close(self.pending[2])
+            self.pending = None
+        if self.last_fd is not None:
+            with contextlib.suppress(OSError):
+                os.close(self.last_fd)
+            self.last_fd = None
+        self.hello_seen = False
+        if not quiet:
+            log(f"out {self.index}: stopped")
+
+    # -- events --
+    def on_accept(self):
+        try:
+            conn, _ = self.listen.accept()
+        except BlockingIOError:
+            return
+        if self.conn is not None:
+            # The previous connection was registered with the selector; drop it
+            # before closing so the selector never holds a stale fd.
+            with contextlib.suppress(Exception):
+                self.feed.sel.unregister(self.conn)
+            with contextlib.suppress(OSError):
+                self.conn.close()
+        conn.setblocking(False)
+        self.conn = conn
+        self.feed.sel.register(conn, selectors.EVENT_READ, ("child", self))
+        log(f"out {self.index}: renderer connected")
+
+    def on_readable(self):
+        try:
+            got = recv_packet(self.conn)
+        except EOFError:
+            log(f"out {self.index}: renderer closed")
+            self.child_died("closed")
+            return
+        if got is None:
+            return
+        data, fds = got
+        hdr = decode_header(data)
+        if hdr is None:
+            for fd in fds:
+                os.close(fd)
+            self.child_died("malformed message")
+            return
+        mtype, payload = hdr
+        if mtype == LFS_HELLO:
+            for fd in fds:
+                os.close(fd)
+            if len(payload) < _HELLO.size:
+                self.child_died("short HELLO")
+                return
+            abi, transports, _n = _HELLO.unpack_from(payload, 0)
+            if abi != LFS_VERSION or not (transports & LFS_TRANSPORT_SHM):
+                self.child_died("bad HELLO abi/transport")
+                return
+            o = self.output
+            payload = _WELCOME.pack(LFS_VERSION, LFS_TRANSPORT_SHM, 1) + _OUTPUT.pack(
+                o["name_hash"], o["bw"], o["bh"], o["scale_120"]
+            )
+            send_packet(self.conn, encode_msg(LFS_WELCOME, payload))
+            self.hello_seen = True
+            self.opened_at = time.monotonic()
+        elif mtype == LFS_FRAME:
+            if not fds:
+                self.child_died("FRAME without fd")
+                return
+            if len(payload) != _FRAME.size:
+                for fd in fds:
+                    os.close(fd)
+                self.child_died("bad FRAME size")
+                return
+            f = _FRAME.unpack_from(payload, 0)
+            seq, o_hash, w, h, stride, offset, fmt = f[0], f[1], f[2], f[3], f[4], f[5], f[6]
+            o = self.output
+            if (o_hash != o["name_hash"] or w != o["bw"] or h != o["bh"]
+                    or stride < w * 4 or fmt not in (LFS_FMT_XRGB8888, LFS_FMT_ARGB8888)):
+                for fd in fds:
+                    os.close(fd)
+                self.child_died("FRAME does not match THIS output's geometry")
+                return
+            if len(fds) > 1:
+                for fd in fds[1:]:
+                    os.close(fd)
+            if self.pending is not None:
+                os.close(self.pending[2])
+            self.pending = (seq, {"w": w, "h": h, "stride": stride, "offset": offset,
+                                  "fmt": fmt}, fds[0])
+        elif mtype == LFS_BYE:
+            for fd in fds:
+                os.close(fd)
+            self.child_died("renderer said BYE")
+        else:
+            for fd in fds:
+                os.close(fd)
+            self.child_died(f"unexpected message type {mtype}")
+
+    def ack(self, seq):
+        """The lock consumed the forwarded frame; let the child render the next.
+        `seq` is the CHILD's frame sequence number (not the lock's)."""
+        if self.conn is not None:
+            with contextlib.suppress(OSError):
+                send_packet(self.conn, encode_msg(LFS_READY, _ACK.pack(seq)))
+
+    def child_died(self, why):
+        log(f"out {self.index}: renderer failed ({why})")
+        self.restarts += 1
+        self.stop(quiet=True)
+        # The feed keeps the lock held by re-sending the last frame until the
+        # next hack is up. If it keeps failing the feed just exits; the lock
+        # then falls back to its own prompt (fail-closed).
+        if self.restarts <= 6:
+            self.feed.schedule_restart(self)
+
+    def keepalive_fd(self):
+        """An fd the lock can import when no fresh frame is ready yet."""
+        if self.last_fd is not None:
+            return os.dup(self.last_fd)
+        # A black frame at the output's size.
+        o = self.output
+        size = o["bw"] * o["bh"] * 4
+        fd = os.memfd_create("ncz-feed-hold",
+                             getattr(os, "MFD_CLOEXEC", 0))
+        os.ftruncate(fd, size)
+        return fd
+
+
+# --------------------------------------------------------------------------
+# The feed
+# --------------------------------------------------------------------------
+class Feed:
+    def __init__(self, args):
+        self.args = args
+        self.settings, _src = LAUNCHER.load_settings()
+        self.catalog = LAUNCHER.load_catalog()
+        self.rt = LAUNCHER.runtime_dir() / "ncz-saver-feed"
+        self.rt.mkdir(parents=True, exist_ok=True)
+        with contextlib.suppress(OSError):
+            os.chmod(self.rt, 0o700)
+        self.logfile = open(self.rt / "feed.log", "ab")  # noqa: SIM115
+        self.sel = selectors.DefaultSelector()
+        self.running = True
+        self.lock_fd = None
+        self.outputs = []            # list[Renderer]
+        self.lock_seq = 0
+        self.awaiting = None         # Renderer whose frame the lock is acking
+        self.awaiting_child_seq = None  # the child seq to ack (None for hold frames)
+        self.last_send_ms = 0.0
+        self.rotate_at = 0.0
+        self.restart_queue = []      # Renderer waiting to be restarted
+        self.restart_at = {}
+        self.frames_sent = 0
+        # Selection state, reused verbatim from the launcher.
+        selector = _Selector(self.settings, self.catalog)
+        self.selector = selector
+        self.fps = choose_lock_fps()
+        self.render_div = choose_render_div()
+        self.freeze = choose_freeze()
+        self.freeze_after = freeze_after_s()
+        self.freeze_at = 0.0
+        self.frozen = False
+        # Whether the LOCK on the other end understands LFS_HOLD. Only set from
+        # the WELCOME capability bit; until then we assume NOT (fail-safe: no
+        # HOLD is ever sent to a lock that has not advertised support).
+        self.hold_ok = False
+        log(f"settings mode={self.settings.get('mode')} fps={self.fps} "
+            f"render_div={self.render_div} freeze={self.freeze} "
+            f"freeze_after={self.freeze_after}s")
+
+    def choose_fps(self):
+        # Kept for callers/tests that predate the lock policy helpers.
+        return choose_lock_fps()
+
+    # -- lock side --
+    def connect_lock(self):
+        path = os.environ.get("SINGULARITY_LOCK_RENDERER_SOCKET")
+        if not path:
+            xdg = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+            path = f"{xdg}/singularity-lock-renderer-{os.getuid()}.sock"
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
+        deadline = time.monotonic() + 10.0
+        while True:
+            try:
+                s.connect(path)
+                break
+            except OSError as exc:
+                if time.monotonic() > deadline:
+                    raise SystemExit(
+                        f"ncz-screensaver-feed: cannot connect to the lock at {path}: {exc}"
+                    ) from None
+                time.sleep(0.05)
+        s.setblocking(False)
+        self.lock_fd = s
+        self.sel.register(s, selectors.EVENT_READ, ("lock", None))
+        send_packet(s, encode_msg(LFS_HELLO, _HELLO.pack(LFS_VERSION, LFS_TRANSPORT_SHM, 0)))
+        log(f"HELLO sent to lock at {path}")
+
+    def read_welcome(self):
+        """Block (bounded) for WELCOME and build one Renderer per output."""
+        deadline = time.monotonic() + 5.0
+        buf = b""
+        while time.monotonic() < deadline:
+            r, _, _ = select.select([self.lock_fd], [], [], 0.2)
+            if not r:
+                continue
+            got = recv_packet(self.lock_fd)
+            if got is None:
+                continue
+            buf = got[0]
+            for fd in got[1]:
+                os.close(fd)
+            break
+        hdr = decode_header_full(buf)
+        if hdr is None or hdr[0] != LFS_WELCOME:
+            raise SystemExit("ncz-screensaver-feed: expected WELCOME from the lock")
+        _mtype, wflags, payload = hdr
+        # The lock advertises HOLD support with LFS_FLAG_HOLD in WELCOME. An
+        # older lock (built before LFS_HOLD) sends flags=0; we must then never
+        # send HOLD or it faults with "unknown message type" on every restart.
+        self.hold_ok = bool(wflags & LFS_FLAG_HOLD)
+        if len(payload) < _WELCOME.size:
+            raise SystemExit("ncz-screensaver-feed: short WELCOME")
+        abi, transport, n = _WELCOME.unpack_from(payload, 0)
+        if abi != LFS_VERSION or transport != LFS_TRANSPORT_SHM:
+            raise SystemExit(
+                f"ncz-screensaver-feed: unsupported WELCOME (abi={abi} transport={transport})"
+            )
+        if n < 1 or n > 16:
+            raise SystemExit(f"ncz-screensaver-feed: lock reported {n} outputs")
+        outs = []
+        off = _WELCOME.size
+        for _ in range(n):
+            if off + _OUTPUT.size > len(payload):
+                raise SystemExit("ncz-screensaver-feed: truncated WELCOME outputs")
+            h, w, hh, s120 = _OUTPUT.unpack_from(payload, off)
+            off += _OUTPUT.size
+            outs.append({"name_hash": h, "bw": w, "bh": hh, "scale_120": s120})
+        for i, o in enumerate(outs):
+            r = Renderer(self, i, o, self.selector.pick(), self.fps)
+            self.outputs.append(r)
+            r.start()
+        self.arm_rotation()
+        if self.freeze and self.hold_ok:
+            self.freeze_at = time.monotonic() + self.freeze_after
+        elif self.freeze:
+            # Policy asked for a freeze, but this lock predates LFS_HOLD. Degrade
+            # safely: keep the low lock frame rate + the child-side thermal
+            # governor, send NO HOLD, and log exactly once (not once per restart,
+            # which is what an unguarded feed would do against an old lock).
+            log("lock does not advertise HOLD support (pre-LFS_HOLD lock); "
+                "running without freeze at the low lock frame rate + thermal "
+                "governor, sending no HOLD")
+        log(f"lock accepted; {len(self.outputs)} output(s) "
+            f"freeze_at={'+%.0fs' % self.freeze_after if (self.freeze and self.hold_ok) else 'off'}")
+
+    def freeze_now(self):
+        """Send HOLD and stop rendering: the lock keeps the last frame and the
+        CPU/GPU go idle. Fail-closed: on unlock the lock still clears. Never
+        called unless the lock advertised HOLD (self.hold_ok)."""
+        if self.frozen or self.lock_fd is None or not self.hold_ok:
+            return
+        self.frozen = True
+        try:
+            send_packet(self.lock_fd, encode_msg(LFS_HOLD))
+        except OSError:
+            log("HOLD could not be sent; exiting")
+            self.running = False
+            return
+        for r in self.outputs:
+            with contextlib.suppress(Exception):
+                r.stop(quiet=True)
+        log(f"HOLD after {self.frames_sent} frame(s); saver frozen, "
+            "renderers stopped, lock keeps the last frame")
+
+    # -- scheduling --
+    def arm_rotation(self):
+        mode = self.selector.mode
+        if mode in ("random", "playlist"):
+            delay = max(self.selector.min_cycle, int(self.settings.get("cycle-delay", 600)))
+            self.rotate_at = time.monotonic() + delay
+        else:
+            self.rotate_at = 0.0
+
+    def schedule_restart(self, r):
+        self.restart_at[r.index] = time.monotonic() + min(1.0 * r.restarts, 5.0)
+        if r not in self.restart_queue:
+            self.restart_queue.append(r)
+
+    def do_rotation(self):
+        hack = self.selector.pick()          # advances playlist / avoids repeats
+        log(f"rotating to {hack}")
+        for r in self.outputs:
+            r.hack_id = hack
+            r.restarts = 0
+            r.start()
+        self.arm_rotation()
+
+    # -- lock messages --
+    def on_lock_readable(self):
+        try:
+            got = recv_packet(self.lock_fd)
+        except EOFError:
+            log("lock closed the connection; exiting")
+            self.running = False
+            return
+        if got is None:
+            return
+        data, fds = got
+        for fd in fds:
+            os.close(fd)
+        hdr = decode_header(data)
+        if hdr is None:
+            log("malformed message from lock; exiting (fail-closed)")
+            self.running = False
+            return
+        mtype, payload = hdr
+        if mtype == LFS_READY:
+            if self.awaiting is None:
+                log("unsolicited READY; exiting")
+                self.running = False
+                return
+            if self.awaiting_child_seq is not None:
+                self.awaiting.ack(self.awaiting_child_seq)
+            self.awaiting = None
+            self.awaiting_child_seq = None
+        elif mtype == LFS_STOP:
+            log("STOP from the lock; exiting")
+            self.running = False
+        else:
+            log(f"unexpected message type {mtype} from lock; exiting")
+            self.running = False
+
+    # -- the lock wants exactly one buffer in flight --
+    def pump_lock(self):
+        if self.frozen:
+            return
+        if self.awaiting is not None or self.lock_fd is None:
+            return
+        now = time.monotonic()
+        # Prefer a fresh frame, oldest first.
+        chosen = None
+        for r in self.outputs:
+            if r.pending is not None:
+                chosen = r
+                break
+        if chosen is not None:
+            seq, meta, fd = chosen.pending
+            f = _FRAME.pack(self.lock_seq, chosen.output["name_hash"],
+                            meta["w"], meta["h"], meta["stride"], meta["offset"],
+                            meta["fmt"], 0, 0)
+            try:
+                send_packet(self.lock_fd, encode_msg(LFS_FRAME, f), fd)
+            except OSError:
+                os.close(fd)
+                log("lock write failed; exiting")
+                self.running = False
+                return
+            # Keep a private copy for gap re-sends at this output's geometry.
+            if chosen.last_fd is not None:
+                os.close(chosen.last_fd)
+            try:
+                chosen.last_fd = os.dup(fd)
+            except OSError:
+                chosen.last_fd = None
+            os.close(fd)
+            chosen.pending = None
+            chosen.last_sent_ms = now
+            self.awaiting = chosen
+            self.awaiting_child_seq = seq
+            self.lock_seq += 1
+            self.last_send_ms = now
+            self.frames_sent += 1
+            if self.frames_sent == 1 or self.frames_sent % 60 == 0:
+                log(f"forwarded {self.frames_sent} frame(s) to the lock")
+            return
+        # No fresh frame: keep the lock's frame watchdog fed during warm-up or a
+        # rotation gap by re-sending the last frame (or black).
+        if now - self.last_send_ms >= FALLBACK_AFTER and self.outputs:
+            r = self.outputs[0]
+            try:
+                fd = r.keepalive_fd()
+            except OSError:
+                return
+            o = r.output
+            f = _FRAME.pack(self.lock_seq, o["name_hash"], o["bw"], o["bh"],
+                            o["bw"] * 4, 0, LFS_FMT_XRGB8888, 0, 0)
+            try:
+                send_packet(self.lock_fd, encode_msg(LFS_FRAME, f), fd)
+            except OSError:
+                os.close(fd)
+                self.running = False
+                return
+            os.close(fd)
+            self.awaiting = r
+            self.awaiting_child_seq = None
+            self.lock_seq += 1
+            self.last_send_ms = now
+
+    # -- main loop --
+    def run(self):
+        self.connect_lock()
+        self.read_welcome()
+        while self.running:
+            timeout = 0.25
+            if self.awaiting is not None:
+                # The lock acks immediately; if it does not, it is gone.
+                timeout = 0.05
+            if self.frozen:
+                # Nothing left to render; just wait for STOP / the lock closing.
+                timeout = 1.0
+            events = self.sel.select(timeout)
+            for key, _mask in events:
+                kind, obj = key.data
+                if kind == "lock":
+                    self.on_lock_readable()
+                elif kind == "listen":
+                    obj.on_accept()
+                elif kind == "child":
+                    obj.on_readable()
+            if not self.running:
+                break
+            now = time.monotonic()
+            if self.frozen:
+                continue
+            # Freeze after the intro, but ONLY when the lock advertised HOLD in
+            # its WELCOME (hold_ok); otherwise the old-lock compat path (below)
+            # disabled the freeze and we keep streaming frames.
+            if self.freeze and self.hold_ok and self.frames_sent > 0 and now >= self.freeze_at:
+                self.freeze_now()
+                continue
+            # Restarts due?
+            for r in list(self.restart_queue):
+                if now >= self.restart_at.get(r.index, 0.0):
+                    self.restart_queue.remove(r)
+                    if not r.start():
+                        self.running = False
+            # Rotation due?
+            if self.rotate_at and now >= self.rotate_at:
+                self.do_rotation()
+            # Lock callbacks stalled -> the lock is gone.
+            if self.awaiting is not None and now - self.last_send_ms > READY_TIMEOUT:
+                log("lock did not ack a frame; exiting (fail-closed)")
+                self.running = False
+                break
+            self.pump_lock()
+
+    def shutdown(self):
+        for r in self.outputs:
+            with contextlib.suppress(Exception):
+                r.stop(quiet=True)
+        if self.lock_fd is not None:
+            with contextlib.suppress(Exception):
+                self.sel.unregister(self.lock_fd)
+            with contextlib.suppress(Exception):
+                self.lock_fd.close()
+        with contextlib.suppress(Exception):
+            self.logfile.close()
+
+
+class _Selector:
+    """Exposes exactly the attributes Supervisor.pick()/installed() read, so the
+    feed reuses the launcher's catalog/pool/playlist/rotation selection logic
+    verbatim instead of forking it."""
+
+    pick = LAUNCHER.Supervisor.pick
+    installed = LAUNCHER.Supervisor.installed
+
+    def __init__(self, settings, catalog):
+        self.args = argparse.Namespace(hack=None, option=None)
+        self.settings = settings
+        self.catalog = catalog
+        self.mode = settings["mode"]
+        self.playlist_index = 0
+        self.last_hack = None
+        self.failures = LAUNCHER.Failures()
+        # Same floor the launcher's Supervisor uses (rotation test seam).
+        self.min_cycle = 1 if os.environ.get("NCZ_SCREENSAVER_MIN_CYCLE") else 5
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(prog="ncz-screensaver-feed",
+                                description="NCZ lock-hosted screensaver producer")
+    p.add_argument("--version", action="version", version="ncz-screensaver-feed 0.1.0")
+    p.add_argument("--print-policy", action="store_true",
+                   help="print the compiled-in lock-saver policy defaults and exit")
+    args = p.parse_args(argv)
+    if args.print_policy:
+        print_policy()
+        return 0
+    feed = Feed(args)
+    signal.signal(signal.SIGTERM, lambda *_: setattr(feed, "running", False))
+    signal.signal(signal.SIGINT, lambda *_: setattr(feed, "running", False))
+    try:
+        feed.run()
+    finally:
+        feed.shutdown()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

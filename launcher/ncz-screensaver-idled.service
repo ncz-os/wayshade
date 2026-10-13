@@ -1,0 +1,37 @@
+[Unit]
+Description=NCZ screensaver idle timer (ext-idle-notify-v1)
+Documentation=file:///usr/share/doc/ncz-screensavers/LAUNCHER-DESIGN.md
+# Tie the daemon to the real desktop session. graphical-session.target covers
+# non-Singularity compositors; singularity-session.target is started on every
+# login by /opt/singularity/bin/singularity-desktop-session (and stopped on
+# logout), so a new login re-pulls this unit and a logout stops it instead of
+# leaving it failed. The target is a no-op where it does not exist.
+PartOf=graphical-session.target singularity-session.target
+After=graphical-session.target singularity-session.target
+Conflicts=ncz-idle-manager.service
+ConditionEnvironment=WAYLAND_DISPLAY
+# A greetd restart (or any compositor crash) drops the Wayland connection and
+# systemd auto-restarts this unit at once, but the replacement session imports
+# WAYLAND_DISPLAY only when the user logs back in. During that window every
+# restart fails, so do not let the default start-limit latch the unit `failed`:
+# the daemon's own bounded wait covers the window and the restart loop retries
+# until a real session exists.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStartPre=-/usr/bin/ncz-screensaver ensure-plugin
+ExecStart=/usr/libexec/ncz-screensaver-idled
+Restart=on-failure
+RestartSec=5
+# 78 = EX_CONFIG is now only the permanent "settings schema missing" case, so
+# let the unit fail and be noticed.
+# 75 = EX_TEMPFAIL is NOT in this list: "no usable Wayland session yet" (logged
+# out, compositor restarting, or a login greeter that does not advertise
+# ext-idle-notify-v1) stays in auto-restart rather than `failed`, and stopping
+# the session target stops it cleanly. The daemon itself waits for up to
+# NCZ_IDLED_SESSION_WAIT_MS (default 30s) before returning 75.
+RestartPreventExitStatus=78
+
+[Install]
+WantedBy=graphical-session.target singularity-session.target

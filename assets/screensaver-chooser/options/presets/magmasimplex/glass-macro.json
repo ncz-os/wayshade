@@ -1,0 +1,9 @@
+{
+  "title": "Eye against the glass",
+  "description": "Extreme macro: wax pressed flat on the inside of the glass, the rest of the lamp out of focus behind it.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "glass"
+  }
+}

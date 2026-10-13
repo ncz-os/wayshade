@@ -1,0 +1,17 @@
+#!/bin/sh
+# The older swayidle based ncz-idle-manager user service (cix-installer 57/58)
+# would run next to ncz-screensaver-idled and lock the session on its own
+# schedule. Disable it globally; the new unit declares Conflicts= as well.
+set -e
+case "$1" in
+    configure)
+        if [ -e /usr/lib/systemd/user/ncz-idle-manager.service ] ||
+           [ -e /etc/systemd/user/default.target.wants/ncz-idle-manager.service ]; then
+            systemctl --global disable ncz-idle-manager.service >/dev/null 2>&1 || true
+        fi
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

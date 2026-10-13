@@ -1,0 +1,14 @@
+{
+  "title": "Caustics on stone: Late afternoon",
+  "description": "Lower, warmer light on honey stone; the swell dominates, so the light gathers in broad slow pools.",
+  "accuracy": "analytic small-slope caustics, compressed",
+  "min_class": "weak",
+  "values": {
+    "palette": "honey-marble",
+    "focus": "0.45",
+    "depth": "0.45",
+    "ripples": "0.3",
+    "sun": "0.85",
+    "stone-texture": "0.75"
+  }
+}

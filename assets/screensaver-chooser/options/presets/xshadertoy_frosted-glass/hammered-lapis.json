@@ -1,0 +1,13 @@
+{
+  "title": "Frosted Glass: Hammered Lapis",
+  "description": "Hammered glass with strong colour fringes on deep blue.",
+  "accuracy": "analytic model",
+  "min_class": "weak",
+  "values": {
+    "style": "hammered",
+    "palette": "lapis",
+    "frost": "0.3",
+    "refraction": "0.6",
+    "dispersion": "0.7"
+  }
+}

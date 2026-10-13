@@ -1,0 +1,458 @@
+{
+  "id": "xshadertoy_chitin",
+  "options": [
+    {
+      "id": "preset",
+      "type": "string",
+      "label": "Preset",
+      "default": "",
+      "group": "Look",
+      "level": "basic",
+      "description": "Named scene (see --list-presets): applied above the saved config file and below environment and command line. Empty = none.",
+      "env": "NCZ_XSHADERTOY_CHITIN_PRESET"
+    },
+    {
+      "id": "palette",
+      "type": "enum",
+      "label": "Palette",
+      "default": "auto",
+      "choices": [
+        "auto",
+        "native",
+        "navy-cream",
+        "ink-bone",
+        "midnight-amber",
+        "deep-teal-pearl",
+        "aubergine-rose",
+        "forest-moss",
+        "slate-ice",
+        "charcoal-copper",
+        "obsidian-jade",
+        "indigo-saffron",
+        "graphite-coral",
+        "night-aurora",
+        "polar-violet",
+        "sea-glass",
+        "ember-night",
+        "plum-gold",
+        "prussian-silver",
+        "oxblood-linen",
+        "ultramarine-cream",
+        "moss-lilac",
+        "abyss-cyan",
+        "lagoon-sand",
+        "oxygen-green",
+        "crimson-arc",
+        "polar-teal",
+        "bone-charcoal",
+        "gunmetal",
+        "verdigris-iron",
+        "slate-bone",
+        "steel-green",
+        "charcoal-verdigris",
+        "travertine",
+        "carrara",
+        "warm-limestone",
+        "sandstone-rose",
+        "plaster-sage",
+        "linen-ochre",
+        "pearl-grey",
+        "celadon",
+        "blush-clay",
+        "oat-indigo",
+        "slate-paper",
+        "honey-marble",
+        "camel-silk",
+        "fog-lavender",
+        "rosso-levanto",
+        "verde-alpi",
+        "calacatta-gold",
+        "nero-marquina",
+        "amethyst-quartz",
+        "malachite",
+        "lapis",
+        "sienna-onyx",
+        "grey-bardiglio"
+      ],
+      "group": "Look",
+      "level": "basic",
+      "description": "Color roles (background, body, accent, accent2). auto: drawn from this saver's family with the run seed. native: the saver's own colors. Any name from the shared role table.",
+      "env": "NCZ_XSHADERTOY_CHITIN_PALETTE",
+      "choice_groups": [
+        {
+          "label": "Automatic",
+          "choices": [
+            "auto",
+            "native"
+          ]
+        },
+        {
+          "label": "Dark grounds",
+          "choices": [
+            "navy-cream",
+            "ink-bone",
+            "midnight-amber",
+            "deep-teal-pearl",
+            "aubergine-rose",
+            "forest-moss",
+            "slate-ice",
+            "charcoal-copper",
+            "obsidian-jade",
+            "indigo-saffron",
+            "graphite-coral",
+            "night-aurora",
+            "polar-violet",
+            "sea-glass",
+            "ember-night",
+            "plum-gold",
+            "prussian-silver",
+            "oxblood-linen",
+            "ultramarine-cream",
+            "moss-lilac",
+            "abyss-cyan",
+            "lagoon-sand",
+            "oxygen-green",
+            "crimson-arc",
+            "polar-teal",
+            "bone-charcoal",
+            "gunmetal",
+            "verdigris-iron",
+            "slate-bone",
+            "steel-green",
+            "charcoal-verdigris"
+          ]
+        },
+        {
+          "label": "Light materials",
+          "choices": [
+            "travertine",
+            "carrara",
+            "warm-limestone",
+            "sandstone-rose",
+            "plaster-sage",
+            "linen-ochre",
+            "pearl-grey",
+            "celadon",
+            "blush-clay",
+            "oat-indigo",
+            "slate-paper",
+            "honey-marble",
+            "camel-silk",
+            "fog-lavender"
+          ]
+        },
+        {
+          "label": "Stone and mineral",
+          "choices": [
+            "rosso-levanto",
+            "verde-alpi",
+            "calacatta-gold",
+            "nero-marquina",
+            "amethyst-quartz",
+            "malachite",
+            "lapis",
+            "sienna-onyx",
+            "grey-bardiglio"
+          ]
+        }
+      ],
+      "choice_labels": {
+        "auto": "Drawn from the seed",
+        "native": "The saver's own colors",
+        "navy-cream": "Navy Cream",
+        "ink-bone": "Ink Bone",
+        "midnight-amber": "Midnight Amber",
+        "deep-teal-pearl": "Deep Teal Pearl",
+        "aubergine-rose": "Aubergine Rose",
+        "forest-moss": "Forest Moss",
+        "slate-ice": "Slate Ice",
+        "charcoal-copper": "Charcoal Copper",
+        "obsidian-jade": "Obsidian Jade",
+        "indigo-saffron": "Indigo Saffron",
+        "graphite-coral": "Graphite Coral",
+        "night-aurora": "Night Aurora",
+        "polar-violet": "Polar Violet",
+        "sea-glass": "Sea Glass",
+        "ember-night": "Ember Night",
+        "plum-gold": "Plum Gold",
+        "prussian-silver": "Prussian Silver",
+        "oxblood-linen": "Oxblood Linen",
+        "ultramarine-cream": "Ultramarine Cream",
+        "moss-lilac": "Moss Lilac",
+        "abyss-cyan": "Abyss Cyan",
+        "lagoon-sand": "Lagoon Sand",
+        "oxygen-green": "Oxygen Green",
+        "crimson-arc": "Crimson Arc",
+        "polar-teal": "Polar Teal",
+        "bone-charcoal": "Bone Charcoal",
+        "gunmetal": "Gunmetal",
+        "verdigris-iron": "Verdigris Iron",
+        "slate-bone": "Slate Bone",
+        "steel-green": "Steel Green",
+        "charcoal-verdigris": "Charcoal Verdigris",
+        "travertine": "Travertine",
+        "carrara": "Carrara",
+        "warm-limestone": "Warm Limestone",
+        "sandstone-rose": "Sandstone Rose",
+        "plaster-sage": "Plaster Sage",
+        "linen-ochre": "Linen Ochre",
+        "pearl-grey": "Pearl Grey",
+        "celadon": "Celadon",
+        "blush-clay": "Blush Clay",
+        "oat-indigo": "Oat Indigo",
+        "slate-paper": "Slate Paper",
+        "honey-marble": "Honey Marble",
+        "camel-silk": "Camel Silk",
+        "fog-lavender": "Fog Lavender",
+        "rosso-levanto": "Rosso Levanto",
+        "verde-alpi": "Verde Alpi",
+        "calacatta-gold": "Calacatta Gold",
+        "nero-marquina": "Nero Marquina",
+        "amethyst-quartz": "Amethyst Quartz",
+        "malachite": "Malachite",
+        "lapis": "Lapis",
+        "sienna-onyx": "Sienna Onyx",
+        "grey-bardiglio": "Grey Bardiglio"
+      }
+    },
+    {
+      "id": "palette-cycle",
+      "type": "float",
+      "label": "Palette cycle (min)",
+      "default": 0.0,
+      "range": [
+        0.0,
+        60.0
+      ],
+      "group": "Look",
+      "level": "advanced",
+      "description": "Minutes between slow cross-fades to another palette of the same family (interpolated in Oklab: lightness moves steadily from one palette to the other, never through grey). 0 = keep one palette.",
+      "env": "NCZ_XSHADERTOY_CHITIN_PALETTE_CYCLE"
+    },
+    {
+      "id": "speed",
+      "type": "float",
+      "label": "Speed",
+      "default": 1.0,
+      "range": [
+        0.25,
+        3.0
+      ],
+      "group": "Motion",
+      "level": "basic",
+      "description": "Time scale of every motion.",
+      "env": "NCZ_XSHADERTOY_CHITIN_SPEED"
+    },
+    {
+      "id": "evolution",
+      "type": "float",
+      "label": "Evolution",
+      "default": 1.0,
+      "range": [
+        0.0,
+        3.0
+      ],
+      "group": "Motion",
+      "level": "advanced",
+      "description": "Pace of the slow director: seeded keyframes about every minute that change structure over minutes. 0 holds the opening structure.",
+      "env": "NCZ_XSHADERTOY_CHITIN_EVOLUTION"
+    },
+    {
+      "id": "form",
+      "type": "enum",
+      "label": "Form",
+      "default": "nave",
+      "choices": [
+        "nave",
+        "conduit",
+        "lathe",
+        "comb",
+        "sump"
+      ],
+      "group": "Look",
+      "level": "advanced",
+      "description": "How the ribs, conduits and pores are arranged: nave (arched vault), conduit (bundled runs on chevron ribs), lathe (concentric turned ribs with radial runs), comb (spines with tooth rows), sump (chevrons converging on a trench).",
+      "env": "NCZ_XSHADERTOY_CHITIN_FORM"
+    },
+    {
+      "id": "relief",
+      "type": "float",
+      "label": "Relief",
+      "default": 1.0,
+      "range": [
+        0.5,
+        1.6
+      ],
+      "group": "Look",
+      "level": "advanced",
+      "description": "Height of the relief as seen in the raking light.",
+      "env": "NCZ_XSHADERTOY_CHITIN_RELIEF"
+    },
+    {
+      "id": "warp",
+      "type": "float",
+      "label": "Warp",
+      "default": 0.5,
+      "range": [
+        0.0,
+        1.0
+      ],
+      "group": "Simulation",
+      "level": "advanced",
+      "description": "How far the structure is bent out of true by the three-octave domain warp. 0 is ruled and rigid.",
+      "env": "NCZ_XSHADERTOY_CHITIN_WARP"
+    },
+    {
+      "id": "asymmetry",
+      "type": "float",
+      "label": "Asymmetry",
+      "default": 0.1,
+      "range": [
+        0.05,
+        0.15
+      ],
+      "group": "Simulation",
+      "level": "advanced",
+      "description": "How far the two halves differ. The picture is mirrored, then broken by this much.",
+      "env": "NCZ_XSHADERTOY_CHITIN_ASYMMETRY"
+    },
+    {
+      "id": "conduits",
+      "type": "float",
+      "label": "Conduits",
+      "default": 0.65,
+      "range": [
+        0.2,
+        1.0
+      ],
+      "group": "Simulation",
+      "level": "advanced",
+      "description": "Share of conduit runs that are present.",
+      "env": "NCZ_XSHADERTOY_CHITIN_CONDUITS"
+    },
+    {
+      "id": "pores",
+      "type": "float",
+      "label": "Pores",
+      "default": 0.6,
+      "range": [
+        0.0,
+        1.0
+      ],
+      "group": "Simulation",
+      "level": "advanced",
+      "description": "Share of the pore lattice that is pitted.",
+      "env": "NCZ_XSHADERTOY_CHITIN_PORES"
+    },
+    {
+      "id": "sheen",
+      "type": "float",
+      "label": "Sheen",
+      "default": 0.5,
+      "range": [
+        0.0,
+        1.0
+      ],
+      "group": "Look",
+      "level": "advanced",
+      "description": "Material, from dry bone (0) to polished gunmetal (1).",
+      "env": "NCZ_XSHADERTOY_CHITIN_SHEEN"
+    },
+    {
+      "id": "accent",
+      "type": "float",
+      "label": "Accent",
+      "default": 0.05,
+      "range": [
+        0.0,
+        0.08
+      ],
+      "group": "Look",
+      "level": "advanced",
+      "description": "Share of conduit runs painted in the muted second tone. Never more than 8 percent.",
+      "env": "NCZ_XSHADERTOY_CHITIN_ACCENT"
+    },
+    {
+      "id": "light",
+      "type": "float",
+      "label": "Light direction",
+      "default": 0.5,
+      "range": [
+        0.0,
+        1.0
+      ],
+      "group": "Look",
+      "level": "advanced",
+      "description": "Where the raking light comes from: 0.5 is straight above, the ends are from either side.",
+      "env": "NCZ_XSHADERTOY_CHITIN_LIGHT"
+    },
+    {
+      "id": "light-drift",
+      "type": "float",
+      "label": "Light drift",
+      "default": 0.35,
+      "range": [
+        0.0,
+        1.0
+      ],
+      "group": "Motion",
+      "level": "advanced",
+      "description": "How far the light slowly swings back and forth. 0 holds it still.",
+      "env": "NCZ_XSHADERTOY_CHITIN_LIGHT_DRIFT"
+    },
+    {
+      "id": "scroll",
+      "type": "float",
+      "label": "Scroll",
+      "default": 0.4,
+      "range": [
+        0.0,
+        1.0
+      ],
+      "group": "Motion",
+      "level": "advanced",
+      "description": "Speed of the slow travel along the structure (lathe: the surface turns slowly around the column).",
+      "env": "NCZ_XSHADERTOY_CHITIN_SCROLL"
+    },
+    {
+      "id": "randomize",
+      "type": "bool",
+      "label": "Randomize",
+      "default": true,
+      "group": "System",
+      "level": "advanced",
+      "description": "Draw every option you have not set (and the palette) from the run seed, inside ranges chosen to stay coherent. Off: defaults.",
+      "env": "NCZ_XSHADERTOY_CHITIN_RANDOMIZE"
+    },
+    {
+      "id": "quality",
+      "type": "enum",
+      "label": "Quality",
+      "default": "auto",
+      "choices": [
+        "auto",
+        "low",
+        "medium",
+        "high"
+      ],
+      "group": "System",
+      "level": "advanced",
+      "description": "Detail tier. auto follows the GPU class of this machine (NCZ_SHADER_QUALITY still overrides it).",
+      "env": "NCZ_XSHADERTOY_CHITIN_QUALITY"
+    },
+    {
+      "id": "seed",
+      "type": "int",
+      "label": "Random seed",
+      "default": 0,
+      "range": [
+        0,
+        999999
+      ],
+      "group": "System",
+      "level": "basic",
+      "description": "Fixes the run's randomness so it can be replayed exactly (same options). 0 = a new seed (1 to 999999) every run; the seed in use is logged.",
+      "env": "NCZ_XSHADERTOY_CHITIN_SEED"
+    }
+  ]
+}

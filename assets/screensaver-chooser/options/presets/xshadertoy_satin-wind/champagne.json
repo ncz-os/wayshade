@@ -1,0 +1,12 @@
+{
+  "title": "Satin: Champagne",
+  "description": "Warm cream satin in a light breeze, the sheen riding the fold crests.",
+  "accuracy": "analytic height field, not a cloth simulation",
+  "min_class": "weak",
+  "values": {
+    "palette": "native",
+    "billow": "0.6",
+    "tension": "0.45",
+    "wind": "1"
+  }
+}

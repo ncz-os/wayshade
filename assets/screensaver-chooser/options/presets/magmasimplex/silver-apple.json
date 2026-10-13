@@ -1,0 +1,12 @@
+{
+  "title": "Silver Apple",
+  "description": "Silver and teal inks in an electric-blue field: a cooler, electronic light show.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-silver-apple",
+    "kaleidoscope": "0",
+    "projector-mask": "off"
+  }
+}

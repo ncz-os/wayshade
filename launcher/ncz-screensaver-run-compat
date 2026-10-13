@@ -1,0 +1,10 @@
+#!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Compatibility shim for the older ncz-screensaver-run interface used by
+# cix-installer's ncz-lock and ncz-idle-manager: --start, --stop, --preview ID.
+case "${1:-}" in
+    --start)   exec /usr/bin/ncz-screensaver start ;;
+    --stop)    exec /usr/bin/ncz-screensaver stop ;;
+    --preview) [ "$#" -eq 2 ] || exit 2; exec /usr/bin/ncz-screensaver preview "$2" ;;
+    *) echo "usage: ncz-screensaver-run --start|--stop|--preview ID" >&2; exit 2 ;;
+esac

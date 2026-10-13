@@ -1,0 +1,12 @@
+{
+  "title": "Swarm",
+  "description": "Many bodies falling fast with long trails.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "bodies": "14",
+    "infall": "0.85",
+    "trail": "0.85",
+    "palette": "night-aurora"
+  }
+}

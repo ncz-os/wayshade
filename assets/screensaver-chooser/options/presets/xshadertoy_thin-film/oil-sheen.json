@@ -1,0 +1,14 @@
+{
+  "title": "Thin film: Oil sheen",
+  "description": "A thin, higher-index film (n 1.5) with broad, calm bands and a strong bulge, like oil on dark water.",
+  "accuracy": "analytic interference optics on a procedural film",
+  "min_class": "weak",
+  "values": {
+    "palette": "ink-bone",
+    "thickness": "0.55",
+    "index": "1.5",
+    "swirl": "0.3",
+    "curvature": "0.8",
+    "drainage": "0.2"
+  }
+}

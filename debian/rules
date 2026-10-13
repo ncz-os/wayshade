@@ -1,0 +1,39 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	dh_auto_configure -- \
+		-Dinstall-extras=false \
+		-Dgtk4-reference-app=true
+
+# Two binary packages: install everything into the engine package, then move the
+# reference front end (script and desktop entry) into its own package.
+override_dh_auto_install:
+	dh_auto_install --destdir=debian/ncz-screensavers
+	mkdir -p debian/ncz-screensavers-gtk4-reference/usr/bin \
+		debian/ncz-screensavers-gtk4-reference/usr/share/applications
+	mv debian/ncz-screensavers/usr/bin/ncz-screensaver-settings \
+		debian/ncz-screensavers-gtk4-reference/usr/bin/
+	mv debian/ncz-screensavers/usr/share/applications/dev.ncz.screensaver.desktop \
+		debian/ncz-screensavers-gtk4-reference/usr/share/applications/
+
+override_dh_auto_test:
+	# The screensavers need a live Wayland compositor and GPU; the build
+	# gate here is that the ship set links and installs.
+	python3 tools/generate-catalog.py meson.build $(CURDIR)/debian/hacks.check.tsv
+	diff -u assets/screensaver-chooser/hacks.tsv debian/hacks.check.tsv
+	diff -u assets/screensaver-chooser/presets.tsv debian/presets.tsv
+	rm -f debian/presets.tsv
+	rm -f debian/hacks.check.tsv
+	dh_auto_test
+
+override_dh_strip:
+	dh_strip --no-automatic-dbgsym
+
+override_dh_dwz:
+	# no debug packages are built; skip dwz so no /usr/lib/debug leaks in
+	@true

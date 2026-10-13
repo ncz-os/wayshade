@@ -1,0 +1,13 @@
+{
+  "title": "Inkwell",
+  "description": "Haight-Ashbury: a black ink tree branching over a white-hot dish, red droplets along the fingers, projector-mask dish, dendrites=ink.",
+  "accuracy": "artistic",
+  "min_class": "mid",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-fillmore-splat",
+    "kaleidoscope": "0",
+    "projector-mask": "dish",
+    "dendrites": "ink"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "title": "Lava live",
+  "description": "A classic warm lamp driven by what is playing: bass lifts the wax, onsets pulse the emitter, mids bloom the light. Play music to see it move.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "inside",
+    "world": "tank",
+    "palette": "era-60s-yellow-orange",
+    "material": "milky",
+    "cap": "on",
+    "dynamics": "0.6",
+    "audio": "system"
+  }
+}

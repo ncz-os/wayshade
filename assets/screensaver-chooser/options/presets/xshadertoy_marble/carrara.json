@@ -1,0 +1,13 @@
+{
+  "title": "Marble: Carrara",
+  "description": "White stone with grey veins and fine hairlines; a rare green inclusion; slow raking light.",
+  "accuracy": "procedural approximation",
+  "min_class": "weak",
+  "values": {
+    "palette": "native",
+    "veins": "0.5",
+    "hairlines": "0.6",
+    "intrusion": "0.06",
+    "polish": "0.6"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "title": "Wellcurve: Single Well",
+  "description": "One mass on a square grid.",
+  "accuracy": "analytic model",
+  "min_class": "weak",
+  "values": {
+    "masses": "1",
+    "grid": "square",
+    "palette": "obsidian-jade",
+    "tilt": "0.4",
+    "depth": "0.6"
+  }
+}

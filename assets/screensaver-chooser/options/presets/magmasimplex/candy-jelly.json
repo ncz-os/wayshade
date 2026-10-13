@@ -1,0 +1,10 @@
+{
+  "title": "Candy jelly",
+  "description": "The earlier glossy, clear jelly look of this saver, kept as a scene (opt-in: never drawn).",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "material": "jelly",
+    "view": "field"
+  }
+}

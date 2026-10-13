@@ -1,0 +1,14 @@
+{
+  "title": "Frosted Glass: Reeded Sand",
+  "description": "Fine reeded glass, warm sandstone, moderate frost.",
+  "accuracy": "analytic model",
+  "min_class": "weak",
+  "values": {
+    "style": "reeded",
+    "palette": "sandstone-rose",
+    "frost": "0.5",
+    "refraction": "0.5",
+    "sources": "3",
+    "dispersion": "0.3"
+  }
+}

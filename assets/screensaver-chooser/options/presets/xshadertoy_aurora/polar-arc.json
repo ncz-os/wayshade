@@ -1,0 +1,16 @@
+{
+  "title": "Aurora: Quiet arc",
+  "description": "A single long arc low over dark hills, barely moving, the way an aurora sits for an hour before it wakes.",
+  "accuracy": "procedural approximation",
+  "min_class": "weak",
+  "values": {
+    "palette": "oxygen-green",
+    "curtains": "1",
+    "activity": "0.1",
+    "folds": "0.2",
+    "height": "0.35",
+    "rays": "0.3",
+    "speed": "0.7",
+    "horizon": "true"
+  }
+}

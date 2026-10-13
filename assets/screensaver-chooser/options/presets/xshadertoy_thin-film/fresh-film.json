@@ -1,0 +1,12 @@
+{
+  "title": "Thin film: Fresh film",
+  "description": "Just drawn: thick film with many pale high orders, strong swirling, little black film yet.",
+  "accuracy": "analytic interference optics on a procedural film",
+  "min_class": "weak",
+  "values": {
+    "thickness": "1.8",
+    "drainage": "0.25",
+    "swirl": "0.8",
+    "curvature": "0.3"
+  }
+}

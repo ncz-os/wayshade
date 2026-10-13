@@ -1,0 +1,14 @@
+{
+  "title": "Aurora: Great red aurora",
+  "description": "A rare, high, red-dominated display (oxygen at 630 nm) over two curtains.",
+  "accuracy": "procedural approximation",
+  "min_class": "weak",
+  "values": {
+    "palette": "crimson-arc",
+    "curtains": "2",
+    "activity": "0.55",
+    "folds": "0.55",
+    "height": "0.8",
+    "rays": "0.6"
+  }
+}

@@ -1,0 +1,14 @@
+composition	enum	dramatic			dramatic,quiet,masses,drawing	Composition	dramatic: few workers with very different hands, long contour-following workers, a light ground and dark charcoal, and rare events: a mass lifted to a dull smear that takes marks badly for a long time, and droughts in which nothing is accepted. quiet: the first version, many similar workers (masses or drawing, chosen per run). masses and drawing: the quiet version with that layout.	Look	NCZ_EPHEMERIS_COMPOSITION
+preset	string					Scene	A named set of the options below (see --list-presets); options you set yourself still win.	Look	NCZ_EPHEMERIS_PRESET
+randomize	enum	auto			auto,off	Randomize	auto: in the dramatic composition every option you or the scene leave unset is drawn at launch (workers, paper tone, tide, event rates, tools, iron oxide, the apparent past), so no two runs share a hand. off: the defaults.	Look	NCZ_EPHEMERIS_RANDOMIZE
+tide	float	330	120	600		Tide period	Dramatic: seconds for one slow rise and fall of how much the workers are allowed to lay down.	Look	NCZ_EPHEMERIS_TIDE
+lift-every	float	300	0	1800		Lift every	Dramatic: average seconds between lifts (a mass of work smeared away); 0 = none. The first is never before two minutes.	Events	NCZ_EPHEMERIS_LIFT_EVERY
+drought-every	float	360	0	1800		Drought every	Dramatic: average seconds between droughts (stretches in which nothing is accepted); 0 = none.	Events	NCZ_EPHEMERIS_DROUGHT_EVERY
+tools	enum	mix			mix,points,sticks,washes	Tools	Dramatic: the hands' tools. mix: hard points, sticks, the side of the stick and washes; the others lean on one of them.	Look	NCZ_EPHEMERIS_TOOLS
+oxide	float	0.04	0	0.3		Iron oxide	Dramatic: share of the hands that work in iron oxide rather than charcoal.	Look	NCZ_EPHEMERIS_OXIDE
+past	float	0.35	0	0.6		Apparent past	Dramatic: how dark the marks already on the plate at the start may be (0 = a clean plate).	Look	NCZ_EPHEMERIS_PAST
+tone	float	0.5	0.25	0.85		Paper tone	Lightness of the limestone ground. Lower is easier on the eyes in a dark room. The dramatic composition uses 0.70 unless this is set.	Look	NCZ_EPHEMERIS_TONE
+workers	int	32	8	48		Workers	How many worker slots there are. The dramatic composition uses 10 unless this is set, and keeps it between 4 and 24.	Look	NCZ_EPHEMERIS_WORKERS
+pace	float	1	0.25	3		Pace	Multiplier on how fast workers move and how fast the surface forgets.	Look	NCZ_EPHEMERIS_PACE
+record	bool	true				Emit the run's table	On exit, write a plain numeric table describing the run that just ended to standard error (the session journal). It cannot be loaded back; the next run starts fresh either way.	System	NCZ_EPHEMERIS_RECORD
+seed	int	0	0	4.29497e+09		Random seed	Testing only: fixes the per-run randomness so a capture can be repeated. 0 = a new run every time.	System	NCZ_EPHEMERIS_SEED

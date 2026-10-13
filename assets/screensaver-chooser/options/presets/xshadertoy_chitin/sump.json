@@ -1,0 +1,13 @@
+{
+  "title": "Chitin: Sump",
+  "description": "Dark chevrons converging downward on a trench, in glossy verdigris with dense perforated panels.",
+  "accuracy": "procedural approximation",
+  "min_class": "mid",
+  "values": {
+    "form": "sump",
+    "palette": "verdigris-iron",
+    "sheen": "0.8",
+    "pores": "0.8",
+    "relief": "1.2"
+  }
+}

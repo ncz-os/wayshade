@@ -1,0 +1,12 @@
+{
+  "title": "Chitin: Comb",
+  "description": "Vertical spines with rows of teeth of different lengths growing between them.",
+  "accuracy": "procedural approximation",
+  "min_class": "mid",
+  "values": {
+    "form": "comb",
+    "palette": "slate-bone",
+    "sheen": "0.4",
+    "conduits": "0.8"
+  }
+}

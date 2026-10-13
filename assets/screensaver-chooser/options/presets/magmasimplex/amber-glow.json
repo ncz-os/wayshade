@@ -1,0 +1,12 @@
+{
+  "title": "Amber glow",
+  "description": "Suspended over the hot centre: pale blue and milky-white wax merging and stretching in a warm amber-to-rose glow.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "inside",
+    "world": "radial",
+    "palette": "code-13",
+    "material": "translucent"
+  }
+}

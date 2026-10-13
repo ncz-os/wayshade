@@ -1,0 +1,79 @@
+Source: ncz-screensavers
+Section: x11
+Priority: optional
+Maintainer: Jason Perlow <jperlow@gmail.com>
+Build-Depends:
+ debhelper-compat (= 13),
+ libegl-dev,
+ libgles-dev,
+ libglib2.0-bin,
+ libglib2.0-dev,
+ libpng-dev,
+ libwayland-bin,
+ libwayland-dev,
+ meson (>= 1.0),
+ ninja-build,
+ pkgconf,
+ python3,
+ wayland-protocols,
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://gitlab.com/ncz-os/wayshade
+Vcs-Browser: https://gitlab.com/ncz-os/wayshade
+Vcs-Git: https://gitlab.com/ncz-os/wayshade.git
+
+Package: ncz-screensavers
+Architecture: amd64 arm64
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+ libglib2.0-0t64 | libglib2.0-0,
+ python3,
+ libwayland-client0,
+Recommends:
+ grim,
+Suggests:
+ ncz-screensavers-plugin,
+Description: native Wayland GLES3 screensavers for NCZ-OS
+ A set of 74 OpenGL ES 3 screensavers that run directly on Wayland through
+ wlr-layer-shell and EGL, with no X11 or Xwayland dependency: the Black Hole
+ simulation (with stylized, kipthorne and faithful color modes), hyprsaver and
+ Shadertoy-style shader hacks, the original Fractasia and Magmasimplex
+ (molten-wax lava lamp) savers, and eleven ported classic hacks.
+ .
+ The hack binaries are installed in /usr/lib/ncz-screensavers, their shaders
+ in /usr/share/ncz-screensavers/shaders, the chooser catalog in
+ /usr/share/ncz-screensaver-chooser/hacks.tsv and the dev.ncz.screensaver
+ GSettings schema in /usr/share/glib-2.0/schemas.
+ .
+ The project is licensed under Apache-2.0 (see /usr/share/doc/ncz-screensavers/
+ LICENSE and NOTICE): the grant covers the NCZ-authored harness, launcher,
+ plugin, tools and in-house engines only. Each screensaver is a separate
+ program, and the vendored and ported hacks keep their own licences and
+ notices (MIT, CC0-1.0, CC-BY-3.0 and the xscreensaver permission notice); see
+ /usr/share/doc/ncz-screensavers/copyright, NOTICES.md and PROVENANCE.tsv.
+ .
+ The settings UI on NCZ-OS is the Singularity plugin (ncz-screensavers-plugin,
+ installed by the NCZ-OS image).
+ Other distributions can drive the engine through the ncz-screensaver command
+ line; ncz-screensavers-gtk4-reference is a GTK4 reference front end.
+ Version 0.7.0 moved the old standalone settings application out of this
+ package.
+
+Package: ncz-screensavers-gtk4-reference
+Architecture: all
+Depends:
+ ${misc:Depends},
+ ncz-screensavers (>= ${source:Version}),
+ python3,
+ python3-gi,
+ gir1.2-gtk-4.0,
+ gir1.2-adw-1,
+Replaces: ncz-screensavers (<< 0.7.0)
+Breaks: ncz-screensavers (<< 0.7.0)
+Description: reference GTK4 front end for the ncz-screensavers engine
+ A reference application for distributions and desktops that want to implement
+ the ncz-screensavers engine on Wayland. It is a GTK4 and libadwaita settings
+ window that uses only the public ncz-screensaver command line and the
+ dev.ncz.screensaver GSettings schema; see docs/CLI-CONTRACT.md in the source.
+ It is released together with the engine and is not part of the NCZ-OS image.

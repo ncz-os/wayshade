@@ -1,0 +1,13 @@
+{
+  "title": "Hex lattice: Cold steel",
+  "description": "A teal strut lattice with slow strain waves traveling through it and a few junctions glowing where the emphasis drifts.",
+  "accuracy": "kinematic elasticity (prescribed displacement)",
+  "min_class": "weak",
+  "values": {
+    "palette": "native",
+    "density": "6",
+    "strain": "0.5",
+    "wave-speed": "0.9",
+    "junctions": "0.24"
+  }
+}

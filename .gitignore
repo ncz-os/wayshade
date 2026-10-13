@@ -1,0 +1,7 @@
+build/
+.ported-state.json
+__pycache__/
+*.pyc
+# Local staging of build artifacts.
+arm64-plugin-2026-09-30/
+artifacts/

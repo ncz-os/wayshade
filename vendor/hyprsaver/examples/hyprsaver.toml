@@ -1,0 +1,256 @@
+# hyprsaver -- example configuration
+# Location: ~/.config/hypr/hyprsaver.toml
+#
+# Every key shown here is optional. If a key is omitted, the built-in default
+# (shown as the value below) is used. A completely empty config file -- or no
+# file at all -- is perfectly valid.
+
+# ---------------------------------------------------------------------------
+# [general] -- Core rendering behaviour
+# ---------------------------------------------------------------------------
+[general]
+
+# Target render frame rate. Lower values save GPU power.
+# Fractals at 30 fps are indistinguishable from 60 fps for most viewers.
+fps = 30
+
+# Which shader to display. Options:
+#   - A shader name from the built-in library (see --list-shaders)
+#   - A filename stem from ~/.config/hypr/hyprsaver/shaders/ (without .frag)
+#   - "random"  -- pick a random shader each time hyprsaver starts
+#   - "cycle"   -- rotate through shaders on shader_cycle_interval (default)
+shader = "cycle"
+
+# Which palette to apply. Options:
+#   - A palette name from the built-in library (see --list-palettes)
+#   - A name defined in [palettes] below
+#   - "random"  -- random built-in palette on start
+#   - "cycle"   -- step through palettes on palette_cycle_interval (default)
+palette = "cycle"
+
+# When shader = "cycle", how many seconds to display each shader before advancing.
+shader_cycle_interval = 300   # 5 minutes
+
+# When palette = "cycle", how many seconds to display each palette before advancing.
+palette_cycle_interval = 60   # 1 minute
+
+# Cycle selection order: "random" (default) shuffles; "sequential" goes in order.
+cycle_order = "random"
+
+# Whether all monitors cycle in sync (default: true).
+# When true, all monitors display the same shader and palette at all times.
+# When false, each monitor cycles independently with a different RNG seed.
+synced = true
+
+# Named playlist for shader cycling. Default: "default" (cycles all shaders).
+# Set to a playlist name defined in [playlists.<name>] below.
+shader_playlist = "default"
+
+# Named playlist for palette cycling. Default: "default" (cycles all palettes).
+# Set to a playlist name defined in [playlists.<name>] below.
+palette_playlist = "default"
+
+# Cross-fade duration when switching palettes, in seconds. 0.0 = instant snap.
+palette_transition_duration = 0.0
+
+# ---------------------------------------------------------------------------
+# [behavior] -- Input and transition settings
+# ---------------------------------------------------------------------------
+[behavior]
+
+# Fade-in duration in milliseconds. The overlay fades from transparent to full
+# opacity over this time when the screensaver activates. Set to 0 to disable.
+fade_in_ms = 800
+
+# Fade-out duration in milliseconds when dismissed (before the surface is destroyed).
+# Set to 0 to dismiss instantly. During fade-out, the render loop stays alive and
+# the alpha ramps from the current value to 0.0.
+fade_out_ms = 400
+
+# Which input events dismiss the screensaver and exit.
+# Valid values: "key", "mouse_move", "mouse_click", "touch"
+# Remove any entry to ignore that input type (e.g. remove "mouse_move" if you
+# have a pet that walks on the desk).
+dismiss_on = ["key", "mouse_move", "mouse_click", "touch"]
+
+# ---------------------------------------------------------------------------
+# [playlists] -- Named subsets for cycle mode (v0.4.0+)
+# ---------------------------------------------------------------------------
+# Playlists group shaders and palettes together. When shader = "cycle" and
+# shader_playlist = "<name>", only the shaders in that playlist are cycled.
+# Same for palettes.
+#
+# The special value "all" means all available shaders or palettes.
+# If no "default" playlist is defined, it implicitly expands to ["all"].
+
+# [playlists.default]
+# shaders = ["all"]
+# palettes = ["all"]
+
+# [playlists.chill]
+# shaders = ["plasma", "marble", "bezier", "lissajous", "planet"]
+# palettes = ["vaporwave", "frost", "ocean", "aurora"]
+
+# [playlists.intense]
+# shaders = ["shipburn", "julia", "tesla", "kaleidoscope", "flames"]
+# palettes = ["rainbow", "ember", "groovy"]
+
+# ---------------------------------------------------------------------------
+# Custom palette definitions
+# ---------------------------------------------------------------------------
+# You can define your own cosine gradient palettes here. They become available
+# alongside the built-ins for use in the palette = "..." setting above.
+#
+# The cosine gradient formula is:
+#   color(t) = a + b * cos(2pi * (c * t + d))
+#
+# where a, b, c, d are [r, g, b] vectors and t in [0, 1].
+# See https://iquilezles.org/articles/palettes/ for full mathematical background.
+#
+# Intuition:
+#   a -- average brightness per channel (the midpoint of the oscillation)
+#   b -- amplitude of colour oscillation (higher = more contrast)
+#   c -- frequency per channel (1.0 = one full cycle, 2.0 = two cycles, etc.)
+#   d -- phase offset per channel (rotates the hue of each channel independently)
+
+# Example: "neon" -- hot pinks and electric greens, high contrast cyberpunk.
+# [palettes.neon]
+# a = [0.5, 0.5, 0.5]
+# b = [0.5, 0.5, 0.5]
+# c = [1.0, 1.0, 1.0]
+# d = [0.90, 0.20, 0.55]
+
+# Example: "aurora" -- greens through whites to violets, Northern Lights feel.
+# [palettes.aurora]
+# a = [0.4, 0.6, 0.5]
+# b = [0.4, 0.4, 0.5]
+# c = [0.8, 1.0, 1.2]
+# d = [0.00, 0.25, 0.50]
+
+# Example: "sunset" -- warm gradient from deep indigo through magenta to amber.
+# [palettes.sunset]
+# a = [0.5, 0.3, 0.4]
+# b = [0.5, 0.3, 0.3]
+# c = [0.8, 0.6, 1.0]
+# d = [0.70, 0.30, 0.10]
+
+# ---------------------------------------------------------------------------
+# Legacy shader/palette playlists (v0.3.0 format, still supported)
+# ---------------------------------------------------------------------------
+# These separate playlist sections are superseded by [playlists] in v0.4.0
+# but continue to work for backward compatibility.
+#
+# [shader_playlists.my_favorites]
+# shaders = ["shipburn", "julia", "plasma"]
+#
+# [palette_playlists.warm_tones]
+# palettes = ["ember", "autumn", "groovy"]
+
+# ---------------------------------------------------------------------------
+# Per-monitor shader / palette / playlist assignment
+# ---------------------------------------------------------------------------
+# Assign different shaders, palettes, and playlists to specific monitors.
+# Each [[monitor]] entry matches a Wayland output by name (run `hyprctl monitors`
+# to see names). Monitors without an entry use the global settings from [general].
+#
+# All fields are optional per entry -- omit any to inherit the global setting.
+#
+# [[monitor]]
+# name = "DP-1"
+# shader = "cycle"
+# palette = "cycle"
+# shader_playlist = "chill"       # overrides global shader_playlist for this monitor
+# palette_playlist = "default"    # overrides global palette_playlist for this monitor
+#
+# [[monitor]]
+# name = "HDMI-A-1"
+# shader = "snowfall"
+# palette = "vaporwave"
+
+# ---------------------------------------------------------------------------
+# Default named playlists
+# ---------------------------------------------------------------------------
+# These playlists are active by default. You can add your own [playlists.<name>]
+# sections, remove entries, or swap in shaders from --list-shaders.
+
+[playlists.elements]
+shaders = [
+    "plasma",
+    "flames",
+    "snowfall",
+    "tesla",
+]
+
+[playlists.math]
+shaders = [
+    "hypercube",
+    "lissajous",
+    "bezier",
+    "donut",
+    "geometry",
+    "julia",
+]
+
+[playlists.nature]
+shaders = [
+    "aurora",
+    "clouds",
+    "planet",
+    "snowfall",
+    "starfield",
+]
+
+[playlists.psychedelic]
+shaders = [
+    "fractaltrap",
+    "lissajous",
+    "plasma",
+    "hypercube",
+    "julia",
+    "kaleidoscope",
+]
+
+[playlists.tech]
+shaders = [
+    "matrix",
+    "circuit",
+    "sonar",
+    "oscilloscope",
+    "terminal",
+]
+
+[playlists.pride]
+palettes = [
+    "achilles",
+    "sappho",
+    "marsha",
+    "claude",
+    "mercury",
+    "frida",
+    "emily",
+]
+
+# ---------------------------------------------------------------------------
+# [render_preview] -- Settings for `hyprsaver render-preview`
+# ---------------------------------------------------------------------------
+# The render-preview subcommand generates animated WebP gallery images for
+# each built-in shader. By default it picks a palette for each shader via a
+# stable hash of the shader name, which is reproducible but may not always
+# match the shader's aesthetic.
+#
+# Use [render_preview.palettes] to specify intentional shader→palette pairings.
+# Any shader not listed here falls back to the hash-based default, so partial
+# overrides are valid — you only need to list the shaders you care about.
+#
+# Leave this section out entirely (or keep it empty) to use hash-based
+# selection for all shaders (the default behaviour).
+#
+# Invalid entries (unknown shader or palette name) cause `render-preview` to
+# fail at startup with a clear error message naming the offending entry.
+# Run `hyprsaver --list-shaders` and `hyprsaver --list-palettes` for valid names.
+#
+# [render_preview.palettes]
+# blob      = "marsha"
+# fireflies = "achilles"
+# mobius    = "cahun"
+# aurora    = "sappho"

@@ -1,0 +1,14 @@
+{
+  "title": "Physarum: Ink in water",
+  "description": "Bone-white filaments that stretch and fold strongly, with the fine layers sliding over the broad ones; the structure changes faster over minutes.",
+  "accuracy": "procedural approximation",
+  "min_class": "weak",
+  "values": {
+    "palette": "ink-bone",
+    "density": "0.4",
+    "fold": "0.92",
+    "flow": "0.55",
+    "depth-drift": "0.65",
+    "evolution": "1.6"
+  }
+}

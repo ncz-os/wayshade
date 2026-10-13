@@ -1,0 +1,33 @@
+preset	string					Preset	Named bundle of options (see --list-presets): applied above the saved config file and below environment and command line. Empty = none.	Look	NCZ_MEGACITY_PRESET
+mode	enum	night			night,pale-reach	Light	night: dark, rain-soaked, neon. pale-reach: bright, high-key, pale haze, the opposite lighting. With a cycle this is the state the run begins in. (legacy aliases oscura, luminox, dark, bright, day also accepted.)	Look	NCZ_MEGACITY_MODE
+cycle	enum	off			off,dawn,dusk,day	Day cycle	off: hold the mode. dawn: begin in night and let the sun rise into pale-reach, then stay. dusk: begin in pale-reach and let the sun set into night, then stay. day: hold, rise, hold, set, and repeat. The light is one continuous sun elevation, never a cut.	Look	NCZ_MEGACITY_CYCLE
+transition	float	180	120	1800		Sunrise / sunset length (s)	Seconds a sunrise or sunset takes. Never less than 120: the light changes slowly enough that nothing reads as a flash.	Look	NCZ_MEGACITY_TRANSITION
+night-hold	float	120	0	3600		Night hold (s)	Seconds held in night before a sunrise (cycle dawn and day).	Look	NCZ_MEGACITY_NIGHT_HOLD
+day-hold	float	120	0	3600		Day hold (s)	Seconds held in pale-reach before a sunset (cycle dusk and day).	Look	NCZ_MEGACITY_DAY_HOLD
+palette	enum	neon			neon,violet,refinery,mono	Neon palette	neon: magenta, violet, ice blue and a little acid green. violet: cool purples and blues with pink accents. refinery: sodium orange with teal haze and flare tips (opt in: orange and teal only ever appear together here). mono: white and blue-white light only.	Look	NCZ_MEGACITY_PALETTE
+exposure	float	1	0.5	1.6		Exposure	Overall brightness multiplier applied before tone mapping.	Look	NCZ_MEGACITY_EXPOSURE
+haze	float	1	0	2		Haze	Multiplier on the aerial haze that separates the far towers. 0 is crisp, 2 is heavy.	Look	NCZ_MEGACITY_HAZE
+wet	float	1	0	1		Wet streets	How strongly wet streets and glass reflect the neon when it has rained. 0 turns the reflections off.	Look	NCZ_MEGACITY_WET
+height	float	1	0.6	1.8		Building height	Multiplier on the height of every building, mega-structures included.	Look	NCZ_MEGACITY_HEIGHT
+mega	float	1	0	2		Mega-structures	How many blocks are mega-structures (arcology slabs, terraced masses, spire clusters with sky bridges). 0 is an ordinary skyscraper city.	Look	NCZ_MEGACITY_MEGA
+weather	enum	auto			auto,clear,rain,storm,snow,sleet,fog,smog,dust,ash	Weather	auto: seeded regimes of 3 to 8 minutes drawn from the weather set, each blended into the next along a quintic curve. Any other value holds that weather.	Weather	NCZ_MEGACITY_WEATHER
+weather-set	string	clear,rain,storm,snow,sleet,fog,smog,dust,ash			clear,rain,storm,snow,sleet,fog,smog,dust,ash	Weather set	Comma separated weather types the automatic regimes may use.	Weather	NCZ_MEGACITY_WEATHER_SET
+weather-intensity	float	1	0	1.5		Weather intensity	Multiplier on precipitation and fog density.	Weather	NCZ_MEGACITY_WEATHER_INTENSITY
+regime-min	float	180	60	1200		Shortest regime (s)	Shortest automatic weather regime, seconds.	Weather	NCZ_MEGACITY_REGIME_MIN
+regime-max	float	480	60	1800		Longest regime (s)	Longest automatic weather regime, seconds.	Weather	NCZ_MEGACITY_REGIME_MAX
+lightning	bool	true				Lightning	Lightning in storm weather. At most 3 flashes per second, each with a soft 100 to 300 ms rise. Turn off to have storms without any flash.	Weather	NCZ_MEGACITY_LIGHTNING
+lightning-intensity	float	0.05	0	0.2		Lightning strength	Peak luminance delta of a flash as a fraction of full scale. 0.05 by default, never more than 0.2.	Weather	NCZ_MEGACITY_LIGHTNING_INTENSITY
+ships	bool	true				Ships	Freighters and the occasional colossal capital ship crossing the sky.	Ships	NCZ_MEGACITY_SHIPS
+ship-density	float	1	0	2		Freighter density	How many mid-size freighters are in the sky at once (1 at 0.34, 3 at 1, all 4 above 1.34).	Ships	NCZ_MEGACITY_SHIP_DENSITY
+capital-rate	float	0.35	0	1		Capital ships	Chance that a colossal capital ship crosses in each 7-minute slot. 0 for none.	Ships	NCZ_MEGACITY_CAPITAL_RATE
+traffic	float	1	0	2		Lane traffic	Density of the small craft on the boulevard lanes, the scale cue. 0 removes them.	Ships	NCZ_MEGACITY_TRAFFIC
+ship-style	enum	paperback			paperback,clean	Ship rendering	paperback: 1970s-80s paperback cover art, airbrushed gouache with bold color blocks and fixed grain. clean: plain smooth shading.	Ships	NCZ_MEGACITY_SHIP_STYLE
+ship-saturation	float	1	0	1.5		Hull saturation	Saturation of the hull color blocks.	Ships	NCZ_MEGACITY_SHIP_SATURATION
+speed	float	1	0.2	3		Flight speed	Time scale of the whole scene: camera, weather, ships and the day cycle.	Camera	NCZ_MEGACITY_SPEED
+altitude	float	1	0.5	2		Altitude	Multiplier on the camera height (about 100 to 320 metres).	Camera	NCZ_MEGACITY_ALTITUDE
+sway	float	1	0	2		Sway	Multiplier on the sideways drift of the camera along the boulevard.	Camera	NCZ_MEGACITY_SWAY
+frame-x	float	0	-1	1		Frame shift X	Shifts the composition sideways with a lens shift (verticals stay vertical). Positive moves the scene right.	Camera	NCZ_MEGACITY_FRAME_X
+frame-y	float	0	-1	1		Frame shift Y	Shifts the composition vertically with a lens shift. Positive moves the horizon up the screen, showing more street; negative shows more sky.	Camera	NCZ_MEGACITY_FRAME_Y
+seed	int	0	0	4.29497e+09		Random seed	Fixes the city, weather, ships and camera so a run can be repeated. 0 = a new city every launch.	System	NCZ_MEGACITY_SEED
+time-offset	float	0	0	864000		Start time (s)	Testing: begin this many scene seconds into the run (everything is a function of time, so this lands exactly there).	System	NCZ_MEGACITY_TIME_OFFSET
+flash-hold	bool	false				Hold flash at peak	Testing only: hold a lightning flash at its peak amplitude to measure the luminance delta.	System	NCZ_MEGACITY_FLASH_HOLD

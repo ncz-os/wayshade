@@ -1,0 +1,16 @@
+preset	string					Preset	Named scene (see --list-presets): applied above the saved config file and below environment and command line. Empty = none.	Look	NCZ_XSHADERTOY_FROSTED_GLASS_PRESET
+palette	enum	auto			auto,native,navy-cream,ink-bone,midnight-amber,deep-teal-pearl,aubergine-rose,forest-moss,slate-ice,charcoal-copper,obsidian-jade,indigo-saffron,graphite-coral,night-aurora,polar-violet,sea-glass,ember-night,plum-gold,prussian-silver,oxblood-linen,ultramarine-cream,moss-lilac,abyss-cyan,lagoon-sand,oxygen-green,crimson-arc,polar-teal,bone-charcoal,gunmetal,verdigris-iron,slate-bone,steel-green,charcoal-verdigris,travertine,carrara,warm-limestone,sandstone-rose,plaster-sage,linen-ochre,pearl-grey,celadon,blush-clay,oat-indigo,slate-paper,honey-marble,camel-silk,fog-lavender,rosso-levanto,verde-alpi,calacatta-gold,nero-marquina,amethyst-quartz,malachite,lapis,sienna-onyx,grey-bardiglio	Palette	Color roles (background, body, accent, accent2). auto: drawn from this saver's family with the run seed. native: the saver's own colors. Any name from the shared role table.	Look	NCZ_XSHADERTOY_FROSTED_GLASS_PALETTE
+palette-cycle	float	0	0	60		Palette cycle (min)	Minutes between slow cross-fades to another palette of the same family (interpolated in Oklab: lightness moves steadily from one palette to the other, never through grey). 0 = keep one palette.	Look	NCZ_XSHADERTOY_FROSTED_GLASS_PALETTE_CYCLE
+speed	float	1	0.25	3		Speed	Time scale of every motion.	Motion	NCZ_XSHADERTOY_FROSTED_GLASS_SPEED
+evolution	float	1	0	3		Evolution	Pace of the slow director: seeded keyframes about every minute that change structure over minutes. 0 holds the opening structure.	Motion	NCZ_XSHADERTOY_FROSTED_GLASS_EVOLUTION
+style	enum	fluted			fluted,reeded,hammered	Glass	Fluted (broad cylindrical ribs), reeded (fine ribs) or hammered (dimpled).	Glass	NCZ_XSHADERTOY_FROSTED_GLASS_STYLE
+rib	float	0.5	0	1		Rib size	Width of a flute or dimple.	Glass	NCZ_XSHADERTOY_FROSTED_GLASS_RIB
+frost	float	0.5	0	1		Frost	How much the glass scatters: low keeps the lights nearly sharp, high melts them.	Glass	NCZ_XSHADERTOY_FROSTED_GLASS_FROST
+refraction	float	0.5	0	1		Refraction	How far the ribs displace the light behind them.	Glass	NCZ_XSHADERTOY_FROSTED_GLASS_REFRACTION
+sources	int	4	2	4		Lights	Number of light sources behind the glass.	Light	NCZ_XSHADERTOY_FROSTED_GLASS_SOURCES
+motion	float	0.5	0	1		Light drift	How far the lights wander.	Light	NCZ_XSHADERTOY_FROSTED_GLASS_MOTION
+dispersion	float	0.4	0	1		Dispersion	Color fringes at the rib edges.	Look	NCZ_XSHADERTOY_FROSTED_GLASS_DISPERSION
+brightness	float	1	0.5	1.5		Brightness	Overall level of the light.	Look	NCZ_XSHADERTOY_FROSTED_GLASS_BRIGHTNESS
+randomize	bool	true				Randomize	Draw every option you have not set (and the palette) from the run seed, inside ranges chosen to stay coherent. Off: defaults.	System	NCZ_XSHADERTOY_FROSTED_GLASS_RANDOMIZE
+quality	enum	auto			auto,low,medium,high	Quality	Detail tier. auto follows the GPU class of this machine (NCZ_SHADER_QUALITY still overrides it).	System	NCZ_XSHADERTOY_FROSTED_GLASS_QUALITY
+seed	int	0	0	999999		Random seed	Fixes the run's randomness so it can be replayed exactly (same options). 0 = a new seed (1 to 999999) every run; the seed in use is logged.	System	NCZ_XSHADERTOY_FROSTED_GLASS_SEED

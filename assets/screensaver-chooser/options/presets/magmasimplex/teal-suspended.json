@@ -1,0 +1,12 @@
+{
+  "title": "Violet in teal, suspended",
+  "description": "In the liquid: big soft lavender and peach wax over a saturated blue-to-cyan glow rising from below.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "inside",
+    "world": "tank",
+    "palette": "footage-violet-in-teal",
+    "material": "translucent"
+  }
+}

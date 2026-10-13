@@ -1,0 +1,7 @@
+*.substvars
+*.debhelper
+*.debhelper.log
+debhelper-build-stamp
+files
+ncz-screensavers/
+.debhelper/

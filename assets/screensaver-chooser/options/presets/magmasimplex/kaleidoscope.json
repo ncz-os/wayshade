@@ -1,0 +1,12 @@
+{
+  "title": "Kaleidoscope",
+  "description": "Swinging London: deep blue, yellow and magenta dye in a six-fold mirror.",
+  "accuracy": "artistic",
+  "min_class": "mid",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-kaleido",
+    "kaleidoscope": "6",
+    "projector-mask": "off"
+  }
+}

@@ -1,0 +1,20 @@
+# Per-hack render scale hints for Mali-G720 (Sky1). Columns (tab separated): id, scale, measured fps at that scale, note.
+# Measured on MS-R1 (mali_kbase, ViewSonic VP2488-4K 3840x2160 at output scale 1.75, so hacks get a 2194x1234 surface), package 0.5.3 plus NCZ_TEST_SURFACE_SIZE knob.
+# Operating point: the Mali default cap (1080 lines, render 1919x1080 at scale 1). A hint is the smallest reduction from the ladder 1, 0.75, 0.5, 0.35 that reaches 45 fps.
+# On a 1080p panel the same scale applies to a 1080 surface (slightly smaller render than measured here; hints stay valid).
+# Hacks not listed run at scale 1 (they reach 45 fps with the cap). A hint seeds NCZ_RENDER_SCALE; the adaptive mode may still step lower.
+hyprsaver_lissajous_gles3	0.75	47	reaches 45 fps (scale 1 capped: 35 fps)
+xshadertoy_alienbeacon_gles3	0.35	26	best available, still below 45 fps (scale 1 capped: 5 fps)
+xshadertoy_batteredplanet_gles3	0.75	52	reaches 45 fps (scale 1 capped: 40 fps)
+xshadertoy_bestill0-0_gles3	0.5	60	reaches 45 fps (scale 1 capped: 22 fps)
+xshadertoy_bestill1-0_gles3	0.35	60	reaches 45 fps (scale 1 capped: 14 fps)
+xshadertoy_bestill2-0_gles3	0.35	60	reaches 45 fps (scale 1 capped: 12 fps)
+xshadertoy_bestill3-0_gles3	0.5	60	reaches 45 fps (scale 1 capped: 22 fps)
+xshadertoy_bestill4-0_gles3	0.35	60	reaches 45 fps (scale 1 capped: 12 fps)
+xshadertoy_downfall_gles3	0.35	60	reaches 45 fps (scale 1 capped: 14 fps)
+xshadertoy_fluxcore_gles3	0.5	50	reaches 45 fps (scale 1 capped: 23 fps)
+xshadertoy_noxfire_gles3	0.5	51	reaches 45 fps (scale 1 capped: 18 fps)
+xshadertoy_polarnight_gles3	0.35	60	reaches 45 fps (scale 1 capped: 14 fps)
+xshadertoy_rigrekt_gles3	0.5	60	reaches 45 fps (scale 1 capped: 30 fps)
+xshadertoy_skyline_gles3	0.5	45	reaches 45 fps (scale 1 capped: 17 fps)
+xshadertoy_topologica_gles3	0.75	50	reaches 45 fps (scale 1 capped: 37 fps)

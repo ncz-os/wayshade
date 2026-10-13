@@ -1,0 +1,14 @@
+{
+  "title": "Wellcurve: Polar Funnel",
+  "description": "A deep, narrow funnel drawn with rings and spokes.",
+  "accuracy": "analytic model",
+  "min_class": "weak",
+  "values": {
+    "masses": "1",
+    "grid": "polar",
+    "palette": "midnight-amber",
+    "depth": "0.85",
+    "width": "0.25",
+    "tilt": "0.6"
+  }
+}

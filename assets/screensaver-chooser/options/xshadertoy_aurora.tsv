@@ -1,0 +1,15 @@
+preset	string					Preset	Named scene (see --list-presets): applied above the saved config file and below environment and command line. Empty = none.	Look	NCZ_XSHADERTOY_AURORA_PRESET
+palette	enum	auto			auto,native,navy-cream,ink-bone,midnight-amber,deep-teal-pearl,aubergine-rose,forest-moss,slate-ice,charcoal-copper,obsidian-jade,indigo-saffron,graphite-coral,night-aurora,polar-violet,sea-glass,ember-night,plum-gold,prussian-silver,oxblood-linen,ultramarine-cream,moss-lilac,abyss-cyan,lagoon-sand,oxygen-green,crimson-arc,polar-teal,bone-charcoal,gunmetal,verdigris-iron,slate-bone,steel-green,charcoal-verdigris,travertine,carrara,warm-limestone,sandstone-rose,plaster-sage,linen-ochre,pearl-grey,celadon,blush-clay,oat-indigo,slate-paper,honey-marble,camel-silk,fog-lavender,rosso-levanto,verde-alpi,calacatta-gold,nero-marquina,amethyst-quartz,malachite,lapis,sienna-onyx,grey-bardiglio	Palette	Color roles (background, body, accent, accent2). auto: drawn from this saver's family with the run seed. native: the saver's own colors. Any name from the shared role table.	Look	NCZ_XSHADERTOY_AURORA_PALETTE
+palette-cycle	float	0	0	60		Palette cycle (min)	Minutes between slow cross-fades to another palette of the same family (interpolated in Oklab: lightness moves steadily from one palette to the other, never through grey). 0 = keep one palette.	Look	NCZ_XSHADERTOY_AURORA_PALETTE_CYCLE
+speed	float	1	0.25	3		Speed	Time scale of every motion.	Motion	NCZ_XSHADERTOY_AURORA_SPEED
+evolution	float	1	0	3		Evolution	Pace of the slow director: seeded keyframes about every minute that change structure over minutes. 0 holds the opening structure.	Motion	NCZ_XSHADERTOY_AURORA_EVOLUTION
+curtains	int	3	1	3		Curtains	Number of curtain sheets (quality 0 draws at most two).	Simulation	NCZ_XSHADERTOY_AURORA_CURTAINS
+activity	float	0.5	0	1		Activity	Strength of the folding flow and how fast the curtains ripple. Low is a quiet arc; high is a substorm.	Simulation	NCZ_XSHADERTOY_AURORA_ACTIVITY
+folds	float	0.5	0	1		Folds	Amplitude of the large bends in each curtain's lower edge.	Simulation	NCZ_XSHADERTOY_AURORA_FOLDS
+height	float	0.5	0	1		Curtain height	How far the light reaches up from the lower edge.	Look	NCZ_XSHADERTOY_AURORA_HEIGHT
+rays	float	0.6	0	1		Rays	Strength of the fine vertical striations.	Look	NCZ_XSHADERTOY_AURORA_RAYS
+brightness	float	1	0.4	1.6		Brightness	Overall emission.	Look	NCZ_XSHADERTOY_AURORA_BRIGHTNESS
+horizon	bool	true				Horizon	A dark line of hills along the bottom of the frame.	Look	NCZ_XSHADERTOY_AURORA_HORIZON
+randomize	bool	true				Randomize	Draw every option you have not set (and the palette) from the run seed, inside ranges chosen to stay coherent. Off: defaults.	System	NCZ_XSHADERTOY_AURORA_RANDOMIZE
+quality	enum	auto			auto,low,medium,high	Quality	Detail tier. auto follows the GPU class of this machine (NCZ_SHADER_QUALITY still overrides it).	System	NCZ_XSHADERTOY_AURORA_QUALITY
+seed	int	0	0	999999		Random seed	Fixes the run's randomness so it can be replayed exactly (same options). 0 = a new seed (1 to 999999) every run; the seed in use is logged.	System	NCZ_XSHADERTOY_AURORA_SEED

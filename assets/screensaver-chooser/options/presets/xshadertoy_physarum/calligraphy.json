@@ -1,0 +1,15 @@
+{
+  "title": "Physarum: Calligraphy",
+  "description": "Cream brush strokes on deep navy with fine striation inside each stroke; slow folding, lots of open space.",
+  "accuracy": "procedural approximation",
+  "min_class": "weak",
+  "values": {
+    "palette": "navy-cream",
+    "density": "0.42",
+    "fold": "0.55",
+    "scale": "1.1",
+    "striation": "0.7",
+    "flow": "0.8",
+    "depth-drift": "0.3"
+  }
+}

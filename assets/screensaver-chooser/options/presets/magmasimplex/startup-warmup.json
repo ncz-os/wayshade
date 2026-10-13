@@ -1,0 +1,12 @@
+{
+  "title": "Warm-up",
+  "description": "A lamp just switched on: a cold slab that slowly softens, the first column rising, then the cap forming.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "startup": "true",
+    "view": "field",
+    "world": "tank",
+    "palette": "footage-blue-in-clear"
+  }
+}

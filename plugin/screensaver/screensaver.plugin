@@ -1,0 +1,8 @@
+[Plugin]
+Module=screensaver
+Name=Screensaver and Lockscreen
+Description=Choose the screensaver, idle timers, screen lock and display power-off
+Authors=Jason Perlow
+Copyright=Copyright (c) 2026 Jason Perlow
+Website=https://sinty.dev
+Builtin=false

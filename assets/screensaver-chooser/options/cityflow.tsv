@@ -1,0 +1,10 @@
+style	enum	auto			auto,classic,enhanced	Style	classic: faithful port of the xscreensaver original. enhanced: same hack with anti-aliasing, soft lighting, glow and smooth palettes. auto: enhanced on GPUs that can afford it, classic otherwise.	Look	NCZ_CITYFLOW_STYLE
+speed	float	1	0.1	4		Animation speed	Time scale of the animation. 1 matches the original xscreensaver pace.	Motion	NCZ_CITYFLOW_SPEED
+seed	int	0	0	1e+09		Random seed	Seed for the random choices (0 = new every launch). The same seed repeats the same run.	Motion	NCZ_CITYFLOW_SEED
+count	int	800	50	1600		Towers	Number of towers (xscreensaver -count).	Density	NCZ_CITYFLOW_COUNT
+waves	int	6	1	16		Waves	Number of interference wave sources (xscreensaver -waves).	Motion	NCZ_CITYFLOW_WAVES
+wave-speed	int	25	1	200		Wave speed	Speed of the wave sources (xscreensaver -wave-speed).	Motion	NCZ_CITYFLOW_WAVE_SPEED
+wave-radius	int	256	32	512		Wave radius	Reach of each wave source (xscreensaver -wave-radius).	Motion	NCZ_CITYFLOW_WAVE_RADIUS
+skew	int	12	0	90		Skew	Maximum random rotation of each tower in degrees (xscreensaver -skew).	Look	NCZ_CITYFLOW_SKEW
+bloom	float	1	0	3		Glow	Strength of the soft glow around bright areas (enhanced style only). 0 turns the glow pass off.	Look	NCZ_CITYFLOW_BLOOM
+antialias	bool	true				Anti-aliasing	Smooth edges (enhanced style only).	Look	NCZ_CITYFLOW_ANTIALIAS

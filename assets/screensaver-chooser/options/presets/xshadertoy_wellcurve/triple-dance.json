@@ -1,0 +1,14 @@
+{
+  "title": "Wellcurve: Triple Dance",
+  "description": "Three masses on fast, wide orbits.",
+  "accuracy": "analytic model",
+  "min_class": "weak",
+  "values": {
+    "masses": "3",
+    "grid": "square",
+    "palette": "indigo-saffron",
+    "orbit": "0.85",
+    "depth": "0.5",
+    "width": "0.6"
+  }
+}

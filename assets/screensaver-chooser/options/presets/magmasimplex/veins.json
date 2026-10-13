@@ -1,0 +1,13 @@
+{
+  "title": "Veins",
+  "description": "Haight-Ashbury: a radial vein network in teal, yellow and pink where two dyes interdigitate, macro, dendrites=veins.",
+  "accuracy": "artistic",
+  "min_class": "mid",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-veins",
+    "kaleidoscope": "0",
+    "projector-mask": "off",
+    "dendrites": "veins"
+  }
+}

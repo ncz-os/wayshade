@@ -1,0 +1,9 @@
+{
+  "title": "Violet in teal",
+  "description": "Violet-pink wax in teal liquid, measured from footage of a real lamp.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "palette": "footage-violet-in-teal"
+  }
+}

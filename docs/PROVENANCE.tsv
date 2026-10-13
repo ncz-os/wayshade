@@ -1,0 +1,110 @@
+# PROVENANCE.tsv - origin and licence of every shipped saver and every
+# vendored-but-unshipped shader/source in ncz-screensavers 0.8.9.
+# status is one of: shipped | displaced-by:<id> | absorbed-into:<id> |
+# dropped-not-ready | dropped-quality | dropped-duplicate | unknown.
+# Evidence is a commit or doc for every non-shipped or superseding row.
+# id	kind	origin	license	attribution	source	status	evidence
+blackhole_gles3	engine	ported-from:Adriwin06/black-hole (MIT), heavily rewritten in-house	MIT	Otto Seiskari; Adriwin (upstream); NCZ (port/rewrite)	vendor/blackhole/blackhole.frag; src/gles3_blackhole.c; vendor/blackhole-LICENSE.txt	shipped	-
+magmasimplex_gles3	engine	home-grown NCZ	Apache-2.0	NCZ	vendor/magmasimplex/*.frag; src/magmasimplex_*.c	shipped	-
+fractasia_gles3	engine	home-grown NCZ + 4 families adapted from hyprsaver (MIT)	Apache-2.0 (original) + MIT (4 adapted)	NCZ; Mara Vexa (julia_glow, orbit_trap, mobius, ship_glow)	src/fractasia/; vendor/fractasia/glsl/*.frag (17)	shipped	-
+hyprsaver_attitude_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/attitude.frag	shipped	-
+hyprsaver_aurora_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/aurora.frag	shipped	-
+hyprsaver_bezier_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/bezier.frag	shipped	-
+hyprsaver_blob_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/blob.frag	shipped	-
+hyprsaver_caustics_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/caustics.frag	shipped	-
+hyprsaver_circuit_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/circuit.frag	shipped	-
+hyprsaver_clouds_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/clouds.frag	shipped	-
+hyprsaver_donut_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/donut.frag	shipped	-
+hyprsaver_fireflies_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/fireflies.frag	shipped	-
+hyprsaver_flames_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/flames.frag	shipped	-
+hyprsaver_geometry_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/geometry.frag	shipped	-
+hyprsaver_hypercube_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/hypercube.frag	shipped	-
+hyprsaver_kaleidoscope_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/kaleidoscope.frag	shipped	-
+hyprsaver_lissajous_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/lissajous.frag	shipped	-
+hyprsaver_marble_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/marble.frag	shipped	-
+hyprsaver_digitalrain_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/matrix.frag	shipped	-
+hyprsaver_oscilloscope_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/oscilloscope.frag	shipped	-
+hyprsaver_planet_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/planet.frag	shipped	-
+hyprsaver_plasma_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/plasma.frag	shipped	-
+hyprsaver_snowfall_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/snowfall.frag	shipped	-
+hyprsaver_sonar_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/sonar.frag	shipped	-
+hyprsaver_starfield_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/starfield.frag	shipped	-
+hyprsaver_ticker_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/stonks.frag	shipped	-
+hyprsaver_temple_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/temple.frag	shipped	-
+hyprsaver_terminal_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/terminal.frag	shipped	-
+hyprsaver_arccoil_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/tesla.frag	shipped	-
+hyprsaver_tunnel_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/tunnel.frag	shipped	-
+hyprsaver_voronoi_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/voronoi.frag	shipped	-
+hyprsaver_waterfall_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/waterfall.frag	shipped	-
+hyprsaver_wormhole_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/wormhole.frag	shipped	-
+hyprsaver_gridwave_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/gridwave.frag	displaced-by:xshadertoy_neonhorizon	2c367d0 / changelog 0.8.2: displaced by the in-house neonhorizon look
+hyprsaver_fractaltrap_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/fractaltrap.frag	absorbed-into:fractasia_gles3	4274b8f: adapted as fractasia orbit_trap.frag
+hyprsaver_julia_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/julia.frag	absorbed-into:fractasia_gles3	4274b8f: adapted as fractasia julia_glow.frag
+hyprsaver_mobius_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/mobius.frag	absorbed-into:fractasia_gles3	4274b8f: adapted as fractasia mobius.frag
+hyprsaver_shipburn_gles3	hyprsaver-shader	hyprsaver (Mara Vexa)	MIT	Mara Vexa	vendor/hyprsaver/shaders/shipburn.frag	absorbed-into:fractasia_gles3	8637b6a: adapted as fractasia ship_glow.frag
+xshadertoy_alienbeacon_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: alienbeacon	CC0-1.0	otaviogood	vendor/xshadertoy/glsl/alienbeacon.glsl	shipped	-
+xshadertoy_batteredplanet_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: batteredplanet	CC0-1.0	mrange	vendor/xshadertoy/glsl/batteredplanet.glsl	shipped	-
+xshadertoy_bestill0-0_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: bestill0-0	MIT	Matt Vianueva	vendor/xshadertoy/glsl/bestill0-0.glsl	shipped	relicensed MIT by permission 2026-03-08
+xshadertoy_bestill1-0_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: bestill1-0	MIT	Matt Vianueva	vendor/xshadertoy/glsl/bestill1-0.glsl	shipped	relicensed MIT by permission 2026-03-08
+xshadertoy_bestill2-0_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: bestill2-0	MIT	Matt Vianueva	vendor/xshadertoy/glsl/bestill2-0.glsl	shipped	relicensed MIT by permission 2026-03-08
+xshadertoy_bestill3-0_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: bestill3-0	MIT	Matt Vianueva	vendor/xshadertoy/glsl/bestill3-0.glsl	shipped	relicensed MIT by permission 2026-03-08
+xshadertoy_bestill4-0_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: bestill4-0	MIT	Matt Vianueva	vendor/xshadertoy/glsl/bestill4-0.glsl	shipped	relicensed MIT by permission 2026-03-08
+xshadertoy_bestill5-0_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: bestill5-0	MIT	Matt Vianueva	vendor/xshadertoy/glsl/bestill5-0.glsl	shipped	relicensed MIT by permission 2026-03-08
+xshadertoy_darktransit_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: darktransit	MIT	Matt Vianueva	vendor/xshadertoy/glsl/darktransit.glsl	shipped	relicensed MIT by permission 2026-03-08
+xshadertoy_downfall_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: downfall	MIT	Matt Vianueva	vendor/xshadertoy/glsl/downfall.glsl	shipped	relicensed MIT by permission 2026-03-08
+xshadertoy_elementalring_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: elementalring	CC0-1.0	otaviogood	vendor/xshadertoy/glsl/elementalring.glsl	shipped	-
+xshadertoy_fluxcore_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: fluxcore	CC0-1.0	otaviogood	vendor/xshadertoy/glsl/fluxcore.glsl	shipped	-
+xshadertoy_gimbalharmonics_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: gimbalharmonics	CC0-1.0	otaviogood	vendor/xshadertoy/glsl/gimbalharmonics.glsl	shipped	-
+xshadertoy_goldenapollian_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: goldenapollian	CC0-1.0	mrange	vendor/xshadertoy/glsl/goldenapollian.glsl	shipped	-
+xshadertoy_hexplasma_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: hexplasma	MIT	Nemerix	vendor/xshadertoy/glsl/hexplasma.glsl	shipped	-
+xshadertoy_logarithmiccircles_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: logarithmiccircles	CC0-1.0	mrange	vendor/xshadertoy/glsl/logarithmiccircles.glsl	shipped	-
+xshadertoy_neongravity-1_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: neongravity-1	CC0-1.0	mrange	vendor/xshadertoy/glsl/neongravity-1.glsl	displaced-by:xshadertoy_neongravity	2026-10-05: superseded in the ship set by the in-house xshadertoy_neongravity scene; stays in tree and builds as a developer-only target. 0.8.9 licence cleanup of its tonemapper still applies
+xshadertoy_neontriangulator_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: neontriangulator	CC0-1.0	mrange	vendor/xshadertoy/glsl/neontriangulator.glsl	shipped	0.8.9: the three 'License: Unknown' snippets replaced (Inigo Quilez MIT hashes + in-house filmic curve). No unknown-licence snippet remains
+xshadertoy_noxfire_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: noxfire	MIT	Matt Vianueva	vendor/xshadertoy/glsl/noxfire.glsl	shipped	relicensed MIT by permission 2026-03-08
+xshadertoy_polarnight_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: polarnight	MIT	supervitas	vendor/xshadertoy/glsl/polarnight.glsl	shipped	relicensed MIT by permission 2026-07-28
+xshadertoy_prococean_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: prococean	MIT	afl_ext	vendor/xshadertoy/glsl/prococean.glsl	shipped	-
+xshadertoy_protophore_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: protophore	CC0-1.0	otaviogood	vendor/xshadertoy/glsl/protophore.glsl	shipped	-
+xshadertoy_rigrekt_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: rigrekt	MIT	Matt Vianueva	vendor/xshadertoy/glsl/rigrekt.glsl	shipped	relicensed MIT by permission 2026-03-08
+xshadertoy_skyline_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: skyline	CC0-1.0	otaviogood	vendor/xshadertoy/glsl/skyline.glsl	shipped	-
+xshadertoy_starnest_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: starnest	MIT	Kali	vendor/xshadertoy/glsl/starnest.glsl	shipped	-
+xshadertoy_topologica_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: topologica	CC0-1.0	otaviogood	vendor/xshadertoy/glsl/topologica.glsl	shipped	-
+xshadertoy_trainmandala_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: trainmandala	CC0-1.0	mrange	vendor/xshadertoy/glsl/trainmandala.glsl	shipped	embeds MIT (Inigo Quilez) and 'MIT OR CC-BY-NC-4.0' (mercury) snippets; MIT option available
+xshadertoy_trizm_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: trizm	MIT	Matt Vianueva	vendor/xshadertoy/glsl/trizm.glsl	shipped	relicensed MIT by permission 2026-03-08
+xshadertoy_truchetzoom_gles3	xshadertoy-shader	Shadertoy/xscreensaver 6.16: truchetzoom	CC0-1.0	mrange	vendor/xshadertoy/glsl/truchetzoom.glsl	shipped	-
+xshadertoy_neonhorizon_gles3	xshadertoy-shader	original NCZ	MIT	NCZ (in-house)	vendor/xshadertoy/glsl/neonhorizon.glsl	shipped	clean-room original; cites J. Mroz 'Synthwave City' 2019 CC-BY-3.0 as prior art
+xshadertoy_attractor	xshadertoy-shader	original NCZ	MIT	NCZ (LEAD 27)	vendor/xshadertoy/glsl/attractor.glsl	unknown	not in ncz_ship_bins; 7224ae1 marks opt-in not-yet-evaluated
+xshadertoy_aurora	xshadertoy-shader	original NCZ	MIT	NCZ (LEAD 27)	vendor/xshadertoy/glsl/aurora.glsl	unknown	not in ncz_ship_bins; 7224ae1 marks opt-in not-yet-evaluated
+xshadertoy_caustics	xshadertoy-shader	original NCZ	MIT	NCZ (LEAD 27)	vendor/xshadertoy/glsl/caustics.glsl	unknown	not in ncz_ship_bins; 7224ae1 marks opt-in not-yet-evaluated
+xshadertoy_caustictidepool	xshadertoy-shader	original NCZ	MIT	NCZ (LEAD 27)	vendor/xshadertoy/glsl/caustictidepool.glsl	unknown	not in ncz_ship_bins; 7224ae1 marks opt-in not-yet-evaluated
+xshadertoy_marble	xshadertoy-shader	original NCZ	MIT	NCZ (LEAD 27)	vendor/xshadertoy/glsl/marble.glsl	unknown	not in ncz_ship_bins; 7224ae1 marks opt-in not-yet-evaluated
+xshadertoy_physarum	xshadertoy-shader	original NCZ	MIT	NCZ (LEAD 27)	vendor/xshadertoy/glsl/physarum.glsl	unknown	not in ncz_ship_bins; 7224ae1 marks opt-in not-yet-evaluated
+xshadertoy_ridgeline	xshadertoy-shader	original NCZ	MIT	NCZ (LEAD 27)	vendor/xshadertoy/glsl/ridgeline.glsl	unknown	calibration/stress shader; meson deliberately does not install it
+xshadertoy_wellcurve	xshadertoy-shader	original NCZ	MIT	NCZ (LEAD 27)	vendor/xshadertoy/glsl/wellcurve.glsl	unknown	not in ncz_ship_bins; 7224ae1 marks opt-in not-yet-evaluated
+xshadertoy_xst_common	xshadertoy-shader	original NCZ	Apache-2.0	NCZ (LEAD 27)	vendor/xshadertoy/glsl/xst_common.glsl	unknown	shared include; installed with the in-house neongravity (shipped) and with -Dinstall-extras=true
+xshadertoy_neongravity	xshadertoy-shader	original NCZ	Apache-2.0	NCZ (LEAD 27)	vendor/xshadertoy/glsl/neongravity.glsl	shipped	2026-10-05: wired into ncz_ship_bins as xshadertoy_neongravity_gles3, replacing the third-party neongravity-1 port; validated headless on an AMD Phoenix machine and ULTRA - see docs/audit/neongravity-inhouse-2026-10-05.md. Analytic per-pixel scene, no raymarch, no third-party snippet inside
+xshadertoy_cellmosaic	xshadertoy-shader	original NCZ	UNKNOWN-in-file	NCZ (in-house)	vendor/xshadertoy/glsl/cellmosaic.glsl	unknown	clean-room original but no licence line in header; not in ncz_ship_bins
+xshadertoy_chitin	xshadertoy-shader	original NCZ	UNKNOWN-in-file	NCZ (in-house)	vendor/xshadertoy/glsl/chitin.glsl	unknown	clean-room original but no licence line in header; not in ncz_ship_bins
+xshadertoy_iridescence	xshadertoy-shader	original NCZ	UNKNOWN-in-file	NCZ (in-house)	vendor/xshadertoy/glsl/iridescence.glsl	unknown	clean-room original but no licence line in header; removed from the cohort by 2c367d0 / changelog 0.8.2 (reason not stated)
+xshadertoy_stratus	xshadertoy-shader	original NCZ	UNKNOWN-in-file	NCZ (in-house)	vendor/xshadertoy/glsl/stratus.glsl	unknown	clean-room original but no licence line in header; removed from the cohort by 2c367d0 / changelog 0.8.2 (reason not stated)
+xshadertoy_neongravity-0	xshadertoy-shader	Shadertoy/xscreensaver 6.16: neongravity-0	CC0-1.0	mrange	vendor/xshadertoy/glsl/neongravity-0.glsl	dropped-duplicate	2c367d0 / changelog 0.8.2: duplicate of neongravity-1 (FXAA pass only)
+xshadertoy_universeball	xshadertoy-shader	Shadertoy/xscreensaver 6.16: universeball	MIT	Matt Vianueva	vendor/xshadertoy/glsl/universeball.glsl	displaced-by:xshadertoy_neongravity	2c367d0 / changelog 0.8.2: displaced by the neongravity scene. From 2026-10-05 that is the in-house xshadertoy_neongravity; the 0.8.9 correction naming the third-party port is superseded
+xshadertoy_selfreflect	xshadertoy-shader	Shadertoy/xscreensaver 6.16: selfreflect	CC0-1.0	mrange	vendor/xshadertoy/glsl/selfreflect.glsl	unknown	3549bab moved it out of ncz_ship_bins for licence reasons; 39c30fd: embeds 'License: Unknown' snippets
+xshadertoy_stardome	xshadertoy-shader	Shadertoy/xscreensaver 6.16: stardome	CC0-1.0	mrange	vendor/xshadertoy/glsl/stardome.glsl	unknown	3549bab moved it out of ncz_ship_bins for licence reasons; 39c30fd: embeds 'License: Unknown' and CC-BY-NC-SA-3.0 snippets
+xshadertoy_stripeytorus	xshadertoy-shader	Shadertoy/xscreensaver 6.16: stripeytorus	CC0-1.0	mrange	vendor/xshadertoy/glsl/stripeytorus.glsl	unknown	3549bab moved it out of ncz_ship_bins for licence reasons; 39c30fd: embeds 'License: Unknown' snippets
+xshadertoy_leviathan	xshadertoy-shader	original NCZ	MIT	NCZ (in-house)	vendor/xshadertoy/glsl/leviathan.glsl	dropped-not-ready	meson.build: built but 'not in ncz_ship_bins until the operator decides'
+voronoi_gles3	classic-shader-port	xscreensaver port (voronoi)	xscreensaver notice (MIT-like) + Apache-2.0 (glue)	Jamie Zawinski; NCZ (shader-engine port)	src/classics_shader/cs_voronoi.c	shipped	-
+hexstrut_gles3	classic-shader-port	xscreensaver port (hexstrut)	xscreensaver notice (MIT-like) + Apache-2.0 (glue)	Jamie Zawinski; NCZ (shader-engine port)	src/classics_shader/cs_hexstrut.c	shipped	-
+cubestorm_gles3	classic-shader-port	xscreensaver port (cubestorm)	xscreensaver notice (MIT-like) + Apache-2.0 (glue)	Jamie Zawinski; NCZ (shader-engine port)	src/classics_shader/cs_cubestorm.c	shipped	-
+crackberg_gles3	classic-shader-port	xscreensaver port (crackberg)	xscreensaver notice (MIT-like) + Apache-2.0 (glue)	Matus Telgarsky; NCZ (shader-engine port)	src/classics_shader/cs_crackberg.c	shipped	-
+cityflow_gles3	classic-shader-port	xscreensaver port (cityflow)	xscreensaver notice (MIT-like) + Apache-2.0 (glue)	Jamie Zawinski; NCZ (shader-engine port)	src/classics_shader/cs_cityflow.c	shipped	-
+noof_gles3	classic-shader-port	xscreensaver port (noof)	xscreensaver notice (MIT-like) + Apache-2.0 (glue)	Bill Torzewski; NCZ (shader-engine port)	src/classics_shader/cs_noof.c	shipped	-
+geodesic_gles3	classic-shader-port	xscreensaver port (geodesic)	xscreensaver notice (MIT-like) + Apache-2.0 (glue)	Jamie Zawinski; NCZ (shader-engine port)	src/classics_shader/cs_geodesic.c	shipped	-
+datatowers_gles3	classic-shader-port	xscreensaver port (gibson)	xscreensaver notice (MIT-like) + Apache-2.0 (glue)	Jamie Zawinski; NCZ (shader-engine port)	src/classics_shader/cs_gibson.c	shipped	-
+gravitywell_gles3	classic-shader-port	xscreensaver port (gravitywell)	xscreensaver notice (MIT-like) + Apache-2.0 (glue)	Jamie Zawinski; NCZ (shader-engine port)	src/classics_shader/cs_gravitywell.c	displaced-by:xshadertoy_neongravity	2c367d0 / changelog 0.8.2: displaced by the neongravity scene. From 2026-10-05 that is the in-house xshadertoy_neongravity, not the third-party port
+hypertorus_gles3	classic-upstream-glsl	xscreensaver upstream GLSL (Carsten Steger)	xscreensaver notice (MIT-like)	Carsten Steger; NCZ (build glue)	src/hypertorus.c	shipped	-
+klein_gles3	classic-upstream-glsl	xscreensaver upstream GLSL (Carsten Steger)	xscreensaver notice (MIT-like)	Carsten Steger; NCZ (build glue)	src/klein.c	shipped	-
+projectiveplane_gles3	classic-upstream-glsl	xscreensaver upstream GLSL (Carsten Steger)	xscreensaver notice (MIT-like)	Carsten Steger; NCZ (build glue)	src/projectiveplane.c	shipped	-
+ephemeris_gles3	engine	home-grown NCZ	Apache-2.0	NCZ	vendor/ephemeris/ephemeris.glsl	dropped-not-ready	meson.build: built but install-gated; not in ncz_ship_bins
+megacity_gles3	engine	home-grown NCZ	Apache-2.0	NCZ	vendor/megacity/megacity.glsl	dropped-not-ready	meson.build: built but install-gated; not in ncz_ship_bins
+neonspacewar_gles3	engine	home-grown NCZ	Apache-2.0	NCZ	vendor/neonspacewar/composite.frag; lines.frag; melee.glsl	dropped-not-ready	meson.build: built but install-gated; not in ncz_ship_bins
+genxvectorcade_gles3	engine	home-grown NCZ	Apache-2.0	NCZ	vendor/genxvectorcade/genxvectorcade.frag	dropped-not-ready	meson.build: built but install-gated; not in ncz_ship_bins

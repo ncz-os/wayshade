@@ -1,0 +1,399 @@
+{
+  "id": "xshadertoy_caustictidepool",
+  "options": [
+    {
+      "id": "preset",
+      "type": "string",
+      "label": "Preset",
+      "default": "",
+      "group": "Look",
+      "level": "basic",
+      "description": "Named scene (see --list-presets): applied above the saved config file and below environment and command line. Empty = none.",
+      "env": "NCZ_XSHADERTOY_CAUSTICTIDEPOOL_PRESET"
+    },
+    {
+      "id": "palette",
+      "type": "enum",
+      "label": "Palette",
+      "default": "auto",
+      "choices": [
+        "auto",
+        "native",
+        "navy-cream",
+        "ink-bone",
+        "midnight-amber",
+        "deep-teal-pearl",
+        "aubergine-rose",
+        "forest-moss",
+        "slate-ice",
+        "charcoal-copper",
+        "obsidian-jade",
+        "indigo-saffron",
+        "graphite-coral",
+        "night-aurora",
+        "polar-violet",
+        "sea-glass",
+        "ember-night",
+        "plum-gold",
+        "prussian-silver",
+        "oxblood-linen",
+        "ultramarine-cream",
+        "moss-lilac",
+        "abyss-cyan",
+        "lagoon-sand",
+        "oxygen-green",
+        "crimson-arc",
+        "polar-teal",
+        "bone-charcoal",
+        "gunmetal",
+        "verdigris-iron",
+        "slate-bone",
+        "steel-green",
+        "charcoal-verdigris",
+        "travertine",
+        "carrara",
+        "warm-limestone",
+        "sandstone-rose",
+        "plaster-sage",
+        "linen-ochre",
+        "pearl-grey",
+        "celadon",
+        "blush-clay",
+        "oat-indigo",
+        "slate-paper",
+        "honey-marble",
+        "camel-silk",
+        "fog-lavender",
+        "rosso-levanto",
+        "verde-alpi",
+        "calacatta-gold",
+        "nero-marquina",
+        "amethyst-quartz",
+        "malachite",
+        "lapis",
+        "sienna-onyx",
+        "grey-bardiglio"
+      ],
+      "group": "Look",
+      "level": "basic",
+      "description": "Color roles (background, body, accent, accent2). auto: drawn from this saver's family with the run seed. native: the saver's own colors. Any name from the shared role table.",
+      "env": "NCZ_XSHADERTOY_CAUSTICTIDEPOOL_PALETTE",
+      "choice_groups": [
+        {
+          "label": "Automatic",
+          "choices": [
+            "auto",
+            "native"
+          ]
+        },
+        {
+          "label": "Dark grounds",
+          "choices": [
+            "navy-cream",
+            "ink-bone",
+            "midnight-amber",
+            "deep-teal-pearl",
+            "aubergine-rose",
+            "forest-moss",
+            "slate-ice",
+            "charcoal-copper",
+            "obsidian-jade",
+            "indigo-saffron",
+            "graphite-coral",
+            "night-aurora",
+            "polar-violet",
+            "sea-glass",
+            "ember-night",
+            "plum-gold",
+            "prussian-silver",
+            "oxblood-linen",
+            "ultramarine-cream",
+            "moss-lilac",
+            "abyss-cyan",
+            "lagoon-sand",
+            "oxygen-green",
+            "crimson-arc",
+            "polar-teal",
+            "bone-charcoal",
+            "gunmetal",
+            "verdigris-iron",
+            "slate-bone",
+            "steel-green",
+            "charcoal-verdigris"
+          ]
+        },
+        {
+          "label": "Light materials",
+          "choices": [
+            "travertine",
+            "carrara",
+            "warm-limestone",
+            "sandstone-rose",
+            "plaster-sage",
+            "linen-ochre",
+            "pearl-grey",
+            "celadon",
+            "blush-clay",
+            "oat-indigo",
+            "slate-paper",
+            "honey-marble",
+            "camel-silk",
+            "fog-lavender"
+          ]
+        },
+        {
+          "label": "Stone and mineral",
+          "choices": [
+            "rosso-levanto",
+            "verde-alpi",
+            "calacatta-gold",
+            "nero-marquina",
+            "amethyst-quartz",
+            "malachite",
+            "lapis",
+            "sienna-onyx",
+            "grey-bardiglio"
+          ]
+        }
+      ],
+      "choice_labels": {
+        "auto": "Drawn from the seed",
+        "native": "The saver's own colors",
+        "navy-cream": "Navy Cream",
+        "ink-bone": "Ink Bone",
+        "midnight-amber": "Midnight Amber",
+        "deep-teal-pearl": "Deep Teal Pearl",
+        "aubergine-rose": "Aubergine Rose",
+        "forest-moss": "Forest Moss",
+        "slate-ice": "Slate Ice",
+        "charcoal-copper": "Charcoal Copper",
+        "obsidian-jade": "Obsidian Jade",
+        "indigo-saffron": "Indigo Saffron",
+        "graphite-coral": "Graphite Coral",
+        "night-aurora": "Night Aurora",
+        "polar-violet": "Polar Violet",
+        "sea-glass": "Sea Glass",
+        "ember-night": "Ember Night",
+        "plum-gold": "Plum Gold",
+        "prussian-silver": "Prussian Silver",
+        "oxblood-linen": "Oxblood Linen",
+        "ultramarine-cream": "Ultramarine Cream",
+        "moss-lilac": "Moss Lilac",
+        "abyss-cyan": "Abyss Cyan",
+        "lagoon-sand": "Lagoon Sand",
+        "oxygen-green": "Oxygen Green",
+        "crimson-arc": "Crimson Arc",
+        "polar-teal": "Polar Teal",
+        "bone-charcoal": "Bone Charcoal",
+        "gunmetal": "Gunmetal",
+        "verdigris-iron": "Verdigris Iron",
+        "slate-bone": "Slate Bone",
+        "steel-green": "Steel Green",
+        "charcoal-verdigris": "Charcoal Verdigris",
+        "travertine": "Travertine",
+        "carrara": "Carrara",
+        "warm-limestone": "Warm Limestone",
+        "sandstone-rose": "Sandstone Rose",
+        "plaster-sage": "Plaster Sage",
+        "linen-ochre": "Linen Ochre",
+        "pearl-grey": "Pearl Grey",
+        "celadon": "Celadon",
+        "blush-clay": "Blush Clay",
+        "oat-indigo": "Oat Indigo",
+        "slate-paper": "Slate Paper",
+        "honey-marble": "Honey Marble",
+        "camel-silk": "Camel Silk",
+        "fog-lavender": "Fog Lavender",
+        "rosso-levanto": "Rosso Levanto",
+        "verde-alpi": "Verde Alpi",
+        "calacatta-gold": "Calacatta Gold",
+        "nero-marquina": "Nero Marquina",
+        "amethyst-quartz": "Amethyst Quartz",
+        "malachite": "Malachite",
+        "lapis": "Lapis",
+        "sienna-onyx": "Sienna Onyx",
+        "grey-bardiglio": "Grey Bardiglio"
+      }
+    },
+    {
+      "id": "palette-cycle",
+      "type": "float",
+      "label": "Palette cycle (min)",
+      "default": 0.0,
+      "range": [
+        0.0,
+        60.0
+      ],
+      "group": "Look",
+      "level": "advanced",
+      "description": "Minutes between slow cross-fades to another palette of the same family (interpolated in Oklab: lightness moves steadily from one palette to the other, never through grey). 0 = keep one palette.",
+      "env": "NCZ_XSHADERTOY_CAUSTICTIDEPOOL_PALETTE_CYCLE"
+    },
+    {
+      "id": "speed",
+      "type": "float",
+      "label": "Speed",
+      "default": 1.0,
+      "range": [
+        0.25,
+        3.0
+      ],
+      "group": "Motion",
+      "level": "basic",
+      "description": "Time scale of every motion.",
+      "env": "NCZ_XSHADERTOY_CAUSTICTIDEPOOL_SPEED"
+    },
+    {
+      "id": "evolution",
+      "type": "float",
+      "label": "Evolution",
+      "default": 1.0,
+      "range": [
+        0.0,
+        3.0
+      ],
+      "group": "Motion",
+      "level": "advanced",
+      "description": "Pace of the slow director: seeded keyframes about every minute that change structure over minutes. 0 holds the opening structure.",
+      "env": "NCZ_XSHADERTOY_CAUSTICTIDEPOOL_EVOLUTION"
+    },
+    {
+      "id": "focus",
+      "type": "float",
+      "label": "Focus",
+      "default": 0.55,
+      "range": [
+        0.1,
+        1.0
+      ],
+      "group": "Simulation",
+      "level": "advanced",
+      "description": "How sharply the ripples focus sunlight into a net on the floor.",
+      "env": "NCZ_XSHADERTOY_CAUSTICTIDEPOOL_FOCUS"
+    },
+    {
+      "id": "chop",
+      "type": "float",
+      "label": "Chop",
+      "default": 0.5,
+      "range": [
+        0.0,
+        1.0
+      ],
+      "group": "Simulation",
+      "level": "advanced",
+      "description": "Share of the short wind ripples against the long swell.",
+      "env": "NCZ_XSHADERTOY_CAUSTICTIDEPOOL_CHOP"
+    },
+    {
+      "id": "depth",
+      "type": "float",
+      "label": "Depth",
+      "default": 0.5,
+      "range": [
+        0.0,
+        1.0
+      ],
+      "group": "Simulation",
+      "level": "advanced",
+      "description": "Water depth: deeper water is darker, bluer, and softens the net.",
+      "env": "NCZ_XSHADERTOY_CAUSTICTIDEPOOL_DEPTH"
+    },
+    {
+      "id": "stones",
+      "type": "float",
+      "label": "Stones",
+      "default": 0.55,
+      "range": [
+        0.0,
+        1.0
+      ],
+      "group": "Look",
+      "level": "advanced",
+      "description": "How much of the floor is covered by stones rather than sand.",
+      "env": "NCZ_XSHADERTOY_CAUSTICTIDEPOOL_STONES"
+    },
+    {
+      "id": "stone-size",
+      "type": "float",
+      "label": "Stone size",
+      "default": 1.0,
+      "range": [
+        0.5,
+        2.0
+      ],
+      "group": "Look",
+      "level": "advanced",
+      "description": "Size of the stones.",
+      "env": "NCZ_XSHADERTOY_CAUSTICTIDEPOOL_STONE_SIZE"
+    },
+    {
+      "id": "glints",
+      "type": "float",
+      "label": "Glints",
+      "default": 0.5,
+      "range": [
+        0.0,
+        1.0
+      ],
+      "group": "Look",
+      "level": "advanced",
+      "description": "Sun glints on the ripple crests.",
+      "env": "NCZ_XSHADERTOY_CAUSTICTIDEPOOL_GLINTS"
+    },
+    {
+      "id": "sun",
+      "type": "float",
+      "label": "Sunlight",
+      "default": 1.0,
+      "range": [
+        0.4,
+        1.6
+      ],
+      "group": "Look",
+      "level": "advanced",
+      "description": "Brightness of the direct light.",
+      "env": "NCZ_XSHADERTOY_CAUSTICTIDEPOOL_SUN"
+    },
+    {
+      "id": "randomize",
+      "type": "bool",
+      "label": "Randomize",
+      "default": true,
+      "group": "System",
+      "level": "advanced",
+      "description": "Draw every option you have not set (and the palette) from the run seed, inside ranges chosen to stay coherent. Off: defaults.",
+      "env": "NCZ_XSHADERTOY_CAUSTICTIDEPOOL_RANDOMIZE"
+    },
+    {
+      "id": "quality",
+      "type": "enum",
+      "label": "Quality",
+      "default": "auto",
+      "choices": [
+        "auto",
+        "low",
+        "medium",
+        "high"
+      ],
+      "group": "System",
+      "level": "advanced",
+      "description": "Detail tier. auto follows the GPU class of this machine (NCZ_SHADER_QUALITY still overrides it).",
+      "env": "NCZ_XSHADERTOY_CAUSTICTIDEPOOL_QUALITY"
+    },
+    {
+      "id": "seed",
+      "type": "int",
+      "label": "Random seed",
+      "default": 0,
+      "range": [
+        0,
+        999999
+      ],
+      "group": "System",
+      "level": "basic",
+      "description": "Fixes the run's randomness so it can be replayed exactly (same options). 0 = a new seed (1 to 999999) every run; the seed in use is logged.",
+      "env": "NCZ_XSHADERTOY_CAUSTICTIDEPOOL_SEED"
+    }
+  ]
+}

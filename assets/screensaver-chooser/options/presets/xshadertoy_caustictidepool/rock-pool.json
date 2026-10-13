@@ -1,0 +1,13 @@
+{
+  "title": "Tide pool: Rock pool",
+  "description": "Deeper water crowded with large stones; the light is softer and bluer between them.",
+  "accuracy": "analytic small-slope optics, procedural floor",
+  "min_class": "weak",
+  "values": {
+    "palette": "deep-teal-pearl",
+    "depth": "0.7",
+    "stones": "0.8",
+    "stone-size": "1.5",
+    "focus": "0.45"
+  }
+}

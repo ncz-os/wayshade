@@ -1,0 +1,13 @@
+{
+  "title": "Chitin: Conduit",
+  "description": "Bundled conduit runs along shallow chevron ribs, in gunmetal.",
+  "accuracy": "procedural approximation",
+  "min_class": "mid",
+  "values": {
+    "form": "conduit",
+    "palette": "gunmetal",
+    "sheen": "0.7",
+    "conduits": "0.8",
+    "relief": "1.0"
+  }
+}

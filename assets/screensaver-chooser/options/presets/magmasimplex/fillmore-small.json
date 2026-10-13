@@ -1,0 +1,13 @@
+{
+  "title": "Fillmore small",
+  "description": "Haight-Ashbury: the 1969 Fillmore dish at its original small size, red and magenta dye splats with satellite droplets.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-fillmore-splat",
+    "kaleidoscope": "0",
+    "projector-mask": "dish",
+    "projector-mask-size": "0.47"
+  }
+}

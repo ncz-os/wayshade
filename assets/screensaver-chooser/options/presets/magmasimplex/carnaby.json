@@ -1,0 +1,13 @@
+{
+  "title": "Carnaby",
+  "description": "Swinging London: hot pink and orange op-art, flat hard-edged bands in a four-fold mirror.",
+  "accuracy": "artistic",
+  "min_class": "mid",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-carnaby",
+    "kaleidoscope": "4",
+    "projector-mask": "off",
+    "poster": "true"
+  }
+}

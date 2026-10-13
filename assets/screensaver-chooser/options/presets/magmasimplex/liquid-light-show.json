@@ -1,0 +1,9 @@
+{
+  "title": "Liquid light show",
+  "description": "Inks and oil between glass dishes, projected on a screen the way the 1960s concert light shows did.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "show"
+  }
+}

@@ -1,0 +1,11 @@
+# Style categories of the screensaver chooser (hand maintained; see docs/CHOOSER-TAXONOMY.md).
+# Columns (tab separated): id, label, description. The order here is the order in the chooser.
+# tools/generate-catalog.py checks that every shipped hack in categories.tsv names exactly one of these ids.
+space	Space & Cosmos	Black holes, planets, star fields and deep space
+fractal	Fractals & Math	Self-similar structure, curves and surfaces from mathematics
+neon	Neon & Synthwave	Glowing lines, electric arcs and saturated colour on black
+nature	Nature & Weather	Water, clouds, fire, snow, aurora and landscapes
+fluid	Abstract & Fluid	Flowing colour, soft shapes and slow abstract motion
+geometry	Geometry & Wireframe	Polyhedra, lattices, cells and clean geometric form
+retro	Retro, Terminal & Data	Terminals, scopes, instruments and streams of data
+scenes	Cities & Scenes	Skylines, interiors and journeys through a place

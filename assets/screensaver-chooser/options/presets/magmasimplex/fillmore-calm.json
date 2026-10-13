@@ -1,0 +1,13 @@
+{
+  "title": "Fillmore calm",
+  "description": "Haight-Ashbury: the Fillmore dish at a gentle dynamics 0.25; a slow breath rather than a dance.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-fillmore-splat",
+    "kaleidoscope": "0",
+    "projector-mask": "dish",
+    "dynamics": "0.25"
+  }
+}

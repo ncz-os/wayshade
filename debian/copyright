@@ -1,0 +1,201 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: ncz-screensavers
+Source: https://gitlab.com/ncz-os/wayshade
+Comment: The project is Apache-2.0. Each screensaver is a separate program, so
+ the NCZ-authored glue and in-house engines are Apache-2.0 while every
+ vendored or ported component keeps its own licence and notice. The
+ per-component record is also in NOTICES.md, NOTICE and docs/PROVENANCE.tsv.
+
+Files: *
+Copyright: 2026 Jason Perlow and contributors
+License: Apache-2.0
+Comment: The Apache-2.0 grant covers only the original NCZ-authored code:
+ the Wayland/EGL/GLES3 harness and drivers, the launcher, the idle timer, the
+ Singularity plugin, the development tools, the tests, and the original
+ in-house engines (Fractasia, Magmasimplex, Neonhorizon, Neonspacewar,
+ Ephemeris, Megacity and Genxvectorcade). SPDX-License-Identifier: Apache-2.0
+ headers mark those files. Every other file is covered by a more specific
+ stanza below and retains its upstream licence.
+
+Files: vendor/blackhole/* vendor/blackhole-LICENSE.txt src/gles3_blackhole.c
+Copyright: 2015 Otto Seiskari
+ 2026 Adriwin
+ 2026 Jason Perlow and contributors
+License: MIT
+Comment: Port of Adriwin06/black-hole (MIT); upstream license text in
+ vendor/blackhole-LICENSE.txt. The color-model work follows
+ hydrogendeuteride/BlackHoleRayTracer (MIT) in method only. The upstream
+ CC-BY-NC Milky Way texture is replaced by a procedural sky and is not used.
+
+Files: vendor/hyprsaver/*
+Copyright: 2026 Mara Vexa
+License: MIT
+Comment: Upstream license in vendor/hyprsaver/LICENSE; the individual shaders
+ carry no header of their own. Four Fractasia families adapt hyprsaver
+ shaders (see docs/fractasia/LICENSE-ANALYSIS.md).
+
+Files: vendor/xshadertoy/glsl/*
+Copyright: the individual shader authors named in each file header
+License: MIT or CC0-1.0 or CC-BY-3.0
+Comment: The ported shaders declare their own licence identifier in their
+ header (MIT, CC0-1.0 or CC-BY-3.0); several are relicensed MIT by permission
+ of the author. The CC0 shaders neontriangulator and neongravity-1 embedded
+ helper snippets marked "License: Unknown"; in 0.8.9 those helpers were
+ replaced with an Inigo Quilez MIT hash and an in-house filmic tone curve, so
+ no unknown-licence snippet remains. stardome, selfreflect and stripeytorus
+ remain excluded from the package for the same reason.
+
+Files: vendor/xshadertoy/glsl/attractor.glsl
+ vendor/xshadertoy/glsl/aurora.glsl
+ vendor/xshadertoy/glsl/caustics.glsl
+ vendor/xshadertoy/glsl/caustictidepool.glsl
+ vendor/xshadertoy/glsl/cellmosaic.glsl
+ vendor/xshadertoy/glsl/chitin.glsl
+ vendor/xshadertoy/glsl/iridescence.glsl
+ vendor/xshadertoy/glsl/leviathan.glsl
+ vendor/xshadertoy/glsl/marble.glsl
+ vendor/xshadertoy/glsl/neonhorizon.glsl
+ vendor/xshadertoy/glsl/neongravity.glsl
+ vendor/xshadertoy/glsl/physarum.glsl
+ vendor/xshadertoy/glsl/ridgeline.glsl
+ vendor/xshadertoy/glsl/stratus.glsl
+ vendor/xshadertoy/glsl/wellcurve.glsl
+ vendor/xshadertoy/glsl/xst_common.glsl
+Copyright: 2026 Jason Perlow and contributors
+License: Apache-2.0
+Comment: Original NCZ work. neonhorizon credits the period prior art
+ "Synthwave City" by Jan Mroz (jaszunio15), 2019, CC-BY-3.0, without copying.
+
+Files: src/hypertorus.c src/klein.c src/projectiveplane.c
+ src/glsl-utils.c src/glsl-utils.h
+Copyright: 2003-2026 Carsten Steger <carsten@mirsanmir.org>
+ 2026 Jason Perlow and contributors (build glue)
+License: xscreensaver
+Comment: Upstream xscreensaver GLSL hacks (retained buffers); the per-file
+ header carries Carsten Steger's permission notice.
+
+Files: src/classics_shader/cs_voronoi.c src/classics_shader/cs_hexstrut.c
+ src/classics_shader/cs_cubestorm.c src/classics_shader/cs_cityflow.c
+ src/classics_shader/cs_geodesic.c src/classics_shader/cs_gibson.c
+ src/classics_shader/cs_gravitywell.c
+Copyright: 2003-2025 Jamie Zawinski <jwz@jwz.org>
+ 2026 Jason Perlow <jperlow@gmail.com> (shader-engine port)
+License: xscreensaver and Apache-2.0
+Comment: Ports of the xscreensaver hacks of the same names; the simulation
+ follows the original and keeps its permission notice. The GLES3 glue is
+ Apache-2.0.
+
+Files: src/classics_shader/cs_crackberg.c
+Copyright: 2005 Matus Telgarsky <catachresis@cmu.edu>
+ 2026 Jason Perlow <jperlow@gmail.com> (shader-engine port)
+License: xscreensaver and Apache-2.0
+
+Files: src/classics_shader/cs_noof.c
+Copyright: 2004-2018 Bill Torzewski <billt@worksitez.com>
+ (ported to xscreensaver by Jamie Zawinski, 2004)
+ 2026 Jason Perlow <jperlow@gmail.com> (shader-engine port)
+License: xscreensaver and Apache-2.0
+
+Files: src/rotator.c src/rotator.h src/yarandom.c src/yarandom.h
+Copyright: 1988-2025 Jamie Zawinski <jwz@jwz.org>
+License: xscreensaver
+
+Files: src/xlockmore.h src/xlockmoreI.h src/gltrackball.h src/curlicue.h
+Copyright: 1988-2025 Jamie Zawinski <jwz@jwz.org> and contributors
+License: xscreensaver
+
+Files: src/fractasia/* vendor/fractasia/*
+Copyright: 2026 Jason Perlow and contributors
+License: Apache-2.0
+Comment: Original Fractasia driver, data and kernels. Four of the 17 GLSL
+ families are adapted from hyprsaver (MIT, 2026 Mara Vexa): ship_glow,
+ julia_glow, orbit_trap and mobius. No Fractint source code, .frm formula,
+ .map/.par/.ifs asset or colour map is used; Fractint is credited only as the
+ source of public type-name/callback metadata (docs/fractasia/LICENSE-ANALYSIS.md).
+
+Files: vendor/magmasimplex/*
+Copyright: 2026 Jason Perlow and contributors
+License: Apache-2.0
+Comment: Original in-house magma/lava-lamp engine shaders.
+
+Files: vendor/gl-transitions/*
+Copyright: the individual transition authors named in each file header
+License: MIT or BSD-3-Clause or BSD-2-Clause
+Comment: Development-only shader sources, not shipped in the ncz-screensavers
+ Debian package; see vendor/gl-transitions-PORTED.md.
+
+License: Apache-2.0
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+ .
+     http://www.apache.org/licenses/LICENSE-2.0
+ .
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ .
+ On Debian systems, the complete text of the Apache License 2.0 can be found
+ in /usr/share/common-licenses/Apache-2.0.
+
+License: xscreensaver
+ Permission to use, copy, modify, distribute, and sell this software and its
+ documentation for any purpose is hereby granted without fee, provided that
+ the above copyright notice appear in all copies and that both that
+ copyright notice and this permission notice appear in supporting
+ documentation.  No representations are made about the suitability of this
+ software for any purpose.  It is provided "as is" without express or
+ implied warranty.
+
+License: MIT
+ Permission is hereby granted, free of charge, to any person obtaining a
+ copy of this software and associated documentation files (the "Software"),
+ to deal in the Software without restriction, including without limitation
+ the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ and/or sell copies of the Software, and to permit persons to whom the
+ Software is furnished to do so, subject to the following conditions:
+ .
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+License: CC0-1.0
+ To the extent possible under law, the author has waived all copyright and
+ related or neighboring rights to this work. See
+ /usr/share/common-licenses/CC0-1.0.
+
+License: CC-BY-3.0
+ Creative Commons Attribution 3.0 Unported. See
+ https://creativecommons.org/licenses/by/3.0/legalcode
+
+License: BSD-3-Clause
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+ 1. Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+ 3. Neither the name of the copyright holder nor the names of its
+    contributors may be used to endorse or promote products derived from
+    this software without specific prior written permission.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ AND ANY EXPRESS OR IMPLIED WARRANTIES ARE DISCLAIMED.
+
+License: BSD-2-Clause
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+ 1. Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ AND ANY EXPRESS OR IMPLIED WARRANTIES ARE DISCLAIMED.

@@ -1,0 +1,13 @@
+{
+  "title": "Light show live",
+  "description": "The liquid light show driven by what is playing: the projector pulses and the inks move on the beat. Play music to see it move.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "show",
+    "kaleidoscope": "0",
+    "projector-mask": "soft",
+    "dynamics": "0.7",
+    "audio": "system"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "title": "Classic lamp",
+  "description": "The whole screen is the inside of a warm lamp: orange wax in yellow liquid, the pool below, the cap above, moving at the pace of a real lamp.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "field",
+    "world": "tank",
+    "palette": "era-60s-yellow-orange",
+    "material": "milky",
+    "cap": "on"
+  }
+}

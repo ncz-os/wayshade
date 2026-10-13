@@ -1,0 +1,13 @@
+{
+  "title": "Marble: Verde Alpi",
+  "description": "Deep green serpentine with pale veins and bronze flecks, wandering at a walking pace.",
+  "accuracy": "procedural approximation",
+  "min_class": "weak",
+  "values": {
+    "palette": "verde-alpi",
+    "vein-scale": "0.8",
+    "veins": "0.45",
+    "hairlines": "0.75",
+    "intrusion": "0.1"
+  }
+}

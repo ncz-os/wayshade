@@ -1,0 +1,14 @@
+# Options shown in the simple view of a screensaver's settings; everything else folds into Advanced.
+# Columns (tab separated): hack id (with or without _gles3), comma separated option names (at most 8,
+# all present in options/<hack>.tsv). A hack not listed shows its basic-level options (preset, seed,
+# palette, style, speed). Black Hole has its own simple mode (blackhole-simple.tsv).
+megacity	preset,mode,cycle,palette,weather,speed,seed
+xshadertoy_chitin	preset,palette,form,speed,evolution,sheen,seed
+xshadertoy_wellcurve	preset,palette,speed,evolution,glow,seed
+xshadertoy_attractor	preset,palette,form,speed,evolution,seed
+xshadertoy_neongravity	preset,palette,bodies,speed,evolution,seed
+xshadertoy_leviathan	preset,hull,landmark,palette,planet,seed
+xshadertoy_frosted-glass	preset,palette,style,speed,evolution,seed
+neonspacewar	mode,preset,palette,glow,camera,seed
+ephemeris	composition,preset,tide,pace,tone,seed
+datatowers	style,speed,columns,seed

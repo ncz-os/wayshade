@@ -1,0 +1,15 @@
+{
+  "title": "Physarum: Ember script",
+  "description": "Sparse, broad strokes of warm light on a dark ground, folding faster.",
+  "accuracy": "procedural approximation",
+  "min_class": "weak",
+  "values": {
+    "palette": "ember-night",
+    "density": "0.3",
+    "fold": "0.8",
+    "scale": "1.45",
+    "striation": "0.5",
+    "flow": "1.2",
+    "depth-drift": "0.2"
+  }
+}

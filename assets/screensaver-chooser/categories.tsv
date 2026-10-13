@@ -1,0 +1,79 @@
+# Primary style category, origin and search tags of every shipped screensaver (hand maintained).
+# Columns (tab separated): id, category (one id from category-list.tsv), origin (ncz = written for
+# ncz-screensavers, ported = adapted from another project), tags (comma separated, free text used by search).
+# tools/generate-catalog.py checks: every id in the ship set appears exactly once, every category exists,
+# xshadertoy shaders marked ncz carry an "original work" header, hyprsaver and Classics ports are marked ported.
+blackhole_gles3	space	ncz	black hole,relativity,accretion disk,physics,cinematic
+hyprsaver_planet_gles3	space	ported	planet,orbit,atmosphere
+hyprsaver_starfield_gles3	space	ported	stars,warp,flight
+hyprsaver_wormhole_gles3	space	ported	tunnel,warp,sci-fi
+xshadertoy_alienbeacon_gles3	space	ported	alien,planet,landscape,sci-fi
+xshadertoy_batteredplanet_gles3	space	ported	planet,craters,sci-fi
+xshadertoy_darktransit_gles3	space	ported	planet,eclipse,transit
+xshadertoy_starnest_gles3	space	ported	stars,nebula,fractal,volumetric
+fractasia_gles3	fractal	ncz	fractint,mandelbrot,julia,fractal,zoom
+xshadertoy_goldenapollian_gles3	fractal	ported	apollonian,circles,gold
+xshadertoy_logarithmiccircles_gles3	fractal	ported	circles,spiral,monochrome
+xshadertoy_truchetzoom_gles3	fractal	ported	truchet,tiles,zoom
+xshadertoy_protophore_gles3	fractal	ported	fractal,glossy,3d
+hypertorus_gles3	fractal	ported	4d,torus,surface,xscreensaver
+klein_gles3	fractal	ported	klein bottle,surface,xscreensaver
+projectiveplane_gles3	fractal	ported	projective plane,surface,xscreensaver
+hyprsaver_lissajous_gles3	fractal	ported	curves,harmonic,lines
+hyprsaver_bezier_gles3	fractal	ported	curves,bezier,lines
+xshadertoy_neongravity_gles3	neon	ncz	gravity well,neon,abstract
+xshadertoy_neontriangulator_gles3	neon	ported	triangles,neon,grid
+xshadertoy_hexplasma_gles3	neon	ported	hexagons,plasma,neon
+hyprsaver_tunnel_gles3	neon	ported	tunnel,neon,flight
+hyprsaver_arccoil_gles3	neon	ported	tesla,electric,arcs,lightning
+hyprsaver_aurora_gles3	nature	ported	aurora,northern lights,sky
+hyprsaver_clouds_gles3	nature	ported	clouds,sky,drift
+hyprsaver_fireflies_gles3	nature	ported	fireflies,night,particles
+hyprsaver_flames_gles3	nature	ported	fire,flames,heat
+hyprsaver_snowfall_gles3	nature	ported	snow,winter,particles
+hyprsaver_waterfall_gles3	nature	ported	water,waterfall,flow
+hyprsaver_caustics_gles3	nature	ported	water,caustics,pool,light
+xshadertoy_bestill2-0_gles3	nature	ported	clouds,night,dance
+xshadertoy_bestill3-0_gles3	nature	ported	clouds,lights,sky
+xshadertoy_bestill4-0_gles3	nature	ported	desert,dunes,landscape
+xshadertoy_bestill5-0_gles3	nature	ported	water,waves,ocean
+xshadertoy_prococean_gles3	nature	ported	ocean,waves,sea
+xshadertoy_polarnight_gles3	nature	ported	terrain,aurora,mountains,night
+xshadertoy_downfall_gles3	nature	ported	rain,falling,weather
+crackberg_gles3	nature	ported	terrain,flyover,fractal landscape,xscreensaver
+hyprsaver_blob_gles3	fluid	ported	blob,metaball,soft
+hyprsaver_plasma_gles3	fluid	ported	plasma,colour,waves
+hyprsaver_marble_gles3	fluid	ported	marble,veins,stone
+hyprsaver_kaleidoscope_gles3	fluid	ported	kaleidoscope,mirror,symmetry
+xshadertoy_bestill0-0_gles3	fluid	ported	calm,abstract,slow
+xshadertoy_bestill1-0_gles3	fluid	ported	abstract,temporary,slow
+xshadertoy_noxfire_gles3	fluid	ported	fire,abstract,dark
+xshadertoy_rigrekt_gles3	fluid	ported	abstract,shapes
+xshadertoy_trizm_gles3	fluid	ported	prism,abstract,colour
+xshadertoy_topologica_gles3	fluid	ported	noise,contours,abstract
+xshadertoy_elementalring_gles3	fluid	ported	ring,fire,3d
+xshadertoy_trainmandala_gles3	fluid	ported	mandala,pattern,symmetry
+noof_gles3	fluid	ported	blobs,colour,xscreensaver
+hyprsaver_geometry_gles3	geometry	ported	wireframe,shapes,lines
+hyprsaver_hypercube_gles3	geometry	ported	tesseract,4d,wireframe
+hyprsaver_donut_gles3	geometry	ported	torus,spinning,3d
+hyprsaver_voronoi_gles3	geometry	ported	voronoi,cells,lattice
+voronoi_gles3	geometry	ported	voronoi,cells,xscreensaver
+hexstrut_gles3	geometry	ported	hexagons,struts,lattice,xscreensaver
+cubestorm_gles3	geometry	ported	cubes,storm,xscreensaver
+geodesic_gles3	geometry	ported	geodesic,sphere,polyhedron,xscreensaver
+xshadertoy_gimbalharmonics_gles3	geometry	ported	discs,gimbal,harmonics,3d
+hyprsaver_digitalrain_gles3	retro	ported	matrix,digital rain,terminal,green
+hyprsaver_terminal_gles3	retro	ported	terminal,text,console
+hyprsaver_ticker_gles3	retro	ported	stocks,ticker,charts,data
+hyprsaver_oscilloscope_gles3	retro	ported	oscilloscope,scope,waveform
+hyprsaver_sonar_gles3	retro	ported	sonar,radar,sweep
+hyprsaver_attitude_gles3	retro	ported	attitude indicator,gauge,instrument,cockpit
+hyprsaver_circuit_gles3	retro	ported	circuit,pcb,traces,pulses
+datatowers_gles3	retro	ported	data,towers,bars,xscreensaver
+xshadertoy_skyline_gles3	scenes	ported	city,skyline,buildings,night
+hyprsaver_temple_gles3	scenes	ported	temple,pillars,interior,retro
+cityflow_gles3	scenes	ported	city,blocks,flow,xscreensaver
+xshadertoy_neonhorizon_gles3	scenes	ncz	city,neon,retro-futurist,flight,synthwave
+xshadertoy_fluxcore_gles3	scenes	ported	machine,energy,sci-fi,core
+magmasimplex_gles3	fluid	ncz	lava lamp,wax,molten,psychedelic,light show

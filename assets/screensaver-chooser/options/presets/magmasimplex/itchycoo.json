@@ -1,0 +1,12 @@
+{
+  "title": "Itchycoo",
+  "description": "Swinging London: park green and gold with cream, a sunny afternoon.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-itchycoo",
+    "kaleidoscope": "0",
+    "projector-mask": "off"
+  }
+}

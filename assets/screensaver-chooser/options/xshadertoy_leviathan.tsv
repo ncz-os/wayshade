@@ -1,0 +1,16 @@
+preset	string					Preset	Named bundle of options (see --list-presets): applied above the saved config file and below environment and command line. Empty = none.	Look	NCZ_LEVIATHAN_PRESET
+hull	enum	auto			auto,slab,tiered,long	Hull	Proportions of the vessel. slab: broad and flat. tiered: a tall superstructure over a deep drop. long: lean and very long. auto: drawn per chapter.	Vessel	NCZ_LEVIATHAN_HULL
+landmark	enum	auto			auto,ring,fins	Landmark	The one structure each vessel is remembered by: a ring the runway passes under, or three tall fins on the superstructure. auto: drawn per chapter.	Vessel	NCZ_LEVIATHAN_LANDMARK
+palette	enum	auto			auto,warm,cool,sodium,white,harmonic	Window palette	Colour family of the windows and lights. harmonic: a colourway generated per chapter (windows at one hue and near its complement; the gate follows it). auto: drawn per chapter among all of them.	Look	NCZ_LEVIATHAN_PALETTE
+aperture-side	enum	auto			auto,left,right	Vessel side	Which side of the frame the vessel appears on, and so which side the runway and aperture are on. auto: drawn per chapter.	Vessel	NCZ_LEVIATHAN_APERTURE_SIDE
+planet	enum	auto			auto,ocean,desert,ice,giant,none	Planet	The world below the vessel, or none (stars only). auto: drawn per chapter.	Look	NCZ_LEVIATHAN_PLANET
+interior	enum	auto			auto,hangar,foundry	Interior	Light inside the hall: hangar (cool daylight shafts) or foundry (amber shafts). auto: drawn per chapter.	Look	NCZ_LEVIATHAN_INTERIOR
+chapter-length	int	0	0	900		Chapter length (arc s)	Length of one chapter in arc seconds, 380 to 900; the extra time goes to the quiet room. 0 = automatic (390 to 420, from the seed).	Timing	NCZ_LEVIATHAN_CHAPTER_LENGTH
+arc-scale	float	1	0.7	2		Arc scale	Wall seconds per arc second: 2 plays the whole arc (and every motion in it) at half speed, 0.7 at about 1.4 times the speed. The lower limit keeps every blinking light at or below 1 Hz.	Timing	NCZ_LEVIATHAN_ARC_SCALE
+gate-hue	int	-1	-1	359		Gate hue (degrees)	Starting hue of the gate's colour path, 0 to 359; it still drifts slowly (<= 0.03 Hz). -1 = automatic.	Look	NCZ_LEVIATHAN_GATE_HUE
+gate-intensity	float	1	0.3	1		Gate intensity	Contrast and saturation of the gate, 0.3 to 1. The gate never exceeds a display value of 0.85 or a mean near 0.45 at any setting.	Look	NCZ_LEVIATHAN_GATE_INTENSITY
+star-density	float	1	0.25	2		Star density	Multiplier on the number of visible stars.	Look	NCZ_LEVIATHAN_STAR_DENSITY
+randomize	enum	auto			auto,fixed	Randomize	auto: every chapter re-seeds at the end of the quiet room (new vessel, palette, planet, side). fixed: every chapter repeats the first one.	System	NCZ_LEVIATHAN_RANDOMIZE
+quality	enum	auto			auto,weak,mid,strong	Quality	Detail tier. auto follows the GPU class of this machine (NCZ_SHADER_QUALITY still overrides it).	System	NCZ_LEVIATHAN_QUALITY
+start-time	float	0	0	900		Start at (arc s)	Testing and captures: begin the run this many arc seconds into the first chapter (for example 45 for the hull pass, 200 for the hall, 300 for the gate). 0 = from the start.	System	NCZ_LEVIATHAN_START_TIME
+seed	int	0	0	999999		Random seed	Fixes the run's randomness so a run can be repeated exactly (with the same preset and options). 0 = a new seed (1 to 999999) every run; the seed in use is logged to standard error, so any run can be replayed with --seed.	System	NCZ_LEVIATHAN_SEED

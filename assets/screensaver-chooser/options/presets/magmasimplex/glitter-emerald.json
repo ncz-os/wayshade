@@ -1,0 +1,10 @@
+{
+  "title": "Glitter",
+  "description": "Gold flecks suspended in emerald liquid, catching the light.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "palette": "era-60s-glitter-emerald",
+    "glitter-amount": "1.5"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "title": "Avalon",
+  "description": "Haight-Ashbury: ink fingers branching into a saturated two-dye field, dendrites=ink.",
+  "accuracy": "artistic",
+  "min_class": "mid",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-cyan-red",
+    "kaleidoscope": "0",
+    "projector-mask": "off",
+    "dendrites": "ink"
+  }
+}

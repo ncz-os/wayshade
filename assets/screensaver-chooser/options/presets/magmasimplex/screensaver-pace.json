@@ -1,0 +1,10 @@
+{
+  "title": "Screensaver pace",
+  "description": "Time compressed three times: more rising, merging and dripping in a short idle.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "speed": "3",
+    "chapter": "0.6"
+  }
+}

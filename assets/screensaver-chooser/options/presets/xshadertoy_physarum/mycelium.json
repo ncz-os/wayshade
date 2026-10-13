@@ -1,0 +1,15 @@
+{
+  "title": "Physarum: Mycelium",
+  "description": "A denser, finer network in moss and pale green, drifting slowly as if growing under bark.",
+  "accuracy": "procedural approximation",
+  "min_class": "weak",
+  "values": {
+    "palette": "forest-moss",
+    "density": "0.68",
+    "fold": "0.4",
+    "scale": "0.7",
+    "striation": "0.85",
+    "flow": "0.6",
+    "depth-drift": "0.45"
+  }
+}

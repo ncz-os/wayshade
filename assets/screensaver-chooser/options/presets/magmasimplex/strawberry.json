@@ -1,0 +1,12 @@
+{
+  "title": "Strawberry",
+  "description": "Haight-Ashbury: full-frame deep red and pink dye, glowing bubbles and hot highlights, no mask.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-fillmore-red",
+    "kaleidoscope": "0",
+    "projector-mask": "off"
+  }
+}

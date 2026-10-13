@@ -1,0 +1,14 @@
+{
+  "title": "Frosted Glass: Fluted Dusk",
+  "description": "Broad flutes over four violet and rose lights.",
+  "accuracy": "analytic model",
+  "min_class": "weak",
+  "values": {
+    "style": "fluted",
+    "palette": "amethyst-quartz",
+    "rib": "0.55",
+    "frost": "0.35",
+    "refraction": "0.6",
+    "sources": "4"
+  }
+}

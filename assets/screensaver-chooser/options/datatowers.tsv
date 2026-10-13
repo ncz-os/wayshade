@@ -1,0 +1,15 @@
+style	enum	auto			auto,classic,enhanced	Style	classic: faithful port of the xscreensaver original. enhanced: same hack with anti-aliasing, soft lighting, glow and smooth palettes. auto: enhanced on GPUs that can afford it, classic otherwise.	Look	NCZ_GIBSON_STYLE
+speed	float	1	0.1	4		Animation speed	Time scale of the animation. 1 matches the original xscreensaver pace.	Motion	NCZ_GIBSON_SPEED
+seed	int	0	0	1e+09		Random seed	Seed for the random choices (0 = new every launch). The same seed repeats the same run.	Motion	NCZ_GIBSON_SEED
+grid-width	int	6	1	12		Grid width	Towers across (xscreensaver -grid-width).	Density	NCZ_GIBSON_GRID_WIDTH
+grid-height	int	7	1	20		Tower height	Height of the towers (xscreensaver -grid-height).	Density	NCZ_GIBSON_GRID_HEIGHT
+grid-depth	int	6	1	12		Grid depth	Rows of towers (xscreensaver -grid-depth).	Density	NCZ_GIBSON_GRID_DEPTH
+spacing	float	2	1	6		Spacing	Space between towers (xscreensaver -spacing).	Density	NCZ_GIBSON_SPACING
+columns	int	5	1	10		Text columns	Text columns per tower face (xscreensaver -columns).	Density	NCZ_GIBSON_COLUMNS
+texture	bool	true				Text	Show the text on the tower faces (xscreensaver -texture).	Look	NCZ_GIBSON_TEXTURE
+ground-color	string	#8A2BE2				Floor color	Circuit-board floor lines, as #RRGGBB (xscreensaver groundColor).	Look	NCZ_GIBSON_GROUND_COLOR
+tower-color	string	#4444FF				Tower color	Tower glass, as #RRGGBB (xscreensaver towerColor).	Look	NCZ_GIBSON_TOWER_COLOR
+text-color	string	#DDDDFF				Text color	Small tower text, as #RRGGBB (xscreensaver towerText).	Look	NCZ_GIBSON_TEXT_COLOR
+text2-color	string	#FF0000				Big text color	Big tower text and billboards, as #RRGGBB (xscreensaver towerText2).	Look	NCZ_GIBSON_TEXT2_COLOR
+bloom	float	1	0	3		Glow	Strength of the soft glow around bright areas (enhanced style only). 0 turns the glow pass off.	Look	NCZ_GIBSON_BLOOM
+antialias	bool	true				Anti-aliasing	Smooth edges (enhanced style only).	Look	NCZ_GIBSON_ANTIALIAS

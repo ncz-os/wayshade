@@ -1,0 +1,10 @@
+{
+  "title": "Real-lamp pace",
+  "description": "Wax moves as fast as in a real lamp (calibrated on real-time footage); views change slowly.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "speed": "1",
+    "chapter": "2"
+  }
+}

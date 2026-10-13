@@ -1,0 +1,15 @@
+{
+  "title": "Attractor: Lantern Fire",
+  "description": "The lantern form in embers: thin bright strands and a warm halo.",
+  "accuracy": "procedural approximation",
+  "min_class": "mid",
+  "values": {
+    "form": "lantern",
+    "palette": "ember-night",
+    "drift": "0.4",
+    "whisker": "0.5",
+    "thickness": "0.3",
+    "glow": "0.75",
+    "brightness": "1.2"
+  }
+}

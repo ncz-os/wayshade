@@ -1,0 +1,14 @@
+{
+  "title": "Fillmore live",
+  "description": "Haight-Ashbury: the Fillmore dish driven by what is playing on the default output: a rhythmic squeeze, colour breathing and droplet bursts on the beat. Play music to see it move.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-fillmore-splat",
+    "kaleidoscope": "0",
+    "projector-mask": "dish",
+    "dynamics": "0.85",
+    "audio": "system"
+  }
+}

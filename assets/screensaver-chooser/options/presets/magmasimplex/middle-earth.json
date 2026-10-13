@@ -1,0 +1,12 @@
+{
+  "title": "Middle Earth",
+  "description": "Swinging London: deep green and teal dye, forest-dark.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-middle-earth",
+    "kaleidoscope": "0",
+    "projector-mask": "off"
+  }
+}

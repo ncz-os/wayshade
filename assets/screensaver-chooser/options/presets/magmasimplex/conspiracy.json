@@ -1,0 +1,12 @@
+{
+  "title": "Conspiracy",
+  "description": "Haight-Ashbury: overhead-projector liquid light show, red and orange dye fingering into cyan, oil droplets with dark rims.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-cyan-red",
+    "kaleidoscope": "0",
+    "projector-mask": "off"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "title": "Caustics on stone: Deep pool",
+  "description": "Soft, wide ribbons on pale Carrara under deeper water, moving slowly.",
+  "accuracy": "analytic small-slope caustics, compressed",
+  "min_class": "weak",
+  "values": {
+    "palette": "carrara",
+    "focus": "0.4",
+    "depth": "0.85",
+    "ripples": "0.5",
+    "speed": "0.7"
+  }
+}

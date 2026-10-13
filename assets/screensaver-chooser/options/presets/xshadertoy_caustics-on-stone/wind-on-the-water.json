@@ -1,0 +1,14 @@
+{
+  "title": "Caustics on stone: Wind on the water",
+  "description": "Short, busy ripples break the net into a fine lace over travertine; the headings turn more over minutes.",
+  "accuracy": "analytic small-slope caustics, compressed",
+  "min_class": "weak",
+  "values": {
+    "palette": "travertine",
+    "focus": "0.6",
+    "depth": "0.3",
+    "ripples": "0.95",
+    "ripple-scale": "0.7",
+    "evolution": "1.5"
+  }
+}

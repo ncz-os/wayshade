@@ -1,0 +1,14 @@
+{
+  "title": "Marble: Nero Marquina",
+  "description": "Black stone crossed by sharp white veins, highly polished, the reflection gliding slowly.",
+  "accuracy": "procedural approximation",
+  "min_class": "weak",
+  "values": {
+    "palette": "nero-marquina",
+    "veins": "0.7",
+    "hairlines": "0.45",
+    "intrusion": "0.04",
+    "polish": "0.9",
+    "drift": "0.8"
+  }
+}

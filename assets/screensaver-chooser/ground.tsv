@@ -1,0 +1,5 @@
+# Ground-dominated pieces: the frame is a paper or stone ground by design, with marks
+# on it and slow change, so the flat_fill / one_color / tiny_motion heuristics do not
+# apply. The test harness judges them by structure (tiles holding a mark) and by change
+# against the capture baseline instead. Columns (tab separated): id, reason.
+ephemeris_gles3	matte limestone ground with charcoal marks, slow by design, may pause

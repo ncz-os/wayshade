@@ -1,0 +1,12 @@
+{
+  "title": "Prune",
+  "description": "Dark-toned: slow gold and orange waves over near-black amber.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-ember-gold",
+    "kaleidoscope": "0",
+    "projector-mask": "off"
+  }
+}

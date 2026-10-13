@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Screensaver & Lock
+GenericName=Screensaver settings
+Comment=Choose the screensaver, idle timeout, lock and display power-off
+Exec=/usr/bin/ncz-screensaver-settings
+Icon=preferences-desktop-screensaver
+Terminal=false
+StartupNotify=true
+StartupWMClass=dev.ncz.screensaver
+Categories=Settings;DesktopSettings;System;
+Keywords=screensaver;lock;idle;screen;power;display;blank;timeout;suspend;dpms;blackhole;

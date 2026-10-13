@@ -1,0 +1,12 @@
+{
+  "title": "Piper",
+  "description": "Swinging London: soft pastel dawn, peach, lavender and primrose, gentle.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-piper",
+    "kaleidoscope": "0",
+    "projector-mask": "off"
+  }
+}

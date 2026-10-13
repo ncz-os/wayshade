@@ -1,0 +1,13 @@
+{
+  "title": "Hapshash",
+  "description": "Swinging London: flat bands of violet, orange and magenta with hard edges, poster-art style, almost no gradients.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "view": "butterfly",
+    "palette": "show-hapshash",
+    "kaleidoscope": "0",
+    "projector-mask": "off",
+    "poster": "true"
+  }
+}

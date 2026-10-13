@@ -1,0 +1,38 @@
+ncz-screensavers
+Copyright 2026 Jason Perlow and contributors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The Apache-2.0 grant covers the original NCZ-authored code in this
+repository: the Wayland/EGL/GLES3 harness, the launcher, the idle timer, the
+Singularity plugin, the development tools and tests, and the original
+in-house engines (Black Hole port/rewrite, Fractasia, Magmasimplex,
+Neonhorizon, Neonspacewar, Ephemeris, Megacity and Genxvectorcade).
+
+Every screensaver and every vendored shader is a separate program with its
+own copyright and licence; those components are NOT relicensed by the
+Apache-2.0 grant above. The complete component-by-component record is in
+NOTICES.md and debian/copyright, which are installed under
+/usr/share/doc/ncz-screensavers/. The required notices include:
+
+- Black Hole: port of Adriwin06/black-hole, Copyright 2015 Otto Seiskari,
+  Copyright 2026 Adriwin (MIT). Full text: vendor/blackhole-LICENSE.txt.
+- hyprsaver: 30 shaders, Copyright 2026 Mara Vexa (MIT). Full text:
+  vendor/hyprsaver/LICENSE.
+- xshadertoy: shaders ported from xscreensaver 6.16, each retaining its
+  per-file Title/Author/URL/Date/licence header (MIT, CC0-1.0 or CC-BY-3.0).
+- xscreensaver classics: Copyright 1988-2025 Jamie Zawinski and
+  contributors, under the MIT-style X Consortium permission notice
+  reproduced in each file header.
+- Carsten Steger GLSL hacks (hypertorus, klein, projectiveplane) and
+  src/glsl-utils.c: Copyright 2003-2026 Carsten Steger, under the
+  xscreensaver permission notice.
+- gl-transitions: development-only shader sources, not shipped in the
+  ncz-screensavers Debian package (MIT / BSD-3-Clause / BSD-2-Clause; see
+  vendor/gl-transitions-PORTED.md).
+
+Two Shadertoy-API shaders (neontriangulator, neongravity-1) declared CC0
+upstream but embedded helper snippets of unstated provenance. Those helpers
+were replaced in 0.8.9 with licence-clear equivalents (Inigo Quilez MIT hash
+and an in-house filmic tone curve); the CC0 grant of the shaders themselves
+is unchanged. See NOTICES.md section 4.

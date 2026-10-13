@@ -1,0 +1,9 @@
+{
+  "title": "Yellow in pink",
+  "description": "Yellow-orange wax in intensely saturated pink liquid.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "palette": "yellow-on-pink"
+  }
+}

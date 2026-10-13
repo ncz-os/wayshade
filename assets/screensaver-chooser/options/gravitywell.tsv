@@ -1,0 +1,10 @@
+style	enum	auto			auto,classic,enhanced	Style	classic: faithful port of the xscreensaver original. enhanced: same hack with anti-aliasing, soft lighting, glow and smooth palettes. auto: enhanced on GPUs that can afford it, classic otherwise.	Look	NCZ_GRAVITYWELL_STYLE
+speed	float	1	0.1	4		Animation speed	Time scale of the animation. 1 matches the original xscreensaver pace.	Motion	NCZ_GRAVITYWELL_SPEED
+seed	int	0	0	1e+09		Random seed	Seed for the random choices (0 = new every launch). The same seed repeats the same run.	Motion	NCZ_GRAVITYWELL_SEED
+count	int	15	2	30		Stars	Number of massive bodies (xscreensaver -count).	Density	NCZ_GRAVITYWELL_COUNT
+resolution	float	1	0.5	2		Resolution	Size of the grid; larger means a bigger field with more room between the wells (xscreensaver -resolution).	Density	NCZ_GRAVITYWELL_RESOLUTION
+grid-size	float	1	0.5	4		Grid spacing	Spacing between grid lines; larger means fewer lines (xscreensaver -grid-size).	Density	NCZ_GRAVITYWELL_GRID_SIZE
+palette	enum	classic			classic,aurora,amber,ice,ember,cycle	Palette	Line colors by depth. classic is the original green to red. cycle cross-fades between the palettes every 45 seconds.	Look	NCZ_GRAVITYWELL_PALETTE
+fog	float	-1	-1	4		Fog	Distance fog density as a multiple of the original (xscreensaver uses 1). -1 = automatic: none for classic (the look this catalog has always shown), half for enhanced.	Look	NCZ_GRAVITYWELL_FOG
+bloom	float	1	0	3		Glow	Strength of the soft glow around bright areas (enhanced style only). 0 turns the glow pass off.	Look	NCZ_GRAVITYWELL_BLOOM
+antialias	bool	true				Anti-aliasing	Smooth edges (enhanced style only).	Look	NCZ_GRAVITYWELL_ANTIALIAS

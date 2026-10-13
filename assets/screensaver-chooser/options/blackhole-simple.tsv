@@ -1,0 +1,37 @@
+# Black Hole simple mode: six sliders (0..100) that each move several underlying options along
+# hand-tuned curves. See docs/CHOOSER-TAXONOMY.md. Columns (tab separated):
+#   axis, option, curve, stops, label, description, low word, high word
+# An axis row has option "-" and carries label, description and the words shown at the two ends.
+# An option row names an option of options/blackhole.tsv, a curve (linear: piecewise linear between the
+# stops; step: the value of the last stop at or below the slider) and "position=value" stops; its last
+# four columns stay empty and may be omitted (editors strip trailing tabs). Every curve
+# must have a stop at 0 and at 100, and its value at 50 must equal the option's schema default, so that
+# the centre of every slider is "as shipped" and Reset returns there. tools/generate-catalog.py checks
+# all of this and that every value stays inside the option's range (float) or choices (enum).
+glow	-	-	-	Glow	Brightness of the disk, the halo around the shadow and the photon ring	Dim	Blazing
+glow	exposure	linear	0=0.55,50=1,100=1.8
+glow	bloom	linear	0=0.3,50=1,100=2.2
+glow	disk-brightness	linear	0=0.7,50=1,100=1.6
+glow	photon-ring	linear	0=0,50=0,100=1.2
+drama	-	-	-	Drama	Relativistic beaming, the jets and the hot sector of the disk	Serene	Violent
+drama	beaming	linear	0=0.3,50=1,100=1.8
+drama	jet	linear	0=0.25,50=1,100=1.7
+drama	jet-length	linear	0=12,50=22.2,100=70
+drama	hot-sector	linear	0=0.06,50=0.22,100=0.6
+motion	-	-	-	Motion	Speed of the animation, the disk rotation and how restless the camera is	Calm	Dynamic
+motion	speed	linear	0=0.35,50=1,100=2.2
+motion	rotation-speed	linear	0=0.4,50=1,100=2
+motion	precession	linear	0=0.3,50=1,100=2
+motion	flyby	step	0=drift,25=slow-orbit,50=auto,80=random,100=random
+cosmos	-	-	-	Cosmos	Density of the background stars, the nebula and the bright star layer	Empty	Crowded
+cosmos	star-density	linear	0=0.2,50=1,100=2.4
+cosmos	nebula	linear	0=0.1,50=1,100=1.8
+cosmos	bright-stars	linear	0=0,50=0,100=1.3
+disk	-	-	-	Disk	Size, heat, structure and spin of the accretion disk	Compact	Vast
+disk	disk-outer	linear	0=7,50=12,100=34
+disk	temperature	linear	0=0.75,50=1,100=1.35
+disk	disk-structure	linear	0=0,50=0,100=1.2
+disk	spin	linear	0=0,50=0,100=0.9
+detail	-	-	-	Detail	Ray-march quality and scene quality (above the centre needs a faster GPU)	Fast	Finest
+detail	quality	step	0=low,25=medium,50=auto,75=high,100=ultra
+detail	scene-quality	step	0=light,50=auto,75=rich,100=rich

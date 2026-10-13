@@ -1,0 +1,9 @@
+{
+  "title": "The sixties",
+  "description": "Only pairings documented for 1960s lamps, and warm generated ones in their spirit.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "palette-era": "1960s"
+  }
+}

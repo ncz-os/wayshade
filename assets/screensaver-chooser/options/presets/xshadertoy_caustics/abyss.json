@@ -1,0 +1,15 @@
+{
+  "title": "Caustics: Abyss",
+  "description": "Deep water: faint, soft light pools and a single slow focal region drifting through the dark.",
+  "accuracy": "analytic small-slope caustics, artistic composition",
+  "min_class": "weak",
+  "values": {
+    "palette": "abyss-cyan",
+    "focus": "0.5",
+    "clustering": "0.9",
+    "depth": "0.85",
+    "shafts": "0.35",
+    "sun": "0.8",
+    "speed": "0.7"
+  }
+}

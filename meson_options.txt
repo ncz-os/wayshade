@@ -1,0 +1,30 @@
+
+option(
+    'install-extras', type: 'boolean', value: false,
+    description: 'Also install shaders of non-ship (development-only) hacks.',
+)
+
+option(
+    'magma-audio', type: 'boolean', value: true,
+    description: 'Build optional audio capture into the magmasimplex beat layer (NCZ_AUDIO_CAPTURE). Off, the saver still builds and runs on the procedural virtual beat only. Capture uses pw-record/parec, so no link-time dependency is added either way.',
+)
+
+option(
+    'gtk4-reference-app', type: 'boolean', value: false,
+    description: 'Also install the reference GTK4/libadwaita front end (contrib/gtk4-reference-app). The Debian packaging turns it on and splits it into ncz-screensavers-gtk4-reference; the NCZ-OS image build leaves it off.',
+)
+
+option(
+    'singularity-plugin', type: 'feature', value: 'disabled',
+    description: 'Build the Singularity Settings plugin (needs the Singularity SDK: valac, libsingularity vapi and pkg-config file).',
+)
+
+option(
+    'singularity-vapidir', type: 'string', value: '/opt/singularity/share/vala/vapi',
+    description: 'Directory holding singularity-1.0.vapi.',
+)
+
+option(
+    'singularity-plugin-dir', type: 'string', value: '/opt/singularity/lib/singularity/plugins',
+    description: 'Where Singularity loads plugins from.',
+)

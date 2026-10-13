@@ -1,0 +1,9 @@
+{
+  "title": "Cyan in blue",
+  "description": "Pale cyan-white wax in deep blue liquid, measured from footage of a real lamp.",
+  "accuracy": "artistic",
+  "min_class": "weak",
+  "values": {
+    "palette": "footage-cyan-in-blue"
+  }
+}
