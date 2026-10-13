@@ -6,3 +6,15 @@ Authors=Jason Perlow
 Copyright=Copyright (c) 2026 Jason Perlow
 Website=https://sinty.dev
 Builtin=false
+Icon=dev.ncz.screensaver
+X-Singularity-Category=lock
+# This plugin ships with the desktop. Marking it app-shipped makes
+# PluginPreferences.is_enabled() return true for it as soon as it is discovered,
+# independently of the dev.sinty.desktop enabled-plugins list. Without this, a
+# shell that scanned plugins *before* this package's postinst added "screensaver"
+# to enabled-plugins (or before ncz-saver ensure-plugin did it at login) leaves
+# the module enabled (the Settings page reads the live setting) but never loaded,
+# so Settings > Plugins > "Screensaver and Lockscreen" renders the empty
+# "No settings available" row until the shell restarts. See
+# tools/test-plugin-settings-pane.py.
+X-Singularity-App=dev.sinty.desktop

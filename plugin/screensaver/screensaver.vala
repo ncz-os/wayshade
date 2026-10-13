@@ -77,6 +77,12 @@ namespace NczChooserStyle {
         .ncz-row-box { padding: 8px 12px; }
         .ncz-axis-word { font-size: 0.78em; opacity: 0.65; }
         .ncz-axis-warning { font-size: 0.8em; color: #e0a040; }
+        .ncz-options { padding: 0 0 6px 12px; }
+        .ncz-open { color: @accent_color; }
+        /* The Settings page already draws one card around this widget: inner groups are
+           plain sections, not cards in cards. */
+        .ncz-flat .preferences-group.preferences-group { background: none; border: none; border-radius: 0; box-shadow: none; }
+        .ncz-flat .preferences-group .group-header { padding-left: 0; padding-right: 0; }
     """;
 
     public static void ensure () {
@@ -88,7 +94,8 @@ namespace NczChooserStyle {
             return;
         var css = new Gtk.CssProvider ();
         css.load_from_string (CSS);
-        Gtk.StyleContext.add_provider_for_display (display, css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+        // USER priority, as the Singularity theme itself loads, so these rules can refine it
+        Gtk.StyleContext.add_provider_for_display (display, css, Gtk.STYLE_PROVIDER_PRIORITY_USER);
     }
 }
 
@@ -118,6 +125,8 @@ public class HackRow : Object {
     public Button preview;
     public Switch pool;
     public Label badge;
+    public string section;
+    public Gtk.Revealer options; // the hack's options, directly under its row
     public bool shown = true;
 }
 
@@ -242,7 +251,7 @@ public class SwatchRow : Gtk.ListBoxRow {
         box.append (ncz_caption (subtitle));
         var flow = new FlowBox ();
         flow.selection_mode = SelectionMode.NONE;
-        flow.min_children_per_line = 5;
+        flow.min_children_per_line = 1; // wraps to the width it is given
         flow.max_children_per_line = 5;
         flow.row_spacing = 6;
         flow.column_spacing = 6;
@@ -469,6 +478,8 @@ public class HackOptionsPanel : Gtk.Box {
         return basic_content;
     }
     public signal void preview_requested (string id);
+    // The header's "Hide" button was pressed.
+    public signal void close_requested ();
     // Emitted after the Developer switch repopulated the Advanced expander (informational).
     public signal void developer_toggled ();
 
@@ -481,6 +492,13 @@ public class HackOptionsPanel : Gtk.Box {
         group = new PreferencesGroup ("%s options".printf (hack.title),
                                       axes.is_empty ? "Changes apply the next time it starts"
                                                     : "The centre of every slider is the shipped look; changes apply to the preview and the next start");
+        var hide = new Button.with_label ("Hide");
+        hide.add_css_class ("flat");
+        hide.valign = Align.CENTER;
+        hide.tooltip_text = "Collapse these options";
+        hide.update_property (Gtk.AccessibleProperty.LABEL, "Hide the options of %s".printf (hack.title), -1);
+        hide.clicked.connect (() => close_requested ());
+        group.add_header_suffix (hide);
         append (group);
         if (!axes.is_empty)
             build_simple (options, axes);
@@ -969,15 +987,19 @@ public class HackOptionsPanel : Gtk.Box {
             if (is_float)
                 row.spin_btn.digits = 2;
             if (option.name == "seed" && !is_float) {
-                var randomize = new Button.with_label ("Randomize");
+                var randomize = new Button.from_icon_name ("view-refresh-symbolic");
+                randomize.add_css_class ("flat");
                 randomize.valign = Align.CENTER;
                 randomize.tooltip_text = "Pick a new random seed";
+                randomize.update_property (Gtk.AccessibleProperty.LABEL, "Pick a new random seed", -1);
                 randomize.clicked.connect (() => {
                     row.spin_btn.value = Random.int_range ((int32) (lo < 1 ? 1 : lo), (int32) hi);
                 });
-                var copy = new Button.with_label ("Copy seed");
+                var copy = new Button.from_icon_name ("edit-copy-symbolic");
+                copy.add_css_class ("flat");
                 copy.valign = Align.CENTER;
                 copy.tooltip_text = "Copy the seed to the clipboard";
+                copy.update_property (Gtk.AccessibleProperty.LABEL, "Copy the seed", -1);
                 copy.clicked.connect (() => {
                     var display = Gdk.Display.get_default ();
                     if (display != null)
@@ -1007,50 +1029,24 @@ public class HackOptionsPanel : Gtk.Box {
     }
 }
 
-// The options of one hack, shown in a transient window opened by its gear. The window is
-// laid out like any other settings dialog: a titlebar with the hack name and a Close
-// button, then the same HackOptionsPanel the page used to hold. It is always visible
-// wherever the gear was, and the page keeps its scroll position. Plain GTK, not a
-// libadwaita widget, so the plugin loads on every desktop build in the field.
-public class HackOptionsDialog : Gtk.Window {
-    public signal void preview_requested (string id);
+// The options of one hack as shown under its row: the Developer hint, then the panel.
+public class HackOptionsBox : Gtk.Box {
+    public HackOptionsPanel panel;
 
-    public HackOptionsDialog (Gtk.Window? parent, ScreensaverBackend backend, ScreensaverHack hack) {
-        Object (transient_for: parent, modal: true, title: "%s options".printf (hack.title));
-        set_default_size (520, 640);
-        set_size_request (360, -1);
-
-        var header = new Gtk.HeaderBar ();
-        var heading = new Gtk.Label ("%s options".printf (hack.title));
-        heading.add_css_class ("title");
-        header.title_widget = heading;
-        var close_btn = new Gtk.Button.with_label ("Close");
-        close_btn.valign = Align.CENTER;
-        close_btn.tooltip_text = "Close the options";
-        close_btn.clicked.connect (() => close ());
-        header.pack_end (close_btn);
-        set_titlebar (header);
-
-        var panel = new HackOptionsPanel (backend, hack);
-        panel.preview_requested.connect ((id) => preview_requested (id));
-
-        var content = new Gtk.Box (Orientation.VERTICAL, 0);
-        // Without the Developer switch the basic view of some hacks is blank; say so.
-        // The hint follows the Developer switch while the dialog is open.
+    public HackOptionsBox (ScreensaverBackend backend, ScreensaverHack hack) {
+        Object (orientation: Orientation.VERTICAL, spacing: 0);
+        add_css_class ("ncz-options");
+        panel = new HackOptionsPanel (backend, hack);
         var hint = ncz_caption ("No basic options; enable Developer options in Advanced to see them.", 60);
         hint.margin_top = 12;
         hint.margin_bottom = 12;
+        hint.margin_start = 12;
         hint.visible = !panel.has_basic_content () && !backend.developer_mode;
         panel.developer_toggled.connect (() => {
             hint.visible = !panel.has_basic_content () && !backend.developer_mode;
         });
-        content.append (hint);
-        var scroll = new Gtk.ScrolledWindow ();
-        scroll.set_policy (PolicyType.EXTERNAL, PolicyType.AUTOMATIC);
-        scroll.vexpand = true;
-        scroll.set_child (panel);
-        content.append (scroll);
-        set_child (content);
+        append (hint);
+        append (panel);
     }
 }
 
@@ -1095,7 +1091,7 @@ public class ScreensaverSettings : Gtk.Box {
     // chooser
     private Box chooser_box = new Box (Orientation.VERTICAL, 8);
     private Gtk.SearchEntry search;
-    private SegmentedControl engine_seg;
+    private SelectionRow engine_row;
     private string engine = "all";
     private bool searching = false;
     private PreferencesGroup? list_group = null;
@@ -1105,19 +1101,15 @@ public class ScreensaverSettings : Gtk.Box {
     private string built_pinned = "";
     private Gee.HashMap<string, bool> expanded_memory = new Gee.HashMap<string, bool> ();
 
-    // The options of one hack live in a transient dialog opened by its gear (see
-    // HackOptionsDialog). They used to be an inline panel appended below the whole
-    // chooser, which put a gear click off the bottom of the visible page.
-    private HackOptionsDialog? options_dialog = null;
+    // At most one hack's options are open, under that hack's row.
+    private HackRow? open_row = null;
+    private HackOptionsBox? open_box = null;
 
     public ScreensaverSettings (ScreensaverBackend backend) {
         Object (orientation: Orientation.VERTICAL, spacing: 12);
         this.backend = backend;
         NczChooserStyle.ensure ();
-        margin_top = 12;
-        margin_bottom = 12;
-        margin_start = 12;
-        margin_end = 12;
+        add_css_class ("ncz-flat");
         foreach (var c in backend.categories ())
             category_by_id[c.id] = c;
         engine = backend.engine_filter;
@@ -1183,7 +1175,7 @@ public class ScreensaverSettings : Gtk.Box {
         options_btn.tooltip_text = "Show the settings of this screensaver";
         options_btn.clicked.connect (() => {
             if (hack_by_id (backend.hack_id) != null)
-                configure (backend.hack_id);
+                configure (backend.hack_id, null, true);
         });
         current_row.add_suffix (options_btn);
         group.add_row (current_row);
@@ -1247,19 +1239,19 @@ public class ScreensaverSettings : Gtk.Box {
         search.update_property (Gtk.AccessibleProperty.LABEL, "Search screensavers", -1);
         chooser_box.append (search);
 
-        engine_seg = new SegmentedControl ();
-        for (int i = 0; i < ENGINE_IDS.length; i++)
-            engine_seg.add_option (ENGINE_IDS[i], ENGINE_LABELS[i]);
-        engine_seg.selected.connect ((name) => {
-            if (name == engine)
+        var filter_group = new PreferencesGroup ();
+        engine_row = new SelectionRow ("Show", ENGINE_LABELS, ENGINE_LABELS[index_of (ENGINE_IDS, engine)]);
+        engine_row.tooltip_text = "Filter by engine: in-house savers, Shadertoy-style shaders, hyprsaver shaders, xscreensaver classics";
+        engine_row.selected.connect ((label) => {
+            int i = index_of (ENGINE_LABELS, label);
+            if (i < 0 || ENGINE_IDS[i] == engine)
                 return;
-            engine = name;
-            backend.engine_filter = name;
+            engine = ENGINE_IDS[i];
+            backend.engine_filter = engine;
             apply_filters ();
         });
-        engine_seg.set_active (engine);
-        engine_seg.tooltip_text = "Filter by engine: in-house savers, Shadertoy-style shaders, hyprsaver shaders, xscreensaver classics";
-        chooser_box.append (engine_seg);
+        filter_group.add_row (engine_row);
+        chooser_box.append (filter_group);
 
         if (backend.has_tiers && backend.has_flags) {
             show_all_row = new SwitchRow ("Show all screensavers",
@@ -1270,9 +1262,7 @@ public class ScreensaverSettings : Gtk.Box {
                 backend.show_all = show_all_row.switch_btn.active;
                 apply_filters ();
             });
-            var switch_group = new PreferencesGroup ();
-            switch_group.add_row (show_all_row);
-            chooser_box.append (switch_group);
+            filter_group.add_row (show_all_row);
         }
         rebuild_list ();
     }
@@ -1284,6 +1274,14 @@ public class ScreensaverSettings : Gtk.Box {
     private void rebuild_list () {
         foreach (var s in sections)
             expanded_memory[s.id] = s.expander.expanded;
+        HackOptionsBox? keep = open_box;
+        string? keep_id = open_row != null ? open_row.hack.id : null;
+        string? keep_section = open_row != null ? open_row.section : null;
+        double keep_y = keep_id != null ? row_y (open_row.row) : double.NAN;
+        if (open_row != null)
+            open_row.options.set_child (null);
+        open_row = null;
+        open_box = null;
         if (list_group != null) {
             chooser_box.remove (list_group);
             list_group = null;
@@ -1337,6 +1335,12 @@ public class ScreensaverSettings : Gtk.Box {
                          backend.categories ().is_empty ? "Alphabetical" : "Not yet placed in a style", other, backend.categories ().is_empty);
         }
         apply_filters ();
+        if (keep_id != null) {
+            var hr = find_row (keep_id, keep_section);
+            if (hr != null)
+                show_options (hr, keep, keep_y, false);
+        }
+        sync_open_state ();
     }
 
     private void add_section (string id, string label, string description, Gee.List<ScreensaverHack> hacks, bool pinned) {
@@ -1378,9 +1382,11 @@ public class ScreensaverSettings : Gtk.Box {
         s.expander.add_suffix (menu);
         foreach (var h in hacks) {
             var hr = make_hack_row (h);
+            hr.section = id;
             s.rows.add (hr);
             hack_rows.add (hr);
             s.expander.add_row (hr.row);
+            s.expander.add_row (hr.options);
         }
         s.expander.expanded = expanded_memory.has_key (id) ? expanded_memory[id] : pinned;
         sections.add (s);
@@ -1421,7 +1427,7 @@ public class ScreensaverSettings : Gtk.Box {
             if (refreshing)
                 return;
             if (hr.pick.active)
-                select_hack (id);
+                select_hack (id, hr.section);
             else if (backend.hack_id == id)
                 hr.pick.active = true;
         });
@@ -1472,7 +1478,7 @@ public class ScreensaverSettings : Gtk.Box {
         hr.gear.tooltip_text = "Options";
         hr.gear.update_property (Gtk.AccessibleProperty.LABEL, "Options of %s".printf (hack.title), -1);
         hr.gear.visible = !backend.options_for (id).is_empty;
-        hr.gear.clicked.connect (() => configure (id));
+        hr.gear.clicked.connect (() => configure (id, hr.section, true));
         hr.row.add_suffix (hr.gear);
 
         hr.preview = new Button.from_icon_name ("media-playback-start-symbolic");
@@ -1493,21 +1499,31 @@ public class ScreensaverSettings : Gtk.Box {
         });
         hr.row.add_suffix (hr.pool);
 
+        hr.options = new Gtk.Revealer ();
+        hr.options.transition_type = RevealerTransitionType.SLIDE_DOWN;
+        hr.options.visible = false;
+        hr.options.notify["child-revealed"].connect (() => {
+            if (hr.options.child_revealed && hr == open_row && hr.options.transition_type != RevealerTransitionType.NONE)
+                after_layout (() => place (hr, row_y (hr.row)));
+        });
+
         hr.row.activated.connect (() => {
             if (backend.mode != "random")
-                select_hack (id);
+                select_hack (id, hr.section);
         });
         return hr;
     }
 
-    private void select_hack (string id) {
+    private void select_hack (string id, string section) {
+        var hr = find_row (id, section);
+        double y = hr != null ? row_y (hr.row) : double.NAN;
         if (backend.mode == "off")
             backend.mode = "one";
         if (backend.hack_id != id)
             backend.hack_id = id;
         backend.note_recent (id);
-        if (!backend.options_for (id).is_empty)
-            configure (id);
+        if (!backend.options_for (id).is_empty && (open_row == null || open_row.hack.id != id))
+            configure (id, section, false, y);
     }
 
     private void set_favourite (string id, bool on) {
@@ -1587,6 +1603,7 @@ public class ScreensaverSettings : Gtk.Box {
                 && (show_all || !backend.is_flagged (hr.hack.id));
             hr.shown = ok;
             hr.row.visible = ok;
+            hr.options.visible = ok && hr == open_row;
         }
         foreach (var s in sections) {
             int visible = 0;
@@ -1605,26 +1622,154 @@ public class ScreensaverSettings : Gtk.Box {
 
     // ---- options panel ------------------------------------------------------------------
 
-    private void configure (string? id) {
-        if (options_dialog != null) {
-            options_dialog.close ();
-            options_dialog = null;
-        }
-        if (id == null)
-            return;
+    private void configure (string id, string? section, bool toggle, double y = double.NAN) {
         var hack = hack_by_id (id);
-        if (hack == null || backend.options_for (id).is_empty)
+        var hr = find_row (id, section);
+        if (hack == null || hr == null || backend.options_for (id).is_empty)
             return;
-        // A dialog is unmistakable wherever the gear was on the page, unlike the old
-        // inline panel that the chooser pushed below the fold. `as` yields null when
-        // the page is not embedded in a window (bare test host); the dialog is fine
-        // without a transient parent.
-        var parent = get_root () as Gtk.Window;
-        options_dialog = new HackOptionsDialog (parent, backend, hack);
-        options_dialog.preview_requested.connect ((hid) => start_preview (hid));
-        options_dialog.present ();
+        if (hr == open_row) {
+            if (toggle)
+                close_options ();
+            else
+                after_layout (() => place (hr, double.NAN));
+            return;
+        }
+        if (y.is_nan ())
+            y = row_y (hr.row);
         if (backend.mode != "one" || backend.hack_id != id)
             backend.note_recent (id);
+        // note_recent may have rebuilt the list
+        hr = find_row (id, section);
+        if (hr == null)
+            return;
+        var box = new HackOptionsBox (backend, hack);
+        box.panel.preview_requested.connect ((hid) => start_preview (hid));
+        box.panel.close_requested.connect (() => close_options ());
+        show_options (hr, box, y, true);
+    }
+
+    // The row in that section, else one already on screen, else the one in its style group.
+    private HackRow? find_row (string id, string? section) {
+        HackRow? fallback = null;
+        foreach (var s in sections) {
+            foreach (var hr in s.rows) {
+                if (hr.hack.id != id)
+                    continue;
+                if (section != null ? s.id == section : (s.expander.expanded && hr.shown))
+                    return hr;
+                if (fallback == null || !s.pinned)
+                    fallback = hr;
+            }
+        }
+        return fallback;
+    }
+
+    private void show_options (HackRow hr, HackOptionsBox box, double y, bool animate) {
+        close_options ();
+        open_row = hr;
+        open_box = box;
+        bool opened_section = false;
+        foreach (var s in sections) {
+            if (s.id == hr.section && !s.expander.expanded) {
+                s.expander.expanded = true;
+                opened_section = true;
+            }
+        }
+        hr.options.transition_type = animate ? RevealerTransitionType.SLIDE_DOWN : RevealerTransitionType.NONE;
+        hr.options.set_child (box);
+        hr.options.visible = hr.shown;
+        hr.options.reveal_child = true;
+        sync_open_state ();
+        after_layout (() => place (hr, y));
+        if (opened_section) {
+            // The style group was folded: its row is not mapped until it has unfolded, so
+            // bring the options into view once it has (the Options button of the page top).
+            Timeout.add (450, () => {
+                if (hr == open_row)
+                    after_layout (() => place (hr, double.NAN));
+                return false;
+            });
+        }
+    }
+
+    // The gear of the open hack and the Options button say it is open, and what they do next.
+    private void sync_open_state () {
+        foreach (var hr in hack_rows) {
+            bool open = hr == open_row;
+            hr.gear.tooltip_text = open ? "Hide the options" : "Options";
+            hr.gear.update_state (Gtk.AccessibleState.EXPANDED, open, -1);
+            if (open)
+                hr.gear.add_css_class ("ncz-open");
+            else
+                hr.gear.remove_css_class ("ncz-open");
+        }
+        string current = backend.hack_id;
+        bool current_open = open_row != null && open_row.hack.id == current;
+        options_btn.label = current_open ? "Hide options" : "Options";
+        options_btn.tooltip_text = current_open ? "Collapse the settings of this screensaver"
+                                                : "Show the settings of this screensaver";
+        options_btn.update_state (Gtk.AccessibleState.EXPANDED, current_open, -1);
+    }
+
+    private void close_options () {
+        if (open_row == null)
+            return;
+        open_row.options.visible = false;
+        open_row.options.reveal_child = false;
+        open_row.options.set_child (null);
+        open_row = null;
+        open_box = null;
+        sync_open_state ();
+    }
+
+    private Gtk.ScrolledWindow? scroller () {
+        return get_ancestor (typeof (Gtk.ScrolledWindow)) as Gtk.ScrolledWindow;
+    }
+
+    private double row_y (Gtk.Widget? w) {
+        var sw = scroller ();
+        var b = Graphene.Rect ();
+        if (w == null || sw == null || !w.get_mapped () || !w.compute_bounds (sw, out b))
+            return double.NAN;
+        return b.origin.y;
+    }
+
+    private delegate void Then ();
+
+    private void after_layout (owned Then then) {
+        var clock = get_frame_clock ();
+        if (clock == null)
+            return;
+        ulong handler = 0;
+        handler = clock.layout.connect_after (() => {
+            clock.disconnect (handler);
+            then ();
+        });
+        queue_allocate ();
+    }
+
+    // Keep the row at old_y, then scroll the options into view without pushing the row off the top.
+    private void place (HackRow hr, double old_y) {
+        var sw = scroller ();
+        double y = row_y (hr.row);
+        if (sw == null || y.is_nan () || hr != open_row)
+            return;
+        double shift = old_y.is_nan () ? 0 : y - old_y;
+        double top = y - shift;
+        if (top < 0) {
+            shift += top;
+            top = 0;
+        }
+        var b = Graphene.Rect ();
+        var child = hr.options.get_child ();
+        if (child != null && child.compute_bounds (sw, out b)) {
+            double bottom = b.origin.y + b.size.height - shift;
+            double vh = sw.get_height ();
+            if (bottom > vh)
+                shift += double.min (bottom - vh, top);
+        }
+        if (shift != 0)
+            sw.vadjustment.value += shift;
     }
 
     // ---- the rest of the page -----------------------------------------------------------

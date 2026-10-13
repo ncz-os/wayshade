@@ -1,102 +1,110 @@
-# wayshade
+# ncz-screensavers
 
-Native Wayland screensavers on OpenGL ES 3. wayshade is the screensaver engine
-of [NCZ-OS](https://github.com/ncz-os/cix-installer/releases/tag/v26.10-preview1):
-74 screensavers that render directly through `wlr-layer-shell` and EGL, with no
-X11, no Xwayland and no OpenGL 1 emulation, plus a launcher, an idle daemon, an
-off-screen feed for lock screens and settings front ends.
+**74 screensaver programs that run natively on Wayland.** Each one is a
+separate binary built on GLES 3.2 and EGL, drawing on a `zwlr_layer_shell_v1`
+overlay surface. No X11, no Xwayland, no OpenGL 1 emulation layer.
 
-The Debian packages built from this tree keep their historical names:
-`ncz-screensavers` (engine, launcher, idle daemon), `ncz-screensavers-plugin`
-(Singularity settings plugin) and `ncz-screensavers-gtk4-reference` (reference
-GTK4 front end). This tree is the 0.8.12 release that ships in NCZ-OS 26.10
-Preview 1.
+![Neon Horizon](docs/screenshots/thumbs/xshadertoy_neonhorizon.png)
 
-| set | count | source |
+One harness (`src/gles3_harness.c`) owns the Wayland connection, the layer
+surface, the EGL context and the frame loop. The saver owns its GL objects
+and its uniforms. A launcher picks a saver, builds its environment and
+supervises it; an idle daemon starts it after the idle time you set.
+
+| Origin group | Count | Examples |
 |---|---|---|
-| Black Hole | 1 | `src/gles3_blackhole.c`, `vendor/blackhole/` (MIT) |
-| hyprsaver shaders | 30 | `src/gles3_hyprsaver.c`, `vendor/hyprsaver/` (MIT) |
-| xshadertoy shaders | 30 | `src/gles3_xshadertoy.c`, `vendor/xshadertoy/` (per-shader licenses) |
-| classics | 11 | xscreensaver classics on a shader engine (`src/classics_shader/`) and upstream GLSL hacks |
-| Fractasia | 1 | `src/fractasia/`, `vendor/fractasia/` (original) |
-| Magmasimplex | 1 | `src/gles3_magmasimplex.c`, `vendor/magmasimplex/` (original) |
+| In-house engines | 3 | `blackhole_gles3`, `magmasimplex_gles3`, `fractasia_gles3` |
+| In-house shaders | 1 | `xshadertoy_neonhorizon_gles3` |
+| Ported classics | 11 | `voronoi_gles3`, `hypertorus_gles3`, `datatowers_gles3` |
+| Ported hyprsaver shaders | 30 | `hyprsaver_aurora_gles3`, `hyprsaver_starfield_gles3` |
+| Ported xshadertoy shaders | 30 | `xshadertoy_alienbeacon_gles3`, `xshadertoy_neongravity-1_gles3` |
+| **Total shipped** | **74** | |
 
-Every screensaver is a separate `<id>_gles3` binary driven by one Wayland/EGL
-harness (`src/gles3_harness.c`). Shaders are compiled once at startup and nothing
-reads pixels back inside the frame loop. Each screensaver has a minimum GPU class
-(weak, mid, strong) in `assets/screensaver-chooser/tiers.tsv`; the launcher only
-picks savers the GPU can run.
+`xshadertoy_neonhorizon_gles3` is written in house *and* ships as one of
+the thirty `xshadertoy_*` binaries, so the group table counts it once, in
+the in-house row.
 
-## What runs it
+![contact sheet: space](docs/screenshots/contact-sheet-space.jpg)
 
-* A Wayland compositor that offers `zwlr_layer_shell_v1` (rendering) and
-  `ext_idle_notifier_v1` (idle timer), for example labwc, sway or Hyprland.
-* A GPU with OpenGL ES 3.0 through EGL (Mesa, NVIDIA or Arm Mali drivers).
-  Software rendering is refused on purpose.
-* For the lock-hosted saver: a session-lock client that hosts an out-of-process
-  frame source (NCZ-OS ships one for the Singularity desktop). The feed protocol
-  is in `include/lock_framesrc_proto.h`.
+## Documentation
 
-## Build
+- **[docs/user-guide.md](docs/user-guide.md)** — turn it on, choose a saver,
+  set the timers, try one out, fix what is broken.
+- **[docs/savers.md](docs/savers.md)** — the catalogue index and how to read
+  a row.
+- **[docs/index.md](docs/index.md)** — every page.
 
-Debian/Ubuntu build dependencies:
+The catalogue has one page per origin group, each row giving the name, a
+one-line description, the style category, the minimum GPU class, the
+options, and the author and licence from the saver's own source header:
 
-    sudo apt install meson ninja-build pkgconf libwayland-dev libwayland-bin \
-        wayland-protocols libegl-dev libgles-dev libpng-dev libglib2.0-dev \
-        libglib2.0-bin python3
+| Page | Group |
+|---|---|
+| [docs/catalogue/in-house-engines.md](docs/catalogue/in-house-engines.md) | Black Hole, Magmasimplex, Fractasia |
+| [docs/catalogue/in-house-shaders.md](docs/catalogue/in-house-shaders.md) | Neon Horizon |
+| [docs/catalogue/ported-classics.md](docs/catalogue/ported-classics.md) | the eleven ported xscreensaver hacks |
+| [docs/catalogue/hyprsaver.md](docs/catalogue/hyprsaver.md) | the thirty hyprsaver shaders |
+| [docs/catalogue/xshadertoy.md](docs/catalogue/xshadertoy.md) | the thirty Shadertoy-API shaders |
 
-Build and test:
+## Install
 
-    meson setup build
-    ninja -C build
-    meson test -C build
-    python3 -m pytest tools/tests launcher/tests     # needs python3-pytest, python3-numpy
+| Where | Packages | Settings UI |
+|---|---|---|
+| NCZ-OS | `ncz-screensavers` + `ncz-screensavers-plugin` | Settings > Plugins > Screensaver and Lockscreen |
+| Another GTK/libadwaita distribution | `ncz-screensavers` + `ncz-screensavers-gtk4-reference` | the reference GTK4 application |
+| Another desktop | `ncz-screensavers` | a front end written against [docs/cli-reference.md](docs/cli-reference.md) |
 
-Options: `-Dsingularity-plugin=enabled` (Singularity settings plugin; needs valac
-and the libsingularity SDK), `-Dgtk4-reference-app=true` (reference GTK4 front end),
-`-Dinstall-extras=true` (install development-only shaders). Debian packaging is in
-`debian/` (`dpkg-buildpackage -b`).
-
-## Run
-
-    ncz-screensaver list                 # catalog with GPU-class flags
-    ncz-screensaver preview <id>         # run one screensaver now
-    <id>_gles3 --help                    # options of that screensaver
-    ncz-screensaver-feed --print-policy  # lock-hosted saver policy
+The engine builds for `amd64` and `arm64`; see
+[docs/packaging.md](docs/packaging.md).
 
 ## Lock-hosted saver
 
-`ncz-screensaver-feed` renders a screensaver off-screen and hands frames to the
-lock client over a socket. In 0.8.12 it runs a short intro at 8 fps and half
-resolution, then freezes after 15 seconds and the lock keeps the last frame (only
-with a lock that negotiates HOLD; older locks keep the low frame rate). A thermal
-governor pauses rendering near 85 C.
+Since 0.8.11 the saver can run inside the session lock: `ncz-screensaver-feed`
+renders a hack off-screen and hands frames to a lock client that hosts an
+out-of-process frame source. In 0.8.12 the feed runs an intro at 8 fps and half
+resolution, then freezes after 15 seconds (only with a lock that negotiates HOLD),
+and a thermal governor pauses rendering near 85 C. `ncz-screensaver-feed
+--print-policy` prints the policy. Release notes: `CHANGELOG.md`.
 
-## NCZ-OS and the Singularity desktop
+## Build
 
-NCZ-OS installs `ncz-screensavers` and `ncz-screensavers-plugin`; the plugin adds
-Settings > Plugins > Screensaver and Lockscreen to the
-[Singularity desktop](https://github.com/singularityos-lab). On other desktops use
-the reference GTK4 front end or write one against `docs/CLI-CONTRACT.md`;
-`docs/IMPLEMENTING-ON-ANOTHER-DISTRO.md` lists what the engine needs.
+```
+meson setup build && ninja -C build && meson test -C build
+```
 
-## Documents
+Build options: `-Dinstall-extras=true|false` (also install the shaders of
+the development-only savers), `-Dsingularity-plugin=enabled|disabled` (the
+Singularity settings plugin) and `-Dgtk4-reference-app=true|false` (the
+reference GTK4 front end). Packaging lives in `debian/`.
 
-* `docs/CLI-CONTRACT.md`, `docs/OPTIONS-SCHEMA.md` - the front-end contract
-* `docs/GPU-CLASSES.md`, `docs/RENDER-AND-GUARD.md` - GPU classes, offload, render guards
-* `docs/BLACKHOLE-OPTIONS.md`, `docs/BLACKHOLE-PRESETS.md`, `docs/SHADER-HACK-GUIDE.md`
-* `docs/fractasia/` - Fractasia algorithm coverage and license analysis
-* `CHANGELOG.md` - release history
+## Run one directly
 
-## License
+```
+blackhole_gles3 --help                    # the options of that saver
+blackhole_gles3 --palette=cygnus          # run it with an option
+hyprsaver_aurora_gles3 --render-scale=0.5 # the three options every saver has
+voronoi_gles3 --style=enhanced --seed=42
+```
 
-The original code in this repository is Apache-2.0 (`LICENSE`, `NOTICE`). Every
-vendored or ported screensaver keeps its own license and notice (MIT, CC0-1.0,
-CC-BY-3.0, BSD or the xscreensaver permission notice) and is not relicensed. The
-component-by-component record is in `NOTICES.md`, `debian/copyright` and
-`docs/PROVENANCE.tsv`.
+Or through the launcher:
 
-## Contributing
+```
+ncz-screensaver list                      # the catalogue
+ncz-screensaver preview hyprsaver_wormhole
+ncz-screensaver status --json
+ncz-screensaver stop
+```
 
-See `CONTRIBUTING.md`. The canonical repository is
-<https://gitlab.com/ncz-os/wayshade>.
+The savers are in `src/`, the idle timer and the launcher in `launcher/`,
+and the Singularity settings UI in `plugin/`.
+
+## Licence
+
+The project is Apache-2.0 (`LICENSE`, `NOTICE`), and that grant covers the
+in-house code only: the harness, the drivers, the launcher, the idle timer,
+the plugin, the tools and the in-house engines and shaders. Each screensaver
+is a separate program, and every vendored or ported component keeps its own
+licence and notice — MIT, CC0-1.0, CC-BY-3.0 or the xscreensaver permission
+notice. The component-by-component record is `NOTICES.md`,
+`debian/copyright`, `docs/PROVENANCE.tsv` and the per-saver credits in the
+catalogue. See [docs/credits.md](docs/credits.md).

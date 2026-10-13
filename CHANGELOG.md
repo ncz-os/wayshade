@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.8.13 - 2026-10-13
+
+Ships in NCZ-OS 26.10 (engine 0.8.13, Settings plugin 0.3.21).
+
+* `ncz-screensaver-idled` delegated mode: the shell is the only idle-lock owner;
+  the daemon keeps suspend locking and display power-off. Two lock clients no
+  longer race for the lock's frame source, so the saver renders behind the lock
+  at default timings.
+* Settings plugin 0.3.21: app-shipped manifest, so the Settings page is filled
+  as soon as the plugin is found; own Plugins category and icon; per-screensaver
+  options expand in place.
+* Launcher: the GPU class cache is keyed on the running kernel release as well;
+  `ensure-plugin` says why when it does nothing.
+* GTK4 reference front end: libadwaita optional, schema-derived choice lists,
+  "Randomize all", build-time smoke test.
+* Documentation: user guide, CLI reference, developer guide and a catalogue page
+  per saver group with screenshots (`docs/index.md`).
+
 ## 0.8.12 - 2026-10-12
 
 Ships in NCZ-OS 26.10 Preview 1.

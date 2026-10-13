@@ -45,6 +45,42 @@ FAKE_CLI = textwrap.dedent(
 # launcher's CLASS_TITLE byte-for-byte (especially "mid" -> "Mid-range").
 CLASS_TITLE = {"weak": "Weak", "mid": "Mid-range", "strong": "Strong"}
 
+# Call one pure helper of the app module in a child process, so the helper sees
+# the harness' fake CLI and compiled schema. Returns the JSON-encoded result.
+CALLER = textwrap.dedent(
+    """\
+    import importlib.machinery as m, importlib.util as u, json, sys
+    ld = m.SourceFileLoader("app", sys.argv[1])
+    mod = u.module_from_spec(u.spec_from_loader("app", ld))
+    ld.exec_module(mod)
+    fn, args = sys.argv[2], json.loads(sys.argv[3])
+    print(json.dumps(getattr(mod, fn)(**args), default=str))
+    """
+)
+
+# Same, but with libadwaita made unavailable before the app imports it, which is
+# how a KDE Plasma / X11 session without gir1.2-adw-1 looks to the app.
+NO_ADW_CALLER = textwrap.dedent(
+    """\
+    import gi, json, sys
+    _real = gi.require_version
+    def _blocked(namespace, version):
+        if namespace == "Adw":
+            raise ValueError("Adw-1.typelib not available (test)")
+        return _real(namespace, version)
+    gi.require_version = _blocked
+    import importlib.machinery as m, importlib.util as u
+    ld = m.SourceFileLoader("app", sys.argv[1])
+    mod = u.module_from_spec(u.spec_from_loader("app", ld))
+    ld.exec_module(mod)
+    print(json.dumps({"have_adw": mod._HAVE_ADW,
+                      "modes": list(mod.mode_nicks()),
+                      "pool": list(mod.pool_nicks()),
+                      "colors": list(mod.color_nicks()),
+                      "dialog_base": mod.OptionsDialog.__mro__[1].__name__}))
+    """
+)
+
 WRAPPER = textwrap.dedent(
     """\
     import importlib.machinery as m, importlib.util as u, json, sys
@@ -180,6 +216,57 @@ def _verdict_status(gpus):
     }
 
 
+class Harness:
+    """Drives the app in a child process against a fake launcher CLI."""
+
+    def __init__(self, env, fake):
+        self.env = env
+        self.fake = fake
+
+    # Existing tests call the harness directly: harness(list, gpus=..., ...).
+    def __call__(self, lst, status=None, gpus=None, gsettings=None):
+        gpus_list = gpus or [DISPLAY_GPU]
+        # Default status uses the synthetic per-GPU verdict fields (mirrors a
+        # launcher >= 0.7.11). Tests that pass an explicit `status` (e.g. the
+        # legacy fallback path) get the override.
+        (self.fake / "list.json").write_text(json.dumps(lst))
+        (self.fake / "status.json").write_text(
+            json.dumps(status if status is not None else _verdict_status(gpus_list))
+        )
+        (self.fake / "gpus.json").write_text(json.dumps(gpus_list))
+        # The memory backend is per process, so keys are set in the child.
+        out = subprocess.run(
+            [PY, "-c", WRAPPER, str(APP), json.dumps(gsettings or {})],
+            env=self.env,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return json.loads(out.stdout)
+
+    def call(self, fn, **args):
+        """Call a pure helper of the app module and return its JSON result."""
+        out = subprocess.run(
+            [PY, "-c", CALLER, str(APP), fn, json.dumps(args)],
+            env=self.env,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return json.loads(out.stdout)
+
+    def no_adw(self):
+        """Import the app with libadwaita blocked; returns the parsed report."""
+        out = subprocess.run(
+            [PY, "-c", NO_ADW_CALLER, str(APP)],
+            env=self.env,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return json.loads(out.stdout)
+
+
 @pytest.fixture
 def harness(tmp_path):
     schemas = tmp_path / "schemas"
@@ -207,28 +294,7 @@ def harness(tmp_path):
         "NCZ_SCREENSAVER_BROKEN": str(tmp_path / "none.tsv"),
         "FAKE_DIR": str(fake),
     }
-
-    def run(lst, status=None, gpus=None, gsettings=None):
-        gpus_list = gpus or [DISPLAY_GPU]
-        # Default status uses the synthetic per-GPU verdict fields (mirrors a
-        # launcher >= 0.7.11). Tests that pass an explicit `status` (e.g. the
-        # legacy fallback path) get the override.
-        (fake / "list.json").write_text(json.dumps(lst))
-        (fake / "status.json").write_text(
-            json.dumps(status if status is not None else _verdict_status(gpus_list))
-        )
-        (fake / "gpus.json").write_text(json.dumps(gpus_list))
-        # The memory backend is per process, so keys are set in the child.
-        out = subprocess.run(
-            [PY, "-c", WRAPPER, str(APP), json.dumps(gsettings or {})],
-            env=env,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return json.loads(out.stdout)
-
-    return run
+    return Harness(env, fake)
 
 
 def group(dump, title):
@@ -358,3 +424,245 @@ def test_class_summary_two_intel_gpus_no_discrete(harness):
     assert d["gpu_verdict"] == "GPU0 (Weak), GPU1 (Weak)"
     assert "not detected" in d["prime_offload"]
     assert "software" not in d["prime_offload"].lower()
+
+
+# ---------------------------------------------------------------------------
+# GPU tier badges
+# ---------------------------------------------------------------------------
+
+
+def test_tier_badges_follow_the_engine_list(harness):
+    """Every screensaver the engine reports a tier for gets that tier badge.
+
+    The tier comes from `ncz-screensaver list --json` (which reads the shipped
+    tiers.tsv); the app must not re-derive it, or the badges drift from the
+    engine the moment a saver is re-measured.
+    """
+    d = harness(STRONG_LIST)
+    catalog = {r["id"]: r for r in d["catalog"]}
+    assert catalog["light_gles3"]["tier"] == "weak"
+    assert catalog["light_gles3"]["tier_label"] == "Light"
+    assert catalog["medium_gles3"]["tier_label"] == "Mid"
+    assert catalog["heavy_gles3"]["tier_label"] == "Heavy"
+    rows = {r["id"]: r for g in d["groups"] for r in g["rows"]}
+    assert rows["heavy_gles3"]["tier"] == "strong"
+
+
+def test_no_tier_means_no_badge(harness):
+    """An unmeasured saver (tier "unknown") or an older launcher without
+    min_class must produce an empty tier, never a made-up one."""
+    # min_class is the only authoritative field; `tier` in the fake list rows is
+    # dropped so a stale value there cannot make the test pass by accident.
+    unmeasured = [
+        {**row("light_gles3", "Light", "Calm", "weak", False), "min_class": ""},
+        {
+            **row("medium_gles3", "Medium", "Calm", "weak", False),
+            "min_class": "unknown",
+        },
+        # Older launcher: no min_class key at all.
+        {"id": "heavy_gles3", "title": "Heavy", "group": "Calm", "flagged": False},
+    ]
+    for r in unmeasured:
+        r.pop("tier", None)  # only min_class is authoritative
+    d = harness(unmeasured)
+    catalog = {r["id"]: r for r in d["catalog"]}
+    assert set(catalog) == {"light_gles3", "medium_gles3", "heavy_gles3"}
+    for r in catalog.values():
+        assert r["tier"] == ""
+        assert r["tier_label"] == ""
+
+
+# ---------------------------------------------------------------------------
+# Choice lists come from the installed schema
+# ---------------------------------------------------------------------------
+
+
+def test_mode_pool_color_choices_match_the_schema(harness):
+    d = harness(STRONG_LIST)
+    assert [c["value"] for c in d["mode_choices"]] == [
+        "off",
+        "one",
+        "random",
+        "playlist",
+    ]
+    assert [c["value"] for c in d["pool_choices"]] == ["auto", "weak", "mid", "all"]
+    assert [c["value"] for c in d["color_choices"]] == [
+        "stylized",
+        "kipthorne",
+        "faithful",
+        "singularity",
+        "slingshot",
+        "whitehole",
+        "eht",
+        "psychedelic",
+        "synthwave",
+        "cygnus",
+    ]
+    labels = {c["value"]: c["label"] for c in d["color_choices"]}
+    assert labels["cygnus"] == "Cygnus (magenta and cyan)"
+
+
+def test_a_new_engine_mode_appears_without_a_code_change(harness, tmp_path):
+    """A mode the app has never heard of must reach the UI.
+
+    This is the drift the reference app exists to avoid: the mode list used to
+    be a hard-coded tuple, so a new engine mode needed a code change here.
+    """
+    schema = (REPO / "config/dev.ncz.screensaver.gschema.xml").read_text(
+        encoding="utf-8"
+    )
+    patched = schema.replace(
+        '<choice value="playlist"/>',
+        '<choice value="playlist"/><choice value="shuffle"/>',
+    )
+    assert patched != schema, "upstream schema no longer has the playlist choice"
+    dir_ = tmp_path / "schemas2"
+    dir_.mkdir()
+    (dir_ / "dev.ncz.screensaver.gschema.xml").write_text(patched, encoding="utf-8")
+    subprocess.run(["glib-compile-schemas", str(dir_)], check=True)
+    (tmp_path / "fake" / "list.json").write_text(json.dumps(STRONG_LIST))
+    (tmp_path / "fake" / "status.json").write_text(
+        json.dumps(_verdict_status([DISPLAY_GPU]))
+    )
+    (tmp_path / "fake" / "gpus.json").write_text(json.dumps([DISPLAY_GPU]))
+    env = dict(harness.env, GSETTINGS_SCHEMA_DIR=str(dir_))
+    out = subprocess.run(
+        [PY, "-c", CALLER, str(APP), "mode_nicks", "{}"],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert json.loads(out.stdout) == ["off", "one", "random", "playlist", "shuffle"]
+
+
+def test_unknown_nick_labels_do_not_crash(harness):
+    """A label for an id this build has never seen falls back to the id."""
+    d = harness(STRONG_LIST)
+    labels = {c["value"]: c["label"] for c in d["mode_choices"]}
+    assert all(v and label for v, label in labels.items())
+
+
+# ---------------------------------------------------------------------------
+# Randomize-everything
+# ---------------------------------------------------------------------------
+
+OPT_SCHEMA = [
+    {
+        "name": "seed",
+        "type": "int",
+        "default": "0",
+        "min": "1",
+        "max": "1000",
+        "choices": [],
+        "label": "Seed",
+        "description": "",
+        "group": "General",
+    },
+    {
+        "name": "glow",
+        "type": "float",
+        "default": "0.5",
+        "min": "0",
+        "max": "1",
+        "choices": [],
+        "label": "Glow",
+        "description": "",
+        "group": "Look",
+    },
+    {
+        "name": "quality",
+        "type": "enum",
+        "default": "high",
+        "min": "",
+        "max": "",
+        "choices": ["low", "high", "ultra"],
+        "label": "Quality",
+        "description": "",
+        "group": "Look",
+    },
+    {
+        "name": "hull",
+        "type": "bool",
+        "default": "false",
+        "min": "",
+        "max": "",
+        "choices": [],
+        "label": "Hull",
+        "description": "",
+        "group": "Look",
+    },
+    {
+        "name": "label",
+        "type": "string",
+        "default": "",
+        "min": "",
+        "max": "",
+        "choices": [],
+        "label": "Label",
+        "description": "",
+        "group": "General",
+    },
+]
+
+
+def test_randomize_options_stays_inside_the_schema(harness):
+    """Every randomized value must be one the engine will accept."""
+    got = harness.call("randomize_options", schema=OPT_SCHEMA, current={})
+    assert set(got) == {r["name"] for r in OPT_SCHEMA}
+    for _ in range(25):
+        got = harness.call("randomize_options", schema=OPT_SCHEMA, current={})
+        assert 1 <= int(got["seed"]) <= 1000
+        assert 0.0 <= float(got["glow"]) <= 1.0
+        assert got["quality"] in ("low", "high", "ultra")
+        assert got["hull"] in ("true", "false")
+        # Free-form text has nothing sensible to randomize: keep the user's.
+        assert got["label"] == ""
+
+
+def test_randomize_options_actually_changes_numbers(harness):
+    """Not a constant function: two draws differ for numeric options."""
+    a = harness.call("randomize_options", schema=OPT_SCHEMA, current={})
+    b = harness.call("randomize_options", schema=OPT_SCHEMA, current={})
+    assert a != b
+
+
+# ---------------------------------------------------------------------------
+# libadwaita is optional
+# ---------------------------------------------------------------------------
+
+
+def test_app_runs_without_libadwaita(harness):
+    """A session without gir1.2-adw-1 must still get a working app.
+
+    Before this was fixed the import was a hard `gi.require_version("Adw","1")`,
+    so the app died with ValueError on KDE Plasma, on X11 and on minimal GNOME
+    images.
+    """
+    info = harness.no_adw()
+    assert info["have_adw"] is False
+    assert info["dialog_base"] == "Window"
+    # The choice lists are schema-derived, so they survive the Adw-less path.
+    assert info["modes"] == ["off", "one", "random", "playlist"]
+    assert "cygnus" in info["colors"]
+
+
+def test_options_preview_uses_the_configured_cli(harness):
+    """Preview must go through $NCZ_SCREENSAVER_CLI, not a hard-coded name.
+
+    Every other engine call honours the override; preview did not, so a
+    distribution that installs the launcher under another name or path got a
+    silent no-op.
+    """
+    argv = harness.call(
+        "preview_argv", hack_id="light_gles3", options={"seed": "7", "hull": "true"}
+    )
+    cli = harness.env["NCZ_SCREENSAVER_CLI"]
+    assert argv[:5] == [cli, "preview", "light_gles3", "--seconds", "30"]
+    assert argv[5:] == ["--option", "seed=7", "--option", "hull=true"]
+
+
+def test_cli_override_is_honoured_for_every_engine_call(harness):
+    """cli_cmd() is the single funnel for the launcher, preview included."""
+    assert harness.call("cli_cmd")[0] == harness.env["NCZ_SCREENSAVER_CLI"]
+    assert harness.call("cli_cmd") == [harness.env["NCZ_SCREENSAVER_CLI"]]

@@ -68,12 +68,21 @@ Depends:
  python3,
  python3-gi,
  gir1.2-gtk-4.0,
+Suggests:
  gir1.2-adw-1,
 Replaces: ncz-screensavers (<< 0.7.0)
 Breaks: ncz-screensavers (<< 0.7.0)
 Description: reference GTK4 front end for the ncz-screensavers engine
  A reference application for distributions and desktops that want to implement
- the ncz-screensavers engine on Wayland. It is a GTK4 and libadwaita settings
- window that uses only the public ncz-screensaver command line and the
- dev.ncz.screensaver GSettings schema; see docs/CLI-CONTRACT.md in the source.
- It is released together with the engine and is not part of the NCZ-OS image.
+ the ncz-screensavers engine on Wayland. It is a GTK4 settings window that uses
+ only the public ncz-screensaver command line, the shipped catalogue and option
+ files and the dev.ncz.screensaver GSettings schema; see docs/CLI-CONTRACT.md
+ and docs/IMPLEMENTING-ON-ANOTHER-DISTRO.md in the source.
+ .
+ The window is built with libadwaita when it is installed and falls back to
+ plain GTK4 widgets when it is not, so it also runs on desktops that ship GTK4
+ without libadwaita; gir1.2-adw-1 is therefore only suggested.
+ .
+ It is released together with the engine and is not part of the NCZ-OS image:
+ the NCZ-OS image hook refuses to install this package, and the settings UI on
+ NCZ-OS is the Singularity plugin (ncz-screensavers-plugin) instead.

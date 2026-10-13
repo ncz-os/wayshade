@@ -13,7 +13,7 @@ project(
         'warning_level=2',
         # Default -O0/-g; downstream packagers usually override.
     ],
-    version: '0.8.12',
+    version: '0.8.13',
     license: 'Apache-2.0',
 )
 

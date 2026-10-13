@@ -26,7 +26,7 @@ def _sdk_arch_matches_host():
     if not lib.is_file():
         return False
     out = subprocess.run(
-        ["file", "-b", str(lib)],
+        ["file", "-bL", str(lib)],
         capture_output=True,
         text=True,
         check=False,

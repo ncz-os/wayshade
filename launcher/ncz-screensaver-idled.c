@@ -147,9 +147,15 @@ struct idled_plan {
  * `delegated` is set when the NCZ lock renderer is configured (the session lock
  * hosts the saver; a separate ncz-screensaver-feed renders it). In that mode
  * this daemon must not start its own wl_layer_shell saver, so `saver` is
- * disabled; the lock is requested at hack-idle-delay (the lock IS the saver),
- * regardless of lock-enabled, because the lock is the only thing that can now
- * show the saver. */
+ * disabled. The SHELL is the single idle-lock owner: the image hook
+ * post-install/64-ncz-lock-saver-plan.sh sets
+ * dev.sinty.lockscreen:idle-delay = dev.ncz.screensaver:hack-idle-delay, so the
+ * shell's own IdleManager locks at the saver time. This daemon must NOT also
+ * request a lock here: two lock clients started at the same instant race the
+ * lock's renderer socket, the loser's unlink() leaves the surviving lock with
+ * no frame source, and the saver never renders (measured
+ * 2026-10-13). Suspend locking still belongs to this daemon (it covers system
+ * suspends, which the shell's own path does not). */
 static struct idled_plan plan_compute(const struct idled_settings *s, bool delegated)
 {
     struct idled_plan p = {
@@ -160,13 +166,9 @@ static struct idled_plan plan_compute(const struct idled_settings *s, bool deleg
     };
     bool screensaver_on = strcmp(s->mode, "off") != 0;
     if (delegated) {
-        /* The lock hosts the saver; suspend locks through the shell too. */
+        /* The lock hosts the saver and the shell owns the idle lock, so arm no
+         * idle lock timer of our own; keep suspend locking and DPMS. */
         p.lock_on_suspend = s->lock_on_suspend;
-        if (screensaver_on) {
-            p.lock = s->hack_idle_delay;
-        } else if (s->lock_enabled) {
-            p.lock = s->hack_idle_delay;
-        }
         if (s->display_off_delay > 0) p.dpms = s->display_off_delay;
         return p;
     }

@@ -33,10 +33,12 @@ $RUNTIME run --rm --network host \
     apt-get install -y -qq --no-install-recommends \
       build-essential valac pkgconf ca-certificates \
       libgtk-4-dev libpeas-2-dev libgee-0.8-dev libjson-glib-dev \
-      libgtksourceview-5-dev libgtk4-layer-shell-dev \
+      libgtksourceview-5-dev libgtk4-layer-shell-dev libsoup-3.0-dev \
+      libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
       xvfb xauth libgl1-mesa-dri libglib2.0-bin python3 \
       libgtk-4-1 libpeas-2-0 libgee-0.8-2 libjson-glib-1.0-0 \
-      libgtksourceview-5-0 libgtk4-layer-shell0 libenchant-2-2 >/dev/null
+      libgtksourceview-5-0 libgtk4-layer-shell0 libenchant-2-2 libsoup-3.0-0 \
+      libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 >/dev/null
     dpkg-deb -x /in/eng.deb /
     dpkg-deb -x /in/sing.deb /
     glib-compile-schemas /usr/share/glib-2.0/schemas
@@ -56,7 +58,7 @@ $RUNTIME run --rm --network host \
     fi
     echo "=== valac compile ==="
     valac --pkg posix --pkg gtk4 --pkg libpeas-2 --pkg gee-0.8 --pkg json-glib-1.0 \
-          --pkg cairo --pkg graphene-gobject-1.0 --pkg singularity-1.0 \
+          --pkg cairo --pkg graphene-gobject-1.0 --pkg libsoup-3.0 --pkg singularity-1.0 \
           --vapidir=/opt/singularity/share/vala/vapi \
           -X -I/opt/singularity/include -X -L/opt/singularity/lib \
           -X -lsingularity -X -Wl,-rpath,/opt/singularity/lib \
@@ -66,6 +68,6 @@ $RUNTIME run --rm --network host \
           /src/plugin/screensaver/ncz_backend.vala \
           /src/plugin/screensaver/tests/gear_options_test.vala
     echo "=== run (headless) ==="
-    xvfb-run -a /work/gear_test
+    GSETTINGS_BACKEND=memory xvfb-run -a /work/gear_test
   '
 echo "SCRATCH=$SCRATCH"

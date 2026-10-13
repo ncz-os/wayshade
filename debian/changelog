@@ -1,3 +1,24 @@
+ncz-screensavers (0.8.13) unstable; urgency=medium
+
+  * ncz-screensaver-idled (delegated mode) no longer asks the shell to lock at
+    the saver delay. The shell is the single idle-lock owner (its lock idle
+    delay is set to match dev.ncz.screensaver:hack-idle-delay), so two lock
+    clients no longer start at the same instant and the lock keeps its frame
+    source. Suspend locking and display power-off stay with the daemon.
+  * ncz-screensavers-plugin 0.3.21: the plugin manifest is declared
+    app-shipped (X-Singularity-App=dev.sinty.desktop), so the Settings page is
+    populated as soon as the plugin is discovered; the plugin has its own
+    Plugins category and icon, and the options of each screensaver expand in
+    place under its row.
+  * Launcher: the GPU class cache also records the running kernel release and
+    recalibrates after a kernel change; ensure-plugin logs why it did nothing.
+  * ncz-screensavers-gtk4-reference: libadwaita is optional (suggested), the
+    choice lists come from the installed schema, and a build-time smoke test.
+  * Regression tests for the delegated plan, the settings pane and the plugin
+    packaging.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 13 Oct 2026 00:00:00 -0400
+
 ncz-screensavers (0.8.12) unstable; urgency=medium
 
   * Lock-hosted saver (ncz-screensaver-feed): cool-by-default operation. While

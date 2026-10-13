@@ -744,9 +744,7 @@ def _build_sky1_live_sysfs(env):
     # The launcher parses the first whitespace-separated token as the
     # model string for class_from_renderer() when no calibrator sample
     # exists in the cache.
-    (gpu_dev / "gpuinfo").write_text(
-        "Mali-G720-Immortalis 10 cores r0p0 0x0C080700\n"
-    )
+    (gpu_dev / "gpuinfo").write_text("Mali-G720-Immortalis 10 cores r0p0 0x0C080700\n")
     add_power(env.sysfs, True)
     for fn in (env.list_gpus, env.gpu_topology):
         fn.cache_clear()
@@ -940,9 +938,7 @@ def test_sky1_live_capture_gpuinfo_is_parsed_from_sysfs(env):
     )
 
 
-def test_sky1_live_capture_classify_mid_via_gpuinfo_no_calibrator(
-    env, monkeypatch
-):
+def test_sky1_live_capture_classify_mid_via_gpuinfo_no_calibrator(env, monkeypatch):
     """Pin the central guarantee on a fresh .66 boot: with the live sysfs
     layout and NO cache + NO calibrator run, `gpu_class(settings, run=False)`
     must still classify the Mali as mid. Before this dispatch, the
@@ -1615,6 +1611,119 @@ def test_software_renderer_is_refused_never_benchmarked(env, monkeypatch):
     e = env.gpu_class(S, None)
     assert e.get("software") is True
     assert env.read_class_cache() == {}
+
+
+def test_calibration_cache_records_kernel_field(env, monkeypatch):
+    """Each cache entry must carry the running kernel release string. The kernel
+    field is what gpu_class() compares against the live os.uname().release to
+    decide whether the entry is still valid; without it, a kernel upgrade would
+    silently reuse a stale score (the regression that motivated this contract).
+    """
+    layout(env, "single-soc")
+    monkeypatch.setenv("FAKE_RENDERER", "Mali-G720-Immortalis")
+    monkeypatch.setenv("FAKE_MS", "11.76")
+    monkeypatch.setattr(env, "_kernel_release", lambda: "7.3.0-rc5-sky1-ncz")
+    entry = env.gpu_class(S, None)
+    assert entry["kernel"] == "7.3.0-rc5-sky1-ncz"
+    cache = env.read_class_cache()
+    (cached,) = cache.values()
+    assert cached["kernel"] == "7.3.0-rc5-sky1-ncz"
+
+
+def test_cache_refreshes_when_kernel_changes(env, monkeypatch):
+    """A bump of the running kernel must invalidate the calibration cache. This
+    is the contract that closes the Orion O6N regression: the Mali-G720 went 9.94 ms on
+    7.2.8-sky1-ncz to 28.21 ms on 7.2.9-sky1-ncz with no other change, so the
+    old "mid" cache entry had to be evicted when the kernel moved.
+
+    Three steps: seed a cache that pins kernel=7.2.8; flip the live kernel to
+    7.2.9; gpu_class() must re-bench and overwrite the stale entry with the new
+    score.
+    """
+    layout(env, "single-soc")
+    monkeypatch.setattr(env, "_kernel_release", lambda: "7.2.8-sky1-ncz")
+    monkeypatch.setenv("FAKE_RENDERER", "Mali-G720-Immortalis")
+    monkeypatch.setenv("FAKE_MS", "9.94")
+    assert env.gpu_class(S, None)["ms"] == 9.94  # seeds cache under 7.2.8
+    # Same renderer, same version, same GPU: a second call with the same kernel
+    # must reuse the cache (no recalibration).
+    monkeypatch.setenv("FAKE_EXIT", "2")
+    assert env.gpu_class(S, None)["ms"] == 9.94
+    # Operator upgrades the kernel: live release is now 7.2.9-sky1-ncz. The fake
+    # calibrator would still try to print 9.94, but the kernel change forces a
+    # real re-bench, so we have to clear FAKE_EXIT and feed a different FAKE_MS.
+    monkeypatch.setattr(env, "_kernel_release", lambda: "7.2.9-sky1-ncz")
+    monkeypatch.delenv("FAKE_EXIT", raising=False)
+    monkeypatch.setenv("FAKE_MS", "28.21")
+    entry = env.gpu_class(S, None)
+    assert entry["ms"] == 28.21
+    assert entry["kernel"] == "7.2.9-sky1-ncz"
+    assert entry["class"] == "weak"  # >= 20 ms
+    (cached,) = env.read_class_cache().values()
+    assert cached["kernel"] == "7.2.9-sky1-ncz"
+    assert cached["ms"] == 28.21
+
+
+def test_cache_holds_when_kernel_matches(env, monkeypatch):
+    """The kernel check is an additional guard, not a replacement for the
+    renderer and version checks. With all three equal across calls, the cache
+    is reused (no re-bench).
+    """
+    layout(env, "single-soc")
+    monkeypatch.setattr(env, "_kernel_release", lambda: "7.2.9-sky1-ncz")
+    monkeypatch.setenv("FAKE_RENDERER", "Mali-G720-Immortalis")
+    monkeypatch.setenv("FAKE_MS", "28.21")
+    assert env.gpu_class(S, None)["ms"] == 28.21
+    monkeypatch.setenv("FAKE_EXIT", "2")  # the fake would fail if it ran
+    assert env.gpu_class(S, None)["ms"] == 28.21
+
+
+def test_stale_kernel_cache_entry_marks_source_as_calibration(env, monkeypatch):
+    """The fresh-install fallback (kernel field missing on a pre-fix cache) must
+    still re-bench rather than keep a kernel-less entry. We seed a cache entry
+    without a kernel field, then assert the next gpu_class() call overwrites it
+    with one that has the kernel and a real ms.
+    """
+    layout(env, "single-soc")
+    monkeypatch.setattr(env, "_kernel_release", lambda: "7.2.9-sky1-ncz")
+    monkeypatch.setenv("FAKE_RENDERER", "Mali-G720-Immortalis")
+    monkeypatch.setenv("FAKE_MS", "28.21")
+    seed_cache(
+        env,
+        {
+            env.display_gpu()["id"]: {
+                "class": "mid",
+                "ms": 9.94,
+                "renderer": "Mali-G720-Immortalis",
+                "version": "OpenGL ES 3.2 v1.r53p0-00eac0",
+                "timer": "gpu",
+                "source": "calibration",
+                "when": "2026-09-29T19:22:03+0000",
+            }
+        },
+    )  # note: no kernel field, simulating a pre-fix cache
+    entry = env.gpu_class(S, None)
+    # Either path: the field must now be present and accurate.
+    assert entry["kernel"] == "7.2.9-sky1-ncz"
+    assert entry["ms"] == 28.21  # fake MS we set above
+    (cached,) = env.read_class_cache().values()
+    assert cached["kernel"] == "7.2.9-sky1-ncz"
+    assert cached["ms"] == 28.21
+    assert cached["class"] == "weak"
+
+
+def test_diagnostics_surfaces_running_kernel_release(env, monkeypatch):
+    """The doctor report must include the running kernel release string so an
+    operator looking at the JSON can correlate a class change with a kernel
+    upgrade without having to ssh in a second time. Without this surface the
+    "why did the class change?" question needs a second command and a manual
+    join against the host's `uname -r`.
+    """
+    layout(env, "single-soc")
+    monkeypatch.setattr(env, "_kernel_release", lambda: "7.2.9-sky1-ncz")
+    settings = {**S, "hack-id": "none_gles3", "mode": "disabled"}
+    diag = env.diagnostics(settings, True)
+    assert diag["gpu_class"]["kernel"] == "7.2.9-sky1-ncz"
 
 
 def test_missing_calibrator_falls_back_to_table(env, monkeypatch):

@@ -24,3 +24,6 @@ fi
 [ -f "$T/b/plugin/screensaver/libscreensaver.so" ] || { echo "build-plugin: no libscreensaver.so produced" >&2; exit 1; }
 mkdir -p "$OUT"
 cp "$T/b/plugin/screensaver/libscreensaver.so" "$ROOT/plugin/screensaver/screensaver.plugin" "$OUT/"
+ICON=$(sed -n "s/^Icon=//p" "$ROOT/plugin/screensaver/screensaver.plugin" | head -n 1)
+[ -n "$ICON" ] && [ -f "$ROOT/plugin/screensaver/$ICON.svg" ] || { echo "build-plugin: screensaver.plugin names no icon file" >&2; exit 1; }
+cp "$ROOT/plugin/screensaver/$ICON.svg" "$OUT/"

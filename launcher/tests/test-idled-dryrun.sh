@@ -34,6 +34,25 @@ check "lock disabled" '{"saver":300,"lock":null,"dpms":900,"lock_on_suspend":fal
 gsettings set $S mode off
 gsettings set $S display-off-delay 0
 check "everything off" '{"saver":null,"lock":null,"dpms":null,"lock_on_suspend":false}'
+# Delegated mode (the NCZ lock renderer is configured): the SHELL owns the idle
+# lock (post-install/64-ncz-lock-saver-plan.sh sets
+# dev.sinty.lockscreen:idle-delay = hack-idle-delay), so this daemon must arm NO
+# lock timer of its own. Two lock clients started at the same instant otherwise
+# race the lock's renderer socket, the loser's unlink() leaves the survivor with
+# no frame source, and the screensaver never renders (measured 2026-10-13).
+# Suspend locking stays with the daemon (it covers system suspends the shell
+# does not), so lock_on_suspend remains as the schema has it.
+gsettings set $S mode one
+gsettings set $S hack-idle-delay 300
+gsettings set $S lock-enabled true
+gsettings set $S lock-delay 60
+gsettings set $S display-off-delay 0
+got=$(NCZ_LOCKSAVER_ENABLE=1 "$BIN" --dry-run)
+if [ "$got" = '{"saver":null,"lock":null,"dpms":null,"lock_on_suspend":true,"delegated":true}' ]; then
+    echo "PASS delegated: no lock timer (shell is the single idle-lock owner)"
+else
+    echo "FAIL delegated: got $got"; fail=1
+fi
 # A missing session is transient: EX_TEMPFAIL (75), not EX_CONFIG (78), so the
 # user unit auto-restarts instead of staying failed after a logout. The startup
 # wait is disabled so this only checks the exit code; test-idled-exit-status.sh

@@ -1214,14 +1214,29 @@ def renderer_matches_gpu(renderer, gpu):
     )
 
 
+def _kernel_release():
+    """The running kernel release string (e.g. "7.2.9-sky1-ncz").
+
+    Bumping the running kernel can change GPU rendering performance by enough to
+    flip the calibrated class (a Mali-G720 on an Orion O6N went 9.94 ms on 7.2.8-sky1-ncz
+    to 28.21 ms on 7.2.9-sky1-ncz with no other change). The cache invalidation in
+    gpu_class() compares the entry's kernel field to this value, so a kernel
+    upgrade forces a fresh calibration on the next call with run=True.
+    """
+    try:
+        return os.uname().release
+    except (AttributeError, OSError):
+        return ""
+
+
 def gpu_class(settings, gpu=None, run=True, force=False):
     """Class entry {"class", "ms", "renderer", "version", "source", ...} for one GPU
     (default: the display GPU), cached per GPU id.
 
     run=False only reads the cache (with a table fallback). run=True identifies the
     renderer first (about 0.3 s) and calibrates (about 3 s) only when the cache is
-    missing or its renderer string or driver version changed. Never call it while a
-    hack is running.
+    missing or its renderer string, driver version or running kernel release
+    changed. Never call it while a hack is running.
     """
     gpu = gpu or display_gpu()
     key = _cache_key(gpu)
@@ -1244,11 +1259,13 @@ def gpu_class(settings, gpu=None, run=True, force=False):
         return entry or fallback_entry("", gpu)
     if not renderer_matches_gpu(ident.get("renderer", ""), gpu):
         return fallback_entry("", gpu)
+    running_kernel = _kernel_release()
     if (
         entry
         and not force
         and entry.get("renderer") == ident.get("renderer")
         and entry.get("version") == ident.get("version")
+        and entry.get("kernel") == running_kernel
         and (
             entry.get("source") == "calibration"
             or time.time() < entry.get("retry_after", 0)
@@ -1266,11 +1283,13 @@ def gpu_class(settings, gpu=None, run=True, force=False):
             "version": res.get("version", ""),
             "timer": res.get("timer", ""),
             "source": "calibration",
+            "kernel": running_kernel,
             "when": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         }
     else:
         entry = fallback_entry(ident.get("renderer", ""), gpu)
         entry["version"] = ident.get("version", "")
+        entry["kernel"] = running_kernel
         entry["retry_after"] = (
             time.time() + 3600
         )  # the benchmark failed: try again later
@@ -3008,10 +3027,7 @@ def diagnostics(settings, schema_ok):
         "idled_running": idled_info() is not None,
         "mode": settings["mode"],
         "gpu": topo,
-        "gpus": [
-            {**g, "gpuinfo_used": bool(g.get("gpuinfo"))}
-            for g in list_gpus()
-        ],
+        "gpus": [{**g, "gpuinfo_used": bool(g.get("gpuinfo"))} for g in list_gpus()],
         "gpu_info": {
             "display_gpu_present": display_gpu() is not None,
             "platform_gpu_devices": sum(
@@ -3036,6 +3052,7 @@ def diagnostics(settings, schema_ok):
             },
             "cache": str(class_cache_path()),
             "calibrator": calibrate_bin(),
+            "kernel": _kernel_release(),
         },
         "offload": {
             "setting": settings["gpu-offload"],
@@ -3178,8 +3195,18 @@ def cmd_ensure_plugin(_args):
     Runs at login from the idle daemon unit. It adds "screensaver" to the shell's
     enabled-plugins when the plugin is installed and this user has not been through
     the step before; a plugin the user switches off afterwards stays off.
+
+    Every path that does nothing says why on stderr (the unit's journal): a login
+    where the Settings page silently stayed off was otherwise undiagnosable.
     """
-    if not Path(PLUGIN_SO).is_file() or not shutil.which("gsettings"):
+    if not Path(PLUGIN_SO).is_file():
+        log(
+            f"ensure-plugin: the Settings plugin is not installed ({PLUGIN_SO} "
+            "missing; package ncz-screensavers-plugin); nothing to enable"
+        )
+        return 0
+    if not shutil.which("gsettings"):
+        log("ensure-plugin: gsettings not found (libglib2.0-bin); cannot enable the Settings plugin")
         return 0
     state = (
         Path(
@@ -3191,14 +3218,23 @@ def cmd_ensure_plugin(_args):
     with contextlib.suppress(OSError):
         state.mkdir(parents=True, exist_ok=True)
     if marker.exists():
+        # The normal case after the first login: the step ran once and the user's
+        # choice since then is theirs. Quiet on purpose (once per login).
         return 0
     got = shell_gsettings("get", SHELL_SCHEMA, "enabled-plugins")
     if got.returncode != 0:
-        log("shell schema not available; not enabling the plugin")
+        log(
+            f"ensure-plugin: shell schema {SHELL_SCHEMA} not available "
+            f"({got.stderr.strip() or 'gsettings failed'}); not enabling the plugin"
+        )
         return 0
     try:
         current = parse_gvariant(got.stdout.strip())
     except (ValueError, SyntaxError):
+        log(f"ensure-plugin: cannot parse enabled-plugins {got.stdout.strip()!r}; not enabling the plugin")
+        return 0
+    if not isinstance(current, list):
+        log(f"ensure-plugin: enabled-plugins is not a list ({got.stdout.strip()!r}); not enabling the plugin")
         return 0
     if PLUGIN_MODULE not in current:
         put = shell_gsettings(
@@ -3210,7 +3246,11 @@ def cmd_ensure_plugin(_args):
         if put.returncode != 0:
             log(f"could not enable the plugin: {put.stderr.strip()}")
             return 1
-    marker.write_text("1\n")
+        log("ensure-plugin: enabled the Settings plugin for this user")
+    try:
+        marker.write_text("1\n")
+    except OSError as e:
+        log(f"ensure-plugin: could not record {marker} ({e}); the step will run again next login")
     return 0
 
 

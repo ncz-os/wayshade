@@ -2,28 +2,57 @@
 # SPDX-License-Identifier: Apache-2.0
 # make-plugin-deb.sh - package the Singularity screensaver plugin.
 # usage: make-plugin-deb.sh ARCH BUILD_DIR OUT.deb [VERSION]
-#   BUILD_DIR holds libscreensaver.so and screensaver.plugin (tools/build-plugin.sh output).
+#   BUILD_DIR holds libscreensaver.so, screensaver.plugin and the icon file named by the
+#   plugin's Icon key (tools/build-plugin.sh output).
 # The package installs into the plugin directory of the Singularity desktop next to the
 # sibling plugins. Its postinst adds "screensaver" to the shell's default enabled-plugins
 # (a gschema override that extends the distribution default, never replaces a user's list);
 # ncz-screensaver ensure-plugin does the same once per existing user at login.
+#
+# NCZ_SINGULARITY_MIN (optional): the ncz-singularity-desktop version the plugin was built
+# against. When set, the dependency becomes "ncz-singularity-desktop (>= NCZ_SINGULARITY_MIN)",
+# the floor for libsingularity's ABI, the way dpkg-shlibdeps would set it for a versioned
+# library. Unset keeps the unversioned dependency.
 set -eu
 ARCH=${1:?arch (amd64|arm64)}
 SRC=${2:?build dir}
 OUT=${3:?output .deb}
-VER=${4:-0.3.16}
+VER=${4:-0.3.21}
+SING_DEP=ncz-singularity-desktop
+if [ -n "${NCZ_SINGULARITY_MIN:-}" ]; then
+    dpkg --validate-version "$NCZ_SINGULARITY_MIN" || { echo "make-plugin-deb: bad NCZ_SINGULARITY_MIN '$NCZ_SINGULARITY_MIN'" >&2; exit 1; }
+    SING_DEP="ncz-singularity-desktop (>= $NCZ_SINGULARITY_MIN)"
+fi
 W=$(mktemp -d)
 trap 'rm -rf "$W"' EXIT
 D=$W/opt/singularity/lib/singularity/plugins/screensaver
 mkdir -p "$D" "$W/DEBIAN"
 install -m 0755 "$SRC/libscreensaver.so" "$D/libscreensaver.so"
-install -m 0644 "$SRC/screensaver.plugin" "$D/screensaver.plugin"
+# The plugin page reads Version, Icon and X-Singularity-Category from this file ("Version
+# Unknown" and a generic icon when they are missing). The version is the package version,
+# never a value kept in the source, so a rebuild without a bump cannot ship stale metadata.
+awk -v v="$VER" '/^Version=/{next} {print} /^Module=/{print "Version=" v}' \
+    "$SRC/screensaver.plugin" > "$D/screensaver.plugin"
+chmod 0644 "$D/screensaver.plugin"
+meta() { sed -n "s/^$1=//p" "$D/screensaver.plugin" | head -n 1; }
+for key in Module Name Description Authors Version Icon X-Singularity-Category; do
+    [ -n "$(meta "$key")" ] || { echo "make-plugin-deb: screensaver.plugin has no $key" >&2; exit 1; }
+done
+[ "$(meta Version)" = "$VER" ] || { echo "make-plugin-deb: Version in screensaver.plugin is not $VER" >&2; exit 1; }
+case "$(meta X-Singularity-Category)" in
+    panel|dock|wallpapers|search|files|lock|tools|other) ;;
+    *) echo "make-plugin-deb: X-Singularity-Category is not one the Plugins page knows" >&2; exit 1 ;;
+esac
+ICON=$(meta Icon)
+[ -f "$SRC/$ICON.svg" ] || { echo "make-plugin-deb: no $ICON.svg for the Icon key" >&2; exit 1; }
+mkdir -p "$W/opt/singularity/share/icons/hicolor/scalable/apps"
+install -m 0644 "$SRC/$ICON.svg" "$W/opt/singularity/share/icons/hicolor/scalable/apps/$ICON.svg"
 cat > "$W/DEBIAN/control" <<EOC
 Package: ncz-screensavers-plugin
 Version: $VER
 Architecture: $ARCH
 Maintainer: Jason Perlow <jperlow@gmail.com>
-Depends: ncz-singularity-desktop, ncz-screensavers (>= 0.8.5), libglib2.0-bin
+Depends: $SING_DEP, ncz-screensavers (>= 0.8.5), libglib2.0-bin
 Section: x11
 Priority: optional
 Description: Screensaver and Lockscreen page for the Singularity desktop
