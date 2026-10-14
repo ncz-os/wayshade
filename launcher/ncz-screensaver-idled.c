@@ -131,6 +131,9 @@ struct idled_settings {
     int   lock_delay;
     bool  lock_on_suspend;
     int   display_off_delay;
+    /* dev.sinty.lockscreen lock-on-suspend (the Singularity settings toggle);
+     * true when that schema is not installed. */
+    bool  shell_lock_on_suspend;
 };
 
 /* Allocated plan: -1 means "no notification for this role". */
@@ -153,7 +156,7 @@ struct idled_plan {
  * shell's own IdleManager locks at the saver time. This daemon must NOT also
  * request a lock here: two lock clients started at the same instant race the
  * lock's renderer socket, the loser's unlink() leaves the surviving lock with
- * no frame source, and the saver never renders (measured
+ * no frame source, and the saver never renders (measured on build-host
  * 2026-10-13). Suspend locking still belongs to this daemon (it covers system
  * suspends, which the shell's own path does not). */
 static struct idled_plan plan_compute(const struct idled_settings *s, bool delegated)
@@ -162,13 +165,14 @@ static struct idled_plan plan_compute(const struct idled_settings *s, bool deleg
         .saver = -1,
         .lock  = -1,
         .dpms  = -1,
-        .lock_on_suspend = s->lock_enabled && s->lock_on_suspend,
+        .lock_on_suspend = s->lock_enabled && s->lock_on_suspend &&
+                           s->shell_lock_on_suspend,
     };
     bool screensaver_on = strcmp(s->mode, "off") != 0;
     if (delegated) {
         /* The lock hosts the saver and the shell owns the idle lock, so arm no
          * idle lock timer of our own; keep suspend locking and DPMS. */
-        p.lock_on_suspend = s->lock_on_suspend;
+        p.lock_on_suspend = s->lock_on_suspend && s->shell_lock_on_suspend;
         if (s->display_off_delay > 0) p.dpms = s->display_off_delay;
         return p;
     }
@@ -188,9 +192,16 @@ static void settings_clear(struct idled_settings *s)
     s->mode = NULL;
 }
 
+/* dev.sinty.lockscreen, when the Singularity shell's schema is installed. Its
+ * lock-on-suspend key is the user-visible "Lock on Suspend" setting, so the
+ * daemon honours it as well as its own dev.ncz.screensaver key. */
+static GSettings *g_shell_lock_settings;
+
 static void settings_load(GSettings *settings, struct idled_settings *out)
 {
     settings_clear(out);
+    out->shell_lock_on_suspend = g_shell_lock_settings
+        ? g_settings_get_boolean(g_shell_lock_settings, "lock-on-suspend") : true;
     out->mode             = g_settings_get_string(settings, "mode");
     out->hack_idle_delay  = g_settings_get_int(settings, "hack-idle-delay");
     out->lock_enabled     = g_settings_get_boolean(settings, "lock-enabled");
@@ -241,6 +252,7 @@ struct role_data {
 struct idled_state {
     /* CLI / options */
     bool        opt_dry_run;
+    bool        opt_classify;    /* --classify-inhibitors (test seam) */
     bool        opt_verbose;
 
     /* Configuration */
@@ -1259,6 +1271,56 @@ static int wl_handle_init(struct idled_state *st, GError **err)
  * logind (GDBus)
  * ------------------------------------------------------------------------- */
 
+/* Pure: does this logind inhibitor belong to a Singularity shell that locks
+ * the session before sleep itself? The shell (singularity-shell
+ * LogindLockListener) holds a "sleep" delay inhibitor with who="Singularity"
+ * for as long as it runs; when it does, the daemon must not lock on
+ * PrepareForSleep as well, or the user meets two lock clients on resume. */
+static bool inhibitor_is_shell_sleep_lock(const char *what, const char *who,
+                                          const char *mode, guint32 uid,
+                                          guint32 my_uid)
+{
+    if (!what || !who || !mode) return false;
+    if (uid != my_uid) return false;
+    if (g_strcmp0(mode, "delay") != 0) return false;
+    if (g_strcmp0(who, "Singularity") != 0) return false;
+    gchar **parts = g_strsplit(what, ":", -1);
+    bool sleep = false;
+    for (gchar **q = parts; *q; q++)
+        if (g_strcmp0(*q, "sleep") == 0) sleep = true;
+    g_strfreev(parts);
+    return sleep;
+}
+
+/* Ask logind whether the shell holds its sleep-lock inhibitor. A failed call
+ * means "unknown", and the daemon keeps its own suspend lock (fallback for a
+ * shell without the handler). */
+static bool shell_locks_before_sleep(GDBusConnection *conn)
+{
+    if (!conn) return false;
+    GError *err = NULL;
+    GVariant *ret = g_dbus_connection_call_sync(
+        conn, "org.freedesktop.login1", "/org/freedesktop/login1",
+        "org.freedesktop.login1.Manager", "ListInhibitors", NULL,
+        G_VARIANT_TYPE("(a(ssssuu))"), G_DBUS_CALL_FLAGS_NONE, 1000, NULL, &err);
+    if (!ret) {
+        log_debug("logind ListInhibitors failed: %s", err ? err->message : "?");
+        g_clear_error(&err);
+        return false;
+    }
+    GVariantIter *it = NULL;
+    const char *what, *who, *why, *mode;
+    guint32 uid, pid;
+    bool found = false;
+    g_variant_get(ret, "(a(ssssuu))", &it);
+    while (g_variant_iter_next(it, "(&s&s&s&suu)", &what, &who, &why, &mode, &uid, &pid))
+        if (inhibitor_is_shell_sleep_lock(what, who, mode, uid, (guint32)getuid()))
+            found = true;
+    g_variant_iter_free(it);
+    g_variant_unref(ret);
+    return found;
+}
+
 static void logind_signal_cb(GDBusConnection *conn, const char *sender,
                              const char *object_path, const char *interface,
                              const char *signal, GVariant *params,
@@ -1418,7 +1480,12 @@ static void logind_signal_cb(GDBusConnection *conn, const char *sender,
         log_debug("logind PrepareForSleep(%s)", about_to_suspend ? "true" : "false");
         if (about_to_suspend) {
             logind_acquire_inhibit(st);
-            if (st->cur_plan.lock_on_suspend) {
+            if (st->cur_plan.lock_on_suspend && shell_locks_before_sleep(st->logind_conn)) {
+                /* The shell locks before sleep (with its own inhibitor). A
+                 * second lock request from here would put a second lock client
+                 * on the screen at resume. */
+                log_info("suspend: the shell locks before sleep; not locking from the daemon");
+            } else if (st->cur_plan.lock_on_suspend) {
                 if (st->delegated) {
                     delegated_lock(st);
                 } else {
@@ -1600,6 +1667,8 @@ static void print_help(void)
 "\n"
 "Options:\n"
 "  --dry-run       Print the notification plan as JSON and exit.\n"
+"  --classify-inhibitors  Test seam: read \"what who mode uid\" rows on stdin,\n"
+"                  print shell|none (the shell's sleep-lock inhibitor).\n"
 "  --verbose       Enable debug logging.\n"
 "  --version       Print version and exit.\n"
 "  --help          Print this help and exit.\n");
@@ -1609,15 +1678,17 @@ static int parse_options(int argc, char **argv, struct idled_state *st)
 {
     static const struct option longopts[] = {
         { "dry-run",  no_argument, NULL, 'd' },
+        { "classify-inhibitors", no_argument, NULL, 'I' },
         { "verbose",  no_argument, NULL, 'v' },
         { "version",  no_argument, NULL, 'V' },
         { "help",     no_argument, NULL, 'h' },
         { NULL, 0, NULL, 0 },
     };
     int opt;
-    while ((opt = getopt_long(argc, argv, "dvVh", longopts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "dvVhI", longopts, NULL)) != -1) {
         switch (opt) {
         case 'd': st->opt_dry_run = true; break;
+        case 'I': st->opt_classify = true; break;
         case 'v': st->opt_verbose = true; g_verbose = true; break;
         case 'V': g_print("%s\n", IDLED_VERSION); exit(0);
         case 'h': print_help(); exit(0);
@@ -1630,6 +1701,26 @@ static int parse_options(int argc, char **argv, struct idled_state *st)
 /* ------------------------------------------------------------------------- *
  * Dry-run
  * ------------------------------------------------------------------------- */
+
+/* Test seam: read "what who mode uid" rows from stdin (uid "self" = ours) and
+ * print "shell" if any row is the shell's sleep-lock inhibitor, else "none". */
+static int run_classify_inhibitors(void)
+{
+    char line[512];
+    bool found = false;
+    while (fgets(line, sizeof line, stdin)) {
+        gchar **f = g_strsplit_set(g_strstrip(line), " \t", -1);
+        if (g_strv_length(f) >= 4) {
+            guint32 uid = g_strcmp0(f[3], "self") == 0 ? (guint32)getuid()
+                                                        : (guint32)strtoul(f[3], NULL, 10);
+            if (inhibitor_is_shell_sleep_lock(f[0], f[1], f[2], uid, (guint32)getuid()))
+                found = true;
+        }
+        g_strfreev(f);
+    }
+    g_print("%s\n", found ? "shell" : "none");
+    return 0;
+}
 
 static int run_dry_run(struct idled_state *st)
 {
@@ -1702,6 +1793,25 @@ int main(int argc, char **argv)
                  st.lock_renderer_cmd[0] ? st.lock_renderer_cmd : "<forced>");
     }
 
+    if (st.opt_classify) {
+        int rc = run_classify_inhibitors();
+        state_teardown(&st);
+        return rc;
+    }
+
+    {
+        GSettingsSchema *ls = source
+            ? g_settings_schema_source_lookup(source, "dev.sinty.lockscreen", TRUE) : NULL;
+        if (ls) {
+            if (g_settings_schema_has_key(ls, "lock-on-suspend"))
+                g_shell_lock_settings = g_settings_new("dev.sinty.lockscreen");
+            g_settings_schema_unref(ls);
+        }
+        if (!g_shell_lock_settings)
+            log_debug("dev.sinty.lockscreen lock-on-suspend not installed; "
+                      "using dev.ncz.screensaver lock-on-suspend alone");
+    }
+
     if (st.opt_dry_run) {
         int rc = run_dry_run(&st);
         state_teardown(&st);
@@ -1721,6 +1831,9 @@ int main(int argc, char **argv)
     }
 
     g_signal_connect(st.gsettings, "changed", G_CALLBACK(on_settings_changed), &st);
+    if (g_shell_lock_settings)
+        g_signal_connect(g_shell_lock_settings, "changed::lock-on-suspend",
+                         G_CALLBACK(on_settings_changed), &st);
 
     g_unix_signal_add(SIGTERM, on_signal_term, &st);
     g_unix_signal_add(SIGINT,  on_signal_term, &st);
@@ -1742,5 +1855,6 @@ int main(int argc, char **argv)
 
     int exit_code = st._exit_code;
     state_teardown(&st);
+    g_clear_object(&g_shell_lock_settings);
     return exit_code;
 }

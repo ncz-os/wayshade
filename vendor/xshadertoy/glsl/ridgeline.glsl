@@ -18,7 +18,7 @@
 // here is independent.
 //
 // iGPU fix (2026-09-26 cut): the floor tier (Intel UHD on
-// the UHD 630 + RTX 2060 laptop) measured 0.4 fps with the original 96-step march
+// build-host) measured 0.4 fps with the original 96-step march
 // over a 5-octave billowy fbm + 5-octave ridge + 2D domain
 // warp. Per-step terrain() was costing 2 fbm calls (10 octaves
 // of noise) + 2 more for the warp (10 more octaves = 20

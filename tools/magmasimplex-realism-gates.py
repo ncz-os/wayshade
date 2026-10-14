@@ -3,7 +3,7 @@
 """magmasimplex-realism-gates.py - measurable "does this look like lamp wax"
 gates on captured frames, with thresholds taken from real-lamp footage.
 
-The operator's 2026-10-04 review of the randomized run on Orion O6N: the orange
+The operator's 2026-10-04 review of the randomized run on O6N: the orange
 look (IMG_8237) was "not wax": glossy candy highlights, ring-outlined
 bubbles, an even white speckle, identical glossy ellipses. The reference
 frames (docs/MAGMASIMPLEX-REALISM.md) have none of that. Each gate below

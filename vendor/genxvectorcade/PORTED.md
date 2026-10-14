@@ -87,9 +87,9 @@ fractal ghosting without any extra geometry.
 | NVIDIA RTX 2060       | ~60 fps (16.7ms) | ~60 fps (16.7ms, still vsync-locked at compositor) |
 | AMD Radeon (navi14)   | ~60 fps (16.7ms) | ~600-1100 fps (0.9-1.7ms) |
 
-Measured on a UHD 630 + RTX 2060 laptop (Intel + NVIDIA via EGL vendor override) and
-the Radeon Pro 5500M laptop (AMD Radeon). The compositor on a UHD 630 + RTX 2060 laptop caps the frame
-rate at the panel refresh even with vblank_mode=0; the Radeon Pro 5500M laptop's
+Measured on build-host (Intel + NVIDIA via EGL vendor override) and
+build-host (AMD Radeon). The compositor on build-host caps the frame
+rate at the panel refresh even with vblank_mode=0; build-host's
 compositor permits full unconstrained throughput.
 
 Trail buffer is half-resolution RGBA8 (`NCZ_GVC_FB_SCALE=0.5` by
@@ -134,7 +134,7 @@ The shader is at
 4. `/usr/share/ncz-screensavers/shaders/genxvectorcade.frag`
    (installed)
 
-Verified working from `/` cwd on a UHD 630 + RTX 2060 laptop (Intel UHD). The
+Verified working from `/` cwd on build-host (Intel UHD). The
 cwd-relative-only path was a real ship-blocker on the flagship
 blackhole hack (it died instantly when launched from any directory
 other than the build tree while still passing the validation
@@ -142,7 +142,7 @@ gate). The installed-path lookup prevents that here.
 
 ## Verification (real hardware)
 
-**the UHD 630 + RTX 2060 laptop, Intel UHD (CML GT2):**
+**build-host, Intel UHD (CML GT2):**
 ```
 [diag] GL_VERSION=OpenGL ES 3.2 Mesa 26.1.6-1
 RENDERER=Mesa Intel(R) UHD Graphics (CML GT2)
@@ -153,7 +153,7 @@ RENDERER=Mesa Intel(R) UHD Graphics (CML GT2)
 ```
 vblank_mode=0: ~90-110 fps (9-11ms).
 
-**the UHD 630 + RTX 2060 laptop, NVIDIA RTX 2060 (EGL vendor override):**
+**build-host, NVIDIA RTX 2060 (EGL vendor override):**
 ```
 [diag] GL_VERSION=OpenGL ES 3.2 NVIDIA 615.71.09
 RENDERER=NVIDIA GeForce RTX 2060/PCIe/SSE2
@@ -164,7 +164,7 @@ RENDERER=NVIDIA GeForce RTX 2060/PCIe/SSE2
 ```
 vblank_mode=0: still capped at the panel refresh (~60 fps).
 
-**the Radeon Pro 5500M laptop, AMD Radeon (navi14):**
+**build-host, AMD Radeon (navi14):**
 ```
 [diag] GL_VERSION=OpenGL ES 3.2 Mesa 26.1.6-1
 RENDERER=AMD Radeon Graphics (radeonsi, navi14, ACO, DRM 3.64, 7.2.7-2-t2-trixie)

@@ -100,7 +100,7 @@ void fract_palette_eval(const FractPaletteDef *p, float t, float rgb[3], int *cl
  * pale; the full range must have bright accents, contrast and strong colour;
  * channel clipping is allowed but not dominant. Rejects the washed-out and
  * grey results a blind random draw produces, and the bright-start palettes
- * that made the first Orion O6N fractint run look like pink on white. */
+ * that made the first O6N fractint run look like pink on white. */
 int fract_palette_acceptable(const FractPaletteDef *p);
 
 /* Palette kinds: the quality gate is relaxed per kind, so a deliberate
@@ -220,7 +220,7 @@ void fract_ca_init_row(int rule, uint32_t seed, uint8_t row[FRACT_CA_W]);
 void fract_ca_step(int rule, const uint8_t in[FRACT_CA_W], uint8_t out[FRACT_CA_W]);
 
 /* Whether the automatic picker may choose this family. Six families draw poorly
- * on real hardware (checked on Orion O6N 2026-10-03): ifs is a solid fill, newton and
+ * on real hardware (checked on O6N 2026-10-03): ifs is a solid fill, newton and
  * quaternion are flat or washed out, lsystem is one stub line, lyapunov and
  * attractor are static-looking noise. They stay compiled and can be pinned with
  * --family=NAME, but the picker skips them. */

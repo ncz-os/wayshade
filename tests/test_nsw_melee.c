@@ -89,7 +89,7 @@ static int matrix(int reps) {
     printf("\ndamage by shots %.0f, rams %.0f, planet %.0f, chain %.0f\n", cause[0], cause[1], cause[2], cause[3]);
     printf("mean duration %.1f s, under 20 s: %d of %d, timeouts %d, boundary closed in %d\n",
            dur_sum / dur_n, short_n, dur_n, timeouts, contracted);
-    /* Balance metrics beyond win rate (design review list). */
+    /* Balance metrics beyond win rate (Fable's list). */
     for (int i = 1; i < nttk; i++)
         for (int j = i; j > 0 && ttk[j - 1] > ttk[j]; j--) { float t = ttk[j]; ttk[j] = ttk[j - 1]; ttk[j - 1] = t; }
     float p10 = nttk ? ttk[nttk / 10] : 0, p50 = nttk ? ttk[nttk / 2] : 0, p90 = nttk ? ttk[nttk * 9 / 10] : 0;

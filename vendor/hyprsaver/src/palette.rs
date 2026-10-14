@@ -362,7 +362,7 @@ pub fn builtin_palettes() -> HashMap<String, Palette> {
 
 /// Build the built-in gradient/LUT palettes: the three core gradients
 /// ("sunset", "aurora", "midnight") plus the pride flag pack
-/// ("achilles", "sappho", "marsha", "claude", "mercury", "frida", "emily").
+/// ("build-host", "sappho", "marsha", "claude", "mercury", "frida", "emily").
 pub fn builtin_gradient_palettes() -> Vec<(String, PaletteEntry)> {
     let sunset = gradient_to_lut(&[
         GradientStop {
@@ -428,8 +428,8 @@ pub fn builtin_gradient_palettes() -> Vec<(String, PaletteEntry)> {
     ])
     .unwrap_or_default();
 
-    // Achilles -- MLM flag (gay men, 7-stripe)
-    let achilles = gradient_to_lut(&[
+    // build-host -- MLM flag (gay men, 7-stripe)
+    let build-host = gradient_to_lut(&[
         GradientStop {
             position: 0.000,
             color: [0.027, 0.553, 0.439],
@@ -591,7 +591,7 @@ pub fn builtin_gradient_palettes() -> Vec<(String, PaletteEntry)> {
         ("sunset".into(), PaletteEntry::Lut(sunset)),
         ("aurora".into(), PaletteEntry::Lut(aurora)),
         ("midnight".into(), PaletteEntry::Lut(midnight)),
-        ("achilles".into(), PaletteEntry::Lut(achilles)),
+        ("build-host".into(), PaletteEntry::Lut(build-host)),
         ("sappho".into(), PaletteEntry::Lut(sappho)),
         ("marsha".into(), PaletteEntry::Lut(marsha)),
         ("claude".into(), PaletteEntry::Lut(claude)),

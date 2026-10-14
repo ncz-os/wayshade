@@ -238,7 +238,7 @@ vec3 stars(vec3 d,float fw){
  // longitude/latitude grid. The old 720x360 lat/long grid packs cells ever
  // tighter toward the poles: a lensed image of a pole (bright grainy
  // "searchlight" patch) and cells stretched into horizontal dashes elsewhere
- // (reported on a UHD 630 + RTX 2060 laptop 2026-09-28 in all colour modes). Each cell now holds
+ // (reported on build-host 2026-09-28 in all colour modes). Each cell now holds
  // at most one round, softly falling-off star at a jittered position, so
  // magnification by the lens enlarges a dot instead of a square cell.
  vec3 ad=abs(d);
@@ -523,7 +523,7 @@ vec3 disk_color(vec3 p,vec3 diskN,float drama){
  // NOTE: `a` is atan(p.y,p.x) and therefore JUMPS from +PI to -PI along one
  // radial line. Driving hue LINEARLY from it (previously (a/(2.*PI))*.18)
  // stepped bandHue by a full 0.18 across that seam, which rendered as a hard
- // straight colour boundary splitting the disk - observed live on a Radeon Pro 5500M laptop as a
+ // straight colour boundary splitting the disk - observed live on build-host as a
  // teal/gold edge down the middle. Use a periodic function of the angle
  // instead: sin/cos are continuous across the wrap and keep comparable
  // amplitude (+/-.09 here vs the old 0.18 peak-to-peak), so the disk gets the
@@ -534,7 +534,7 @@ vec3 disk_color(vec3 p,vec3 diskN,float drama){
  // A real disk-space hot sector also appears in the lensed disk images.
  // Hot sector. Previously cos^4 at 0.65 amplitude, which rotated as a hard
  // narrow lobe and read as a searchlight sweeping the disk (reported on
- // the UHD 630 + RTX 2060 laptop 2026-09-28, visible in ALL colour modes). Widened to cos^2 and
+ // build-host 2026-09-28, visible in ALL colour modes). Widened to cos^2 and
  // cut to 0.22 so it is a broad brightening rather than a spotlight.
  float sector=max(cos(a-(.22*u_time+.00001*u_seed)),0.);
  sector*=sector;
@@ -569,7 +569,7 @@ vec3 jet_tint(){
 // This replaces a screen-fixed cone test (smoothstep on |dot(ray,axis)|) that
 // painted a large ellipse wherever the view direction was within ~13 degrees of
 // the axis, textured by screen-space noise: the "searchlight with large dots"
-// artifact reported on a UHD 630 + RTX 2060 laptop 2026-09-28 in ALL colour modes.
+// artifact reported on build-host 2026-09-28 in ALL colour modes.
 vec3 jet_glow(vec3 cam,vec3 ray,vec3 axis0){
  // slow 5-degree precession of the jet around the disk normal
  vec3 e1=normalize(cross(axis0,abs(axis0.x)<.9?vec3(1.,0.,0.):vec3(0.,1.,0.))),e2=cross(axis0,e1);

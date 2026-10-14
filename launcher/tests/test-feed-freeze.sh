@@ -3,9 +3,12 @@
 # Headless test for the lock-hosted saver POLICY knobs of ncz-screensaver-feed:
 #   * the lock frame rate and the reduced render resolution are applied
 #     (NCZ_SAVER_LOCK_FPS / NCZ_SAVER_RENDER_DIV appear in the feed's log);
-#   * NCZ_SAVER_FREEZE=never  -> frames keep coming, no HOLD (debug/old policy);
+#   * default (NCZ_SAVER_FREEZE unset = prompt) -> frames keep coming well past
+#     the freeze-after time and the feed never sends HOLD: the idle saver keeps
+#     animating; only the lock freezes it, when it raises the prompt;
+#   * NCZ_SAVER_FREEZE=never  -> frames keep coming, no HOLD;
 #   * NCZ_SAVER_FREEZE=always -> after NCZ_SAVER_FREEZE_AFTER_S the feed sends
-#     LFS_HOLD and stops rendering (the operator's freeze-on-every-system policy).
+#     LFS_HOLD and stops rendering (opt-in intro-then-freeze power saver).
 # It runs a REAL hack off-screen (software EGL) and streams to a mock lock that
 # speaks the lock_framesrc wire protocol. No compositor and no GPU required.
 #
@@ -80,9 +83,13 @@ run_case() { # $1 name, $2 mock-extra, $3 expect_hold, rest = FEED ENV assignmen
 # --frames must come through the mock-extra; split so both cases can override.
 run_case pc-never-freeze "--frames 8" no \
     NCZ_SAVER_LOCK_FPS=8 NCZ_SAVER_RENDER_DIV=2 NCZ_SAVER_FREEZE=never
-run_case freeze-always-default "--frames 9999 --hold" yes \
+# Default policy: no timer. The freeze-after time is shortened to 1 s and the
+# mock must still receive 40 frames (5 s at 8 fps) with no HOLD.
+run_case default-no-timer-freeze "--frames 40" no \
+    NCZ_SAVER_LOCK_FPS=8 NCZ_SAVER_RENDER_DIV=2 NCZ_SAVER_FREEZE= NCZ_SAVER_FREEZE_AFTER_S=1
+run_case freeze-always-optin "--frames 9999 --hold" yes \
     NCZ_SAVER_LOCK_FPS=8 NCZ_SAVER_RENDER_DIV=2 NCZ_SAVER_FREEZE=always NCZ_SAVER_FREEZE_AFTER_S=1
 
 if [ "$FAIL" -ne 0 ]; then echo "RESULT: FAIL"; exit 1; fi
-echo "RESULT: PASS: lock fps/division applied; freeze policy honoured (HOLD only when asked)"
+echo "RESULT: PASS: lock fps/division applied; no timer freeze by default; HOLD only when opted in"
 exit 0

@@ -45,7 +45,7 @@ extern void ncz_harness_die(int code);
  * trail buffer is intentionally soft, so half-res costs a quarter the
  * bandwidth and looks fine through the bloom. Intel UHD was already
  * the constraint, and a full-resolution RGBA8 ping-pong nearly doubled
- * per-frame cost on that target (measured on a UHD 630 + RTX 2060 laptop 2026-09-25).
+ * per-frame cost on that target (measured on build-host 2026-09-25).
  * Override via env NCZ_GVC_FB_SCALE for A-B testing. */
 #define DEFAULT_FB_SCALE 0.5f
 #define MAX_PHASES 5

@@ -3,7 +3,8 @@
 Eleven xscreensaver screensavers, ported to run on the GLES3 engine. None
 of them uses OpenGL 1: there is no immediate mode, no display list and no
 `glBegin` anywhere in the port; the whole set is GLES 3.2. See
-[classics-port-notes.md](classics-port-notes.md) for the port notes.
+[`../../docs/CLASSICS-SHADER-PORT.md`](../../docs/CLASSICS-SHADER-PORT.md)
+for the port record and measurements.
 
 Two porting routes are in use, and they differ in how much work each saver
 needed:

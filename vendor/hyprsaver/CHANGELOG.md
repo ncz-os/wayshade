@@ -46,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Sonar: 25% (rotating sweep gates wavefront visibility, white emitter dots)
   - Shipburn: 21% (Burning Ship Julia variant with julia.glsl-style coloring)
   - Fractaltrap: 29% (three-point orbit-trap Julia with three-fold rotational symmetry)
-- **Pride palette pack:** 7 new gradient LUT palettes (achilles, sappho, marsha, cahun, mercury, frida, emily) + `[playlists.pride]` grouping in example config
+- **Pride palette pack:** 7 new gradient LUT palettes (build-host, sappho, marsha, cahun, mercury, frida, emily) + `[playlists.pride]` grouping in example config
 - **CLI — `render-gif` subcommand:** Headless shader→GIF rendering via EGL surfaceless + FBO capture. Defaults: 960×540, 20 fps, 9 s, 3 random palettes as hard-cut segments. Deterministic frame timing for reproducibility. Purpose: generate README showcase GIFs without screen recording.
 - **Persistent shuffle bag:** `$XDG_STATE_HOME/hyprsaver/shuffle.toml` backs `randomize_cycle_start()` for both palette and shader managers — each name returns once per bag cycle before repeats; cross-launch consecutive repeats eliminated
 - **New benchmarks documented:** Clouds (25%), Terminal (18%)

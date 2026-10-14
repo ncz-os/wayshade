@@ -72,7 +72,7 @@ typedef struct {
      * output scale.
      *
      * THESE ARE NOT THE SAME NUMBER AND CONFLATING THEM IS THE MOST COMMON
-     * WAY TO GET THIS WRONG. Measured on a Radxa Orion O6N: the greeter, running
+     * WAY TO GET THIS WRONG. Measured on a Radxa O6N: the greeter, running
      * before the session's scale applies, is configured at 3840x2160; a
      * surface inside the same session on the same panel is configured at
      * 2194x1234, because the output carries a 1.75 fractional scale. A host

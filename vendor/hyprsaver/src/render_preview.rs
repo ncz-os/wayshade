@@ -49,7 +49,7 @@ enum PaletteSource {
 ///   hyprsaver render-preview
 ///   hyprsaver render-preview blob mobius
 ///   hyprsaver render-preview blob --palette marsha -o /tmp/blob.webp
-///   hyprsaver render-preview --cycle-palettes marsha,achilles,sappho --duration 9
+///   hyprsaver render-preview --cycle-palettes marsha,build-host,sappho --duration 9
 ///   hyprsaver render-preview --skip-existing --seed 42
 #[derive(Args, Debug)]
 pub struct RenderPreviewArgs {

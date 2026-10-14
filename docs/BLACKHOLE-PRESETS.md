@@ -42,7 +42,7 @@ Precedence, lowest to highest: built-in defaults, `blackhole.conf`, **the preset
 
 Every preset declares `min-gpu-class` (the weakest GPU class that still runs it at the bar of 30 fps with a 95th percentile frame time under 40 ms) and `measured`. Classes: `weak` (Intel UHD 630 reference), `mid` (Mali-G720 reference), `strong` (Radeon Pro 5500M, RTX 2060 class). The class comes from `NCZ_GPU_CLASS` when the launcher sets it (from its calibration), otherwise from GL_RENDERER (Intel and CPU renderers weak, Mali mid, everything else strong).
 
-Weak-class defaults (used unless the user sets the options): render scale 0.5 (960x540 upscaled to 1080p by the compositor), the ray-step budget at its lowest, no bloom, half the nebula and star density, torus opacity x0.6. Measured on a UHD 630 + RTX 2060 laptop (Intel UHD 630, Mesa iris, 1920x1080, clean timing, 26 s per run, no readbacks):
+Weak-class defaults (used unless the user sets the options): render scale 0.5 (960x540 upscaled to 1080p by the compositor), the ray-step budget at its lowest, no bloom, half the nebula and star density, torus opacity x0.6. Measured on build-host (Intel UHD 630, Mesa iris, 1920x1080, clean timing, 26 s per run, no readbacks):
 
 | Preset | weak (UHD 630) fps, p95 | mid (Mali-G720, 1080p) | strong (Navi14) | min-gpu-class |
 |---|---|---|---|---|
@@ -56,7 +56,7 @@ Weak-class defaults (used unless the user sets the options): render scale 0.5 (9
 | microquasar | 52, 19.6 ms | 60 | 60 | weak |
 | kerr | 53, 19.2 ms | 60 | 60 | weak |
 
-The eight original presets and Black Hole itself clear the bar on the weakest reference GPU at the weak-class defaults, so all are `weak`. The RTX 2060 was not measured here. Scene presets (2026-09-29, `--scene`). on a UHD 630 + RTX 2060 laptop these were measured with the weak-class light mode; on Mali-G720 (Orion O6N, mali_kbase) with the rich mode that the mid class uses, with light mode for comparison; and on the RTX 2060 via per-process PRIME offload. Runs were 26 s with seed 42 and no readbacks. The merger, TDE and galaxy runs start 35, 40 and 30 s into their cycle, so they cover the heavy phases:
+The eight original presets and Black Hole itself clear the bar on the weakest reference GPU at the weak-class defaults, so all are `weak`. The RTX 2060 was not measured here. Scene presets (2026-09-29, `--scene`). On build-host these were measured with the weak-class light mode; on Mali-G720 (O6N, mali_kbase) with the rich mode that the mid class uses, with light mode for comparison; and on the RTX 2060 via per-process PRIME offload. Runs were 26 s with seed 42 and no readbacks. The merger, TDE and galaxy runs start 35, 40 and 30 s into their cycle, so they cover the heavy phases:
 
 | Preset | weak (UHD 630, 960x540, light) fps, p95 | mid (Mali-G720, 1080p, rich) fps, p95 | strong (RTX 2060) | min-gpu-class |
 |---|---|---|---|---|

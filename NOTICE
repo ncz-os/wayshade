@@ -7,9 +7,7 @@ The Apache-2.0 grant covers the original NCZ-authored code in this
 repository: the Wayland/EGL/GLES3 harness, the launcher, the idle timer, the
 Singularity plugin, the development tools and tests, and the original
 in-house engines (Black Hole port/rewrite, Fractasia, Magmasimplex,
-Neonhorizon, Neonspacewar, Ephemeris, Megacity, Genxvectorcade, and the
-Jurassicaquarium and wave2-materia shader sets under vendor/, each carrying an
-Apache-2.0 SPDX header).
+Neonhorizon, Neonspacewar, Ephemeris, Megacity and Genxvectorcade).
 
 Every screensaver and every vendored shader is a separate program with its
 own copyright and licence; those components are NOT relicensed by the

@@ -69,7 +69,7 @@ def add_power(sysfs, ac, battery=True):
 
 GIB = 1024**3
 LAYOUTS = {
-    # Hybrid Intel + NVIDIA laptop: Intel iGPU owns the panel, NVIDIA dGPU is the offload target.
+    # build-host: Intel iGPU owns the panel, NVIDIA dGPU is the offload target.
     "nvidia+intel": lambda s: (
         add_gpu(
             s,
@@ -83,7 +83,7 @@ LAYOUTS = {
         ),
         add_gpu(s, "card1", "0x10de", "0x1f08", "nvidia", "0000:01:00.0"),
     ),
-    # the Radeon Pro 5500M laptops: the AMD dGPU owns the panel, the Intel iGPU is idle.
+    # build-host and build-host: the AMD dGPU owns the panel, the Intel iGPU is idle.
     "amd-dgpu-display+intel-idle": lambda s: (
         add_gpu(s, "card0", "0x8086", "0x3e9b", "i915", "0000:00:02.0"),
         add_gpu(
@@ -221,7 +221,7 @@ def test_renderer_table(env, renderer, expected):
     assert env.class_from_renderer(renderer) == expected
 
 
-# Strings captured on 2026-09-29 from MS-R1 (Sky1,
+# Strings captured on 2026-09-29 from MS-R1 / cixmini (192.0.2.66, Sky1,
 # Mali-G720-Immortalis). Both the GLES renderer string returned by the
 # calibrator and the Vulkan deviceName/driverName returned by vulkaninfo, plus
 # every plausible variant ARM has shipped for the Valhall/Immortalis family
@@ -398,7 +398,7 @@ def test_sky1_mali_platform_driver_is_mid(env, driver, expected):
 
 
 def test_sky1_linlondp_display_controllers_are_filtered_from_gpus(env):
-    """Regression for an MS-R1 (Sky1): Sky1 exposes four DRM cards driven by
+    """Regression for 192.0.2.66: Sky1 exposes four DRM cards driven by
     the 'linlondp' display controller, none of which is a 3D GPU. The actual
     GPU is the /sys/devices/platform/CIXH5000:00/misc/mali0 character device
     driven by the 'mali' platform bus driver. list_gpus() must not list the
@@ -512,7 +512,7 @@ def test_sky1_mali_short_symlink_layout_also_resolves(env):
 
 
 def test_sky1_mali_gpu_is_classified_mid_end_to_end(env, monkeypatch):
-    """End-to-end regression for an MS-R1 (Sky1): with the Sky1 sysfs layout,
+    """End-to-end regression for 192.0.2.66: with the Sky1 sysfs layout,
     the launcher's GPU class detection returns 'mid' (the calibrated class
     on the real hardware) — never 'weak'. This is the central guarantee of
     the operator's policy: never demote a real GPU to weak.
@@ -600,7 +600,7 @@ def _build_sky1_sysfs(env):
 
 
 def test_sky1_cmd_gpus_json_lists_only_the_mali_mid(env, monkeypatch, capsys):
-    """Regression for an MS-R1 (Sky1): `ncz-screensaver gpus --json` must
+    """Regression for 192.0.2.66: `ncz-screensaver gpus --json` must
     report exactly one entry — the Mali — and that entry must be `class=mid`.
     The previous code reported four linlondp cards (one mid from a stale
     cache, three weak from the topology fallback) on a real GPU system.
@@ -645,7 +645,7 @@ def test_sky1_cmd_gpus_text_format(env, monkeypatch, capsys):
 
 
 def test_sky1_cmd_status_reports_mid_class(env, monkeypatch, capsys):
-    """Regression for an MS-R1 (Sky1): `ncz-screensaver status --json`
+    """Regression for 192.0.2.66: `ncz-screensaver status --json`
     must report `gpu_class=mid` (or hit the calibrator and report mid
     via the calibration score). The previous code reported gpu_class=mid
     only because of a stale `pci-CIXH5010_03` cache entry; the fix moves
@@ -669,10 +669,10 @@ def test_sky1_cmd_status_reports_mid_class(env, monkeypatch, capsys):
     assert out["gpu_class_source"] in ("table", "calibration")
 
 
-# Strings captured on 2026-09-30 from MS-R1 (Sky1,
+# Strings captured on 2026-09-30 from MS-R1 / cixmini (192.0.2.66, Sky1,
 # Mali-G720-Immortalis) running kernel 7.3.0-rc5-sky1-ncz with the
 # `module_blacklist=panthor` cmdline. Source of truth: live
-# `/home/user/.cache/ncz-screensavers/gpu-class.json` after the calibrated
+# `/home/mini/.cache/ncz-screensavers/gpu-class.json` after the calibrated
 # `gles3_harness` ran inside the real singularity-labwc compositor on tty1.
 # The renderer string comes from `glGetString(GL_RENDERER)`, the version from
 # `glGetString(GL_VERSION)`, the driver from the platform-bus /sys/.../driver
@@ -753,7 +753,7 @@ def _build_sky1_live_sysfs(env):
 def test_sky1_live_capture_renderer_string_is_mid(env):
     """Pins the EXACT GLES renderer string returned by glGetString on the
     live .66 host (captured 2026-09-30 from
-    /home/user/.cache/ncz-screensavers/gpu-class.json, from
+    /home/mini/.cache/ncz-screensavers/gpu-class.json, from
     /run/user/1000/ncz-screensaver/hack.log lines that begin
     'gles3_harness: gpu class' and 'GL_VERSION=OpenGL ES 3.2'). The
     launcher classifies it as 'mid', never 'weak'.
@@ -834,7 +834,7 @@ def test_sky1_live_capture_cmd_gpus_json_after_calibrate(env, monkeypatch, capsy
     renderer's measurement, `ncz-screensaver gpus --json` reports the
     cached ms/renderer next to the GPU. Captured live on 2026-09-30:
     a fresh calibrate on .66 wrote ms=11.76, renderer='Mali-G720-Immortalis'
-    into /home/user/.cache/ncz-screensavers/gpu-class.json for the
+    into /home/mini/.cache/ncz-screensavers/gpu-class.json for the
     soc-CIXH5000_00 entry."""
     _build_sky1_live_sysfs(env)
     monkeypatch.setenv("FAKE_RENDERER", SKY1_LIVE_CAPTURE["renderer"])
@@ -875,7 +875,7 @@ def test_sky1_live_capture_cmd_status_json(env, monkeypatch, capsys):
 
 
 def test_sky1_live_capture_no_weak_classification_under_any_path(env, monkeypatch):
-    """Regression for an MS-R1 (Sky1) — the central operator-visible promise
+    """Regression for 192.0.2.66 — the central operator-visible promise
     of this fix: with the live .66 sysfs layout, every code path the
     launcher can take returns class=mid, never class=weak. This is the
     table-driven weak/mid/strict table, the topology fallback, and the
@@ -1505,8 +1505,8 @@ def test_calibration_scores_reference_gpus_and_caches(env, monkeypatch):
     assert env.gpu_class(S, disp)["ms"] == 46.5
 
 
-def test_hybrid_nvidia_nvidia_rejects_panel_gpu_calibration(env, monkeypatch):
-    """A live hybrid Intel + NVIDIA cache once assigned Intel's 46.52 ms to the RTX 2060."""
+def test_pegasus_nvidia_rejects_panel_gpu_calibration(env, monkeypatch):
+    """Live build-host cache once assigned Intel's 46.52 ms to the RTX 2060."""
     layout(env, "nvidia+intel")
     disp, nv = env.list_gpus()
     seed_cache(
@@ -1542,7 +1542,7 @@ def test_hybrid_nvidia_nvidia_rejects_panel_gpu_calibration(env, monkeypatch):
     assert env.read_class_cache()[nv["id"]]["ms"] == 46.52
 
 
-def test_hybrid_nvidia_nvidia_rejects_misbound_benchmark(env, monkeypatch):
+def test_pegasus_nvidia_rejects_misbound_benchmark(env, monkeypatch):
     """A correct identify followed by an Intel benchmark cannot be cached."""
     layout(env, "nvidia+intel")
     _disp, nv = env.list_gpus()
@@ -1632,7 +1632,7 @@ def test_calibration_cache_records_kernel_field(env, monkeypatch):
 
 def test_cache_refreshes_when_kernel_changes(env, monkeypatch):
     """A bump of the running kernel must invalidate the calibration cache. This
-    is the contract that closes the Orion O6N regression: the Mali-G720 went 9.94 ms on
+    is the contract that closes the O6N regression: the Mali-G720 went 9.94 ms on
     7.2.8-sky1-ncz to 28.21 ms on 7.2.9-sky1-ncz with no other change, so the
     old "mid" cache entry had to be evicted when the kernel moved.
 
@@ -1745,7 +1745,7 @@ def test_calibrate_command_refuses_while_a_hack_runs(env, monkeypatch):
 
 
 # ---- GPU roles, offload environment ---------------------------------------------------------
-def test_hybrid_nvidia_layout_display_intel_offload_nvidia(env):
+def test_pegasus_layout_display_intel_offload_nvidia(env):
     layout(env, "nvidia+intel")
     gpus = env.list_gpus()
     assert [g["vendor"] for g in gpus] == ["intel", "nvidia"]
@@ -1758,7 +1758,7 @@ def test_hybrid_nvidia_layout_display_intel_offload_nvidia(env):
     assert env.gpu_env(gpus[0]) == {}
 
 
-def test_amd_panel_layout_amd_owns_panel_intel_idle(env):
+def test_chimera_layout_amd_owns_panel_intel_idle(env):
     layout(env, "amd-dgpu-display+intel-idle")
     gpus = env.list_gpus()
     assert gpus[0]["vendor"] == "amd" and gpus[0]["display"] and gpus[0]["discrete"]
@@ -1810,7 +1810,7 @@ def test_switcherooctl_environment_is_used_and_egl_vendor_is_dropped(env):
 
 
 # ---- planning: which GPU renders a hack --------------------------------------------------------
-def classes_hybrid_nvidia(env):
+def classes_pegasus(env):
     layout(env, "nvidia+intel")
     disp, nv = env.list_gpus()
     seed_cache(
@@ -1824,7 +1824,7 @@ def classes_hybrid_nvidia(env):
 
 
 def test_plan_light_hack_stays_on_igpu_heavy_goes_to_nvidia(env):
-    disp, nv = classes_hybrid_nvidia(env)
+    disp, nv = classes_pegasus(env)
     light = env.plan_for("light_gles3", S)
     heavy = env.plan_for("heavy_gles3", S)
     medium = env.plan_for("medium_gles3", S)
@@ -1863,18 +1863,18 @@ def test_plan_never_offloads_to_a_slower_gpu(env):
 
 
 def test_gpu_offload_off_disables_targets(env):
-    _disp, _nv = classes_hybrid_nvidia(env)
+    _disp, _nv = classes_pegasus(env)
     assert env.offload_targets({**S, "gpu-offload": "off"}) == []
     assert not env.plan_for("heavy_gles3", {**S, "gpu-offload": "off"})["offload"]
 
 
 def test_prime_forces_offload_for_every_hack(env):
-    classes_hybrid_nvidia(env)
+    classes_pegasus(env)
     assert env.plan_for("light_gles3", {**S, "gpu-offload": "prime"})["offload"]
 
 
 def test_child_env_has_offload_variables_only_for_the_offloaded_hack(env):
-    classes_hybrid_nvidia(env)
+    classes_pegasus(env)
     heavy = env.build_child_env(
         "heavy_gles3", S, base_env={"DRI_PRIME": "1", "HOME": str(env.tmp)}
     )
@@ -1889,7 +1889,7 @@ def test_child_env_has_offload_variables_only_for_the_offloaded_hack(env):
 
 
 def test_weak_gpu_default_render_scale_and_high_override(env):
-    _disp, _nv = classes_hybrid_nvidia(env)
+    _disp, _nv = classes_pegasus(env)
     off = {**S, "gpu-offload": "off"}
     shader = "hyprsaver_aurora_gles3"
     assert env.render_env(shader, off)["NCZ_RENDER_SCALE"] == "0.50"
@@ -1933,7 +1933,7 @@ def test_pool_strong_system_hides_nothing(env):
 
 
 def test_pool_weak_igpu_with_offload_target_gets_everything(env):
-    classes_hybrid_nvidia(env)
+    classes_pegasus(env)
     assert env.filter_pool(IDS, S) == IDS
 
 
@@ -2010,7 +2010,7 @@ def test_pool_and_plan_commands(env, monkeypatch, capsys):
 
 
 def test_child_env_exports_the_class_of_the_rendering_gpu(env):
-    classes_hybrid_nvidia(env)
+    classes_pegasus(env)
     heavy = env.build_child_env("heavy_gles3", S, base_env={"HOME": str(env.tmp)})
     light = env.build_child_env("light_gles3", S, base_env={"HOME": str(env.tmp)})
     assert heavy["NCZ_GPU_CLASS"] == "strong"  # offloaded to the NVIDIA GPU
@@ -2035,7 +2035,7 @@ def test_mid_class_uses_measured_render_hints(env, monkeypatch):
 
 
 def test_on_ac_every_shader_hack_goes_to_the_discrete_gpu(env):
-    _disp, nv = classes_hybrid_nvidia(env)
+    _disp, nv = classes_pegasus(env)
     shader = env.plan_for("hyprsaver_light_gles3", S)
     assert shader["offload"] and shader["gpu"]["id"] == nv["id"]
     classic = env.plan_for("light_gles3", S)
@@ -2104,7 +2104,7 @@ def test_chosen_gpu_id_is_not_overridden_by_a_better_gpu(env):
 
 
 def test_egl_vendor_pin_is_dropped_for_offloaded_hacks_only(env):
-    classes_hybrid_nvidia(env)
+    classes_pegasus(env)
     base = {"HOME": str(env.tmp), "__EGL_VENDOR_LIBRARY_FILENAMES": "/x/50_mesa.json"}
     heavy = env.build_child_env("heavy_gles3", S, base_env=base)
     light = env.build_child_env("light_gles3", S, base_env=base)
@@ -2193,7 +2193,7 @@ def test_calibration_happens_inside_the_supervisor_after_state_exists(env, monke
 # The operator's complaint (2026-09-30, after the previous passes had merged
 # their fixes into the source tree) was that
 #   $ ncz-screensaver gpus
-# still reported "weak" for every card on .66 (MS-R1 / Sky1 /
+# still reported "weak" for every card on .66 (cixmini / MS-R1 / Sky1 /
 # Mali-G720-Immortalis). The previous tests pin the underlying detection
 # logic in isolation (renderer pattern, sysfs layout, topology fallback,
 # stale cache), but the operator-visible behaviour is the integration of
@@ -2678,7 +2678,7 @@ def test_render_only_gpu_takes_display_when_display_controller_has_no_render_nod
 # ---------------------------------------------------------------------------
 # Dispatch r18 (2026-09-30T11:50Z) re-capture:
 # the strings I personally captured from /tmp/ncz-screensaver-r18-2026-09-30
-# on an MS-R1 (Sky1). The ms differs from SKY1_PASS13_CAPTURE (14.71 vs 9.88)
+# on 192.0.2.66. The ms differs from SKY1_PASS13_CAPTURE (14.71 vs 9.88)
 # because the calibration micro-benchmark runs at different wall times;
 # both classify as `mid` because the threshold band is 8.0 <= ms < 20.0.
 # Pinning the new capture means a regression that changes the threshold
@@ -2687,7 +2687,7 @@ def test_render_only_gpu_takes_display_when_display_controller_has_no_render_nod
 
 SKY1_R18_CAPTURE = {
     # Captured from /tmp/ncz-screensaver-r18-2026-09-30 status --json on
-    # an MS-R1 (Sky1) at 2026-09-30T11:50Z (this dispatch).
+    # 192.0.2.66 at 2026-09-30T11:50Z (this dispatch).
     "renderer": "Mali-G720-Immortalis",
     "ms": 14.71,
     "when": "2026-09-30T11:50:00+0000",
@@ -2767,7 +2767,7 @@ def test_sky1_r18_class_from_ms_keeps_14_71_in_mid_band(env):
 # ---------------------------------------------------------------------------
 # Dispatch r15-continuation (2026-09-30T15:53Z) re-capture:
 # the strings captured live from /tmp/ncz-screensaver-continuation-rN-2026-09-30
-# on an MS-R1 (Sky1). The ms differs from SKY1_R18_CAPTURE (11.93 vs 14.71)
+# on 192.0.2.66. The ms differs from SKY1_R18_CAPTURE (11.93 vs 14.71)
 # and from SKY1_PASS13_CAPTURE (9.88) because the calibration micro-benchmark
 # is wall-time dependent. All three pins classify as `mid` because the
 # threshold band is 8.0 <= ms < 20.0. Pinning the new capture means a
@@ -2777,7 +2777,7 @@ def test_sky1_r18_class_from_ms_keeps_14_71_in_mid_band(env):
 
 SKY1_R15_CONT_CAPTURE = {
     # Captured from /tmp/ncz-screensaver-continuation-rN-2026-09-30T1553Z
-    # status --json on an MS-R1 (Sky1) at 2026-09-30T15:53Z (this dispatch).
+    # status --json on 192.0.2.66 at 2026-09-30T15:53Z (this dispatch).
     # The hack running on .66 at capture time was hyprsaver_stonks_gles3
     # (PID 424458, uptime 5928.2 s at the first run; voronoi_gles3 14 s later).
     "renderer": "Mali-G720-Immortalis",
@@ -3002,7 +3002,7 @@ def test_sky1_r15_cont_adversarial_topology_partial_dict_for_mali(env):
 # Captured live from
 #   /tmp/ncz-screensaver-validate-r20-2026-09-30T1232Z (md5
 #   e7e77d4cc7cf0294902086149486096e, byte-for-byte identical to this
-#   branch's launcher/ncz-screensaver at HEAD f365279) on an MS-R1 (Sky1)
+#   branch's launcher/ncz-screensaver at HEAD f365279) on 192.0.2.66
 #   after a /usr/bin/python3 launcher stop (operator policy: do not
 #   reboot, reinstall or change system config on .66; the running hack
 #   was stopped only briefly to allow the calibrator to write the cache,
@@ -3023,7 +3023,7 @@ def test_sky1_r15_cont_adversarial_topology_partial_dict_for_mali(env):
 
 SKY1_R20_CONT_CAPTURE = {
     # Captured from /tmp/ncz-screensaver-validate-r20-2026-09-30T1232Z
-    # status --json on an MS-R1 (Sky1) at 2026-09-30T16:39:07+0000 (UTC;
+    # status --json on 192.0.2.66 at 2026-09-30T16:39:07+0000 (UTC;
     # -04:00 local), measured by /usr/bin/python3 /usr/libexec/.../calibrate
     # after stop/start.
     "renderer": "Mali-G720-Immortalis",
@@ -3237,7 +3237,7 @@ def test_sky1_r20_cont_no_software_fallback_in_hack_env(env, monkeypatch):
         env,
         "build_child_env",
         lambda *a, **kw: {
-            "HOME": "/home/user",
+            "HOME": "/home/mini",
             "XDG_RUNTIME_DIR": "/run/user/1000",
             "WAYLAND_DISPLAY": "wayland-0",
             "LD_LIBRARY_PATH": (
@@ -3293,10 +3293,12 @@ def test_sky1_r20_cont_all_four_live_ms_pins_classify_as_mid(env):
 # 'weak' detected, it needs to be able to say 'GPU0 (weak), GPU1 (strong)' and it
 # needs text to describe the PRIME offload if the configuration is
 # supported/detected." The fixtures below use the live detection strings and
-# calibration numbers recorded on a UHD 630 + RTX 2060 laptop (dual-GPU amd64 laptop, Intel UHD +
+# calibration numbers recorded on build-host (dual-GPU amd64 laptop, Intel UHD +
+# NVIDIA RTX 2060, login build-host/build-host) and .66 (Mali-G720-Immortalis single
+# SoC, login mini/mini) per the operator's MNEMOS context memory.
 
 
-def _hybrid_nvidia_seed(env):
+def _pegasus_seed(env):
     layout(env, "nvidia+intel")
     disp, nv = env.list_gpus()
     seed_cache(
@@ -3314,9 +3316,9 @@ def _single_soc_seed(env):
     seed_display(env, "mid")
 
 
-def test_gpu_verdict_text_hybrid_nvidia_dual_gpu(env):
-    """Hybrid Intel + NVIDIA: Intel UHD is GPU0 (Weak), NVIDIA RTX 2060 is GPU1 (Strong)."""
-    disp, nv = _hybrid_nvidia_seed(env)
+def test_gpu_verdict_text_pegasus_dual_gpu(env):
+    """build-host dual-GPU: Intel UHD is GPU0 (Weak), NVIDIA RTX 2060 is GPU1 (Strong)."""
+    disp, nv = _pegasus_seed(env)
     text = env.gpu_verdict_text(S)
     assert text == "GPU0 (Weak), GPU1 (Strong)"
     rows = env.gpu_verdict_rows(S)
@@ -3346,7 +3348,7 @@ def test_per_gpu_labels_use_class_title_for_unknown_and_known(env):
 
 
 def test_per_gpu_dual_gpu_layout_panel_first_then_offload(env):
-    """AMD-panel layout: the AMD dGPU owns the panel, the Intel iGPU is idle.
+    """build-host layout: the AMD dGPU owns the panel, the Intel iGPU is idle.
     The verdict reads "GPU0 (Strong), GPU1 (Weak)" — the panel GPU is GPU0
     and the offload candidate is GPU1, even when the offload candidate is
     weaker than the panel (the plugin shows the panel first because the
@@ -3367,7 +3369,7 @@ def test_per_gpu_dual_gpu_layout_panel_first_then_offload(env):
 
 
 def test_prime_offload_explanation_single_soc_uses_panel_label(env):
-    """Single-GPU "no offload" path on a MS-R1 .66 host: the
+    """Single-GPU "no offload" path on a Sky1 / cixmini .66 host: the
     explanation names the panel GPU driver (mali), states that offload is
     not available and never implies a software fallback. This is the path
     the Vala plugin renders in the Settings > Screensaver and Lockscreen
@@ -3401,7 +3403,7 @@ def test_gpu_verdict_text_mini_single_mali_g720(env):
 
 
 def test_gpu_verdict_rows_index_is_panel_first_even_when_offload_is_strong(env):
-    """AMD-panel layout (AMD dGPU owns panel, idle Intel iGPU): GPU0 is the strong
+    """build-host layout (AMD dGPU owns panel, idle Intel iGPU): GPU0 is the strong
     panel dGPU, GPU1 is the idle weak iGPU. Panel-first order is preserved."""
     layout(env, "amd-dgpu-display+intel-idle")
     amd, intel = env.list_gpus()
@@ -3456,9 +3458,9 @@ def test_gpu_verdict_text_handles_missing_class_field(env, monkeypatch):
     assert text == "GPU0 (Unknown)"
 
 
-def test_prime_offload_supported_hybrid_nvidia(env):
-    """A hybrid Intel + NVIDIA laptop has a discrete NVIDIA offload target, so PRIME is supported."""
-    _hybrid_nvidia_seed(env)
+def test_prime_offload_supported_pegasus(env):
+    """build-host has a discrete NVIDIA offload target, so PRIME is supported."""
+    _pegasus_seed(env)
     assert env.prime_offload_supported(S) is True
 
 
@@ -3468,9 +3470,9 @@ def test_prime_offload_supported_mini_single_soc(env):
     assert env.prime_offload_supported(S) is False
 
 
-def test_prime_offload_explanation_hybrid_nvidia_on_ac(env):
-    """Hybrid Intel + NVIDIA on AC: full PRIME explanation, names panel + offload drivers."""
-    _hybrid_nvidia_seed(env)
+def test_prime_offload_explanation_pegasus_on_ac(env):
+    """build-host on AC: full PRIME explanation, names panel + offload drivers."""
+    _pegasus_seed(env)
     text = env.prime_offload_explanation(S)
     # Names the panel GPU and the offload target.
     assert "Intel i915" in text
@@ -3488,8 +3490,8 @@ def test_prime_offload_explanation_hybrid_nvidia_on_ac(env):
     assert "software" not in text.lower()
 
 
-def test_prime_offload_explanation_hybrid_nvidia_on_battery(env):
-    """Hybrid Intel + NVIDIA on battery: the AC rule is replaced; offload is not exercised."""
+def test_prime_offload_explanation_pegasus_on_battery(env):
+    """build-host on battery: the AC rule is replaced; offload is not exercised."""
     layout(env, "nvidia+intel", ac=False)
     disp, nv = env.list_gpus()
     seed_cache(
@@ -3602,8 +3604,8 @@ def test_prime_offload_explanation_second_gpu_without_pci_slot(env):
 
 def test_status_json_includes_per_gpu_verdict_and_prime(env, capsys, monkeypatch):
     """`ncz-screensaver status --json` exposes gpu_verdict and prime_offload
-    with the hybrid Intel + NVIDIA live strings."""
-    _hybrid_nvidia_seed(env)
+    with the build-host live strings."""
+    _pegasus_seed(env)
     monkeypatch.setattr(env, "load_settings", lambda: (dict(env.DEFAULTS), True))
     monkeypatch.setattr(env, "read_state", lambda: None)
     assert env.cmd_status(type("A", (), {"json": True, "diagnostics": False})()) == 3
@@ -3632,9 +3634,9 @@ def test_status_json_single_soc_explains_unavailable_offload(env, capsys, monkey
 
 def test_status_text_appends_verdict_when_not_running(env, capsys, monkeypatch):
     """Plain-text `ncz-screensaver status` (no --json) shows the verdict in
-    the 'not running' line so users on hybrid Intel + NVIDIA laptops see the hybrid verdict at a
+    the 'not running' line so users on build-host see the hybrid verdict at a
     glance."""
-    _hybrid_nvidia_seed(env)
+    _pegasus_seed(env)
     monkeypatch.setattr(env, "load_settings", lambda: (dict(env.DEFAULTS), True))
     monkeypatch.setattr(env, "read_state", lambda: None)
     env.cmd_status(type("A", (), {"json": False, "diagnostics": False})())
@@ -3646,7 +3648,7 @@ def test_status_text_appends_verdict_when_running(env, capsys, monkeypatch):
     """Plain-text `ncz-screensaver status` also appends the verdict when a
     hack is up, so ops scripts reading the text keep the same column layout
     regardless of running state."""
-    _hybrid_nvidia_seed(env)
+    _pegasus_seed(env)
     monkeypatch.setattr(env, "load_settings", lambda: (dict(env.DEFAULTS), True))
     monkeypatch.setattr(
         env,
@@ -3667,7 +3669,7 @@ def test_status_text_appends_verdict_when_running(env, capsys, monkeypatch):
 def test_gpus_json_includes_per_gpu_verdict_fields(env, capsys, monkeypatch):
     """`ncz-screensaver gpus --json` keeps the legacy gpu dict and adds the
     per-GPU verdict fields (index, class, ms, renderer) for the UX."""
-    disp, nv = _hybrid_nvidia_seed(env)
+    disp, nv = _pegasus_seed(env)
     monkeypatch.setattr(env, "load_settings", lambda: (dict(env.DEFAULTS), True))
     env.cmd_gpus(type("A", (), {"json": True})())
     rows = json.loads(capsys.readouterr().out)
@@ -3683,7 +3685,7 @@ def test_gpus_json_includes_per_gpu_verdict_fields(env, capsys, monkeypatch):
 def test_doctor_includes_verdict_and_prime(env, capsys, monkeypatch):
     """`ncz-screensaver doctor` includes gpu_verdict, gpu_verdict_rows,
     prime_offload and prime_offload_supported."""
-    _hybrid_nvidia_seed(env)
+    _pegasus_seed(env)
     monkeypatch.setattr(env, "load_settings", lambda: (dict(env.DEFAULTS), True))
     env.cmd_doctor(type("A", (), {})())
     out = json.loads(capsys.readouterr().out)
@@ -3826,12 +3828,12 @@ def test_dual_gpu_layout_offload_path_still_clears_ambient_prime(env, monkeypatc
 
     We seed an ambient value that is distinguishable from any
     topology-derived value (e.g. a DRI_PRIME BDF that does not exist on
-    the synthetic hybrid Intel + NVIDIA topology), so a leaked ambient variable is
+    the synthetic build-host topology), so a leaked ambient variable is
     observable in the child env. The __NV_PRIME_RENDER_OFFLOAD=1 case is
     the canonical offload value (NVIDIA_OFFLOAD_ENV), so we instead seed
     __VK_LAYER_NV_optimus which the launcher explicitly strips via
     GPU_ENV_NEVER."""
-    _hybrid_nvidia_seed(env)
+    _pegasus_seed(env)
     monkeypatch.setenv("DRI_PRIME", "pci-dead:be:ef.0")
     monkeypatch.setenv("__VK_LAYER_NV_optimus", "ambient-leak-canary")
     monkeypatch.setenv("__GLX_VENDOR_LIBRARY_NAME", "ambient-leak-canary")
@@ -3839,7 +3841,7 @@ def test_dual_gpu_layout_offload_path_still_clears_ambient_prime(env, monkeypatc
     # Sanity: a heavy shader hack on AC should offload to the NVIDIA.
     assert heavy["offload"] is True
     heavy_child = env.build_child_env("hyprsaver_xshadertoy_hexplasma_gles3", S)
-    # on a UHD 630 + RTX 2060 laptop the offload target is NVIDIA, so gpu_env() returns the
+    # On build-host the offload target is NVIDIA, so gpu_env() returns the
     # NVIDIA_OFFLOAD_ENV triple (__NV_PRIME_RENDER_OFFLOAD / __GLX_VENDOR_LIBRARY_NAME
     # / __VK_LAYER_NV_optimus) — NOT DRI_PRIME (NVIDIA uses the __NV_*
     # variables, not DRI_PRIME). The launcher pops OFFLOAD_VARS first and

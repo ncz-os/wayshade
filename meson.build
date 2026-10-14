@@ -13,7 +13,7 @@ project(
         'warning_level=2',
         # Default -O0/-g; downstream packagers usually override.
     ],
-    version: '0.8.13',
+    version: '0.8.15',
     license: 'Apache-2.0',
 )
 
@@ -236,6 +236,14 @@ gles3_native_c_args = common_c_args + [
 # + libm (vendored xscreensaver code and our GLES3 helpers use
 # cosf/sinf/sqrtf etc — neither libGLESv2 nor libwayland-client
 # drags libm in transitively on Debian aarch64).
+# Off-screen rendering has no window and so no framebuffer 0: every hack binary
+# routes glBindFramebuffer through src/ncz_fbo_redirect.c, which substitutes
+# the frame-source FBO for 0 while ncz_feed_render.c is driving the hack.
+dep_fbo_redirect = declare_dependency(
+    sources: files('src/ncz_fbo_redirect.c'),
+    link_args: ['-Wl,--wrap=glBindFramebuffer'],
+)
+
 common_gles3_deps = [
     dep_wayland_client,
     dep_wayland_egl,
@@ -243,6 +251,7 @@ common_gles3_deps = [
     dep_glesv2,
     dep_png,
     dep_m,
+    dep_fbo_redirect,
 ]
 
 # Shader-engine ports of the xscreensaver classics (src/classics_shader/), built
@@ -739,7 +748,7 @@ magmasimplex_exe = executable(
 # feature that separates this from a generic tunnel shader) plus a
 # tiny "fade + rotate" pass that spirals the wakes each frame. Trail
 # buffer is intentionally half-resolution: full-resolution on Intel
-# UHD nearly doubled per-frame cost (measured on a UHD 630 + RTX 2060 laptop 2026-09-25)
+# UHD nearly doubled per-frame cost (measured on build-host 2026-09-25)
 # and trails are intentionally soft.
 if install_extras
 install_data('vendor/genxvectorcade/genxvectorcade.frag',
@@ -760,7 +769,8 @@ executable(
     install: ncz_ship_bins.contains('genxvectorcade_gles3'), install_dir: ncz_libdir,
 )
 
-# Ephemeris. Matte surface,
+# Ephemeris: the piece Claude designed (docs/superpowers/specs/
+# 2026-09-25-ephemeris-chronicle.md, docs/EPHEMERIS.md). Matte surface,
 # short-lived CPU workers that see only an asynchronously read-back 32x32
 # mip of it, and a GPU evaluator they cannot see. One driver plus one GLSL
 # file holding every pass. Not in ncz_ship_bins until the operator decides.

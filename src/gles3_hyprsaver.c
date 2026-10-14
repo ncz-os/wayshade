@@ -322,11 +322,11 @@ bake_palette_lut(int which) {
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     /* Use GL_RGBA as internalformat for maximum driver compatibility —
      * GL_RGBA8 is the size-only form but some embedded GLES drivers
-     * (notably the Mali-G720 Panthor path on Orion O6N with the CIX vendor
+     * (notably the Mali-G720 Panthor path on O6N with the CIX vendor
      * blob) have been observed to silently re-interpret a 1-pixel-tall
      * GL_RGBA8 texture as luminance when read back, which makes the
      * injected `vec3 palette()` return (intensity, intensity, intensity)
-     * — observed on Orion O6N 2026-09-22 with hyprsaver_aurora_gles3 et al.:
+     * — observed on O6N 2026-09-22 with hyprsaver_aurora_gles3 et al.:
      * grim captured grayscale blobs instead of the expected rainbow.
      * Forcing GL_RGBA keeps all four channels distinct through the
      * upload. */

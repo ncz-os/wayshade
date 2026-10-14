@@ -10,7 +10,7 @@
  *   2. EGL device (EGL_PLATFORM_DEVICE_EXT) - the proprietary NVIDIA stack.
  *   3. EGL GBM on a DRM node (EGL_PLATFORM_GBM_KHR, libgbm dlopen'd) - the CIX
  *      Mali blob: libEGL_cix advertises EGL_KHR_platform_gbm (and wayland) but
- *      NOT surfaceless or device, so both of the first two fail on Orion O6N and the
+ *      NOT surfaceless or device, so both of the first two fail on O6N and the
  *      saver never produces a frame. GBM needs no compositor, no window system
  *      and no EGL surface.
  * All render into an FBO, so no compositor and no GBM *surface* is required.
@@ -31,6 +31,7 @@
 #include "ncz_gpu_guard.h"
 #include "ncz_stats.h"
 #include "gles3_harness_hooks.h"
+#include "ncz_fbo_redirect.h"
 
 #include <errno.h>
 #include <dirent.h>
@@ -273,7 +274,7 @@ static EGLDisplay try_device(EGLint *maj, EGLint *minn) {
 
 /* ---- GBM fallback --------------------------------------------------------
  *
- * Some vendor EGL stacks (notably the CIX Mali blob on the Orion O6N Sky1) do not
+ * Some vendor EGL stacks (notably the CIX Mali blob on the O6N Sky1) do not
  * implement EGL_MESA_platform_surfaceless or EGL_EXT_platform_device, so both
  * of the paths above fail and the lock-hosted saver never renders a frame. The
  * CIX blob DOES advertise EGL_KHR_platform_gbm; opening a DRM node with libgbm
@@ -566,6 +567,8 @@ int ncz_feed_render_main(struct xscreensaver_function_table *hack,
     GLuint fbo = make_fbo((int)rw, (int)rh);
     if (!fbo) { close(fd); return 4; }
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    /* This FBO is the hack's "screen": a bind of framebuffer 0 lands here. */
+    ncz_screen_fbo = fbo;
 
     /* Drive the hack exactly as gles3_harness.c does, but with our FBO current
      * and no surface. The globals belong to the shim/runtime. */
@@ -648,6 +651,7 @@ int ncz_feed_render_main(struct xscreensaver_function_table *hack,
                         fbo = make_fbo((int)rw, (int)rh);
                         if (!fbo) { fr_log("FBO recreate failed"); g_run = 0; continue; }
                         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+                        ncz_screen_fbo = fbo;
                         /* Allocate the new readback BEFORE freeing the old one,
                          * so a failed allocation leaves tmp valid and there is
                          * no window where tmp is freed but still used. */
@@ -674,7 +678,11 @@ int ncz_feed_render_main(struct xscreensaver_function_table *hack,
         int fps_eff = (level == 1) ? warm_fps : fps;
 
         ncz_harness_attach_frame_size((int)rw, (int)rh);
+        /* Each frame starts and is read back on the screen FBO, whatever
+         * framebuffer the hack left bound. */
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
         hack->draw_cb(&mi);
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
         glReadPixels(0, 0, (GLsizei)rw, (GLsizei)rh, GL_RGBA,
                      GL_UNSIGNED_BYTE, tmp);
         /* Hacks routinely leave benign GL errors set; never make that fatal

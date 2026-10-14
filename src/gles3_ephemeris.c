@@ -1,7 +1,9 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 /* gles3_ephemeris.c - Ephemeris, a screensaver for NCZ-OS.
  *
- * Designed 2026-09-25.
+ * Designed by Claude (Opus 5) on 2026-09-25 with Fable and Astra as
+ * consultants; see docs/superpowers/specs/2026-09-25-ephemeris-chronicle.md
+ * for the design record and docs/EPHEMERIS.md for what the program does.
  *
  * The mechanism, described plainly:
  *

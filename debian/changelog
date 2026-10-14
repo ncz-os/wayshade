@@ -1,54 +1,673 @@
+ncz-screensavers (0.8.15) unstable; urgency=medium
+
+  * ncz-screensaver-idled honours the Singularity "Lock on Suspend" setting
+    (dev.sinty.lockscreen lock-on-suspend) as well as its own key: with it
+    off, the daemon no longer locks the session when the system sleeps.
+  * When the Singularity shell locks before sleep itself (it then holds a
+    logind "sleep" delay inhibitor as "Singularity"), the daemon leaves the
+    sleep lock to the shell, so resume shows a single lock screen. Without
+    that inhibitor the daemon still locks before sleep.
+  * Regression tests in launcher/tests/test-idled-dryrun.sh.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 13 Oct 2026 17:30:00 -0400
+
+ncz-screensavers (0.8.14) unstable; urgency=medium
+
+  * The lock-hosted screensaver keeps animating until someone uses the
+    machine. On NCZ-OS the lock hosts the idle screensaver, so the old
+    default (freeze 15 seconds after the saver started) stopped every idle
+    screensaver on a frame with nobody there. The default freeze mode is now
+    "prompt": no timer; the lock freezes the saver only when input raises the
+    unlock prompt. NCZ_SAVER_FREEZE=always keeps the intro-then-freeze
+    behaviour as an opt-in, "auto" applies it to Apple T2 Macs only, and an
+    unknown value means "prompt". --print-policy now prints freeze=prompt.
+  * Savers that draw their final pass to the window (the classics with
+    post-processing such as Cubestorm and Noof, and Magmasimplex) showed a
+    black screen behind the lock. Off-screen, framebuffer 0 is now the lock's
+    frame buffer, so they render there.
+  * Magmasimplex renders on Arm Mali (Sky1): its shader now starts at the
+    #version line, which the Mali compiler requires.
+  * Regression tests: launcher/tests/test-feed-engines.sh (visible, changing
+    frames off-screen for a set of savers), a no-timer case in
+    test-feed-freeze.sh and the new defaults in test-feed-policy.py.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 13 Oct 2026 16:00:00 -0400
+
 ncz-screensavers (0.8.13) unstable; urgency=medium
 
   * ncz-screensaver-idled (delegated mode) no longer asks the shell to lock at
-    the saver delay. The shell is the single idle-lock owner (its lock idle
-    delay is set to match dev.ncz.screensaver:hack-idle-delay), so two lock
-    clients no longer start at the same instant and the lock keeps its frame
-    source. Suspend locking and display power-off stay with the daemon.
-  * ncz-screensavers-plugin 0.3.21: the plugin manifest is declared
-    app-shipped (X-Singularity-App=dev.sinty.desktop), so the Settings page is
-    populated as soon as the plugin is discovered; the plugin has its own
-    Plugins category and icon, and the options of each screensaver expand in
-    place under its row.
-  * Launcher: the GPU class cache also records the running kernel release and
-    recalibrates after a kernel change; ensure-plugin logs why it did nothing.
-  * ncz-screensavers-gtk4-reference: libadwaita is optional (suggested), the
-    choice lists come from the installed schema, and a build-time smoke test.
-  * Regression tests for the delegated plan, the settings pane and the plugin
-    packaging.
+    hack-idle-delay. The SHELL is now the single idle-lock owner (the image's
+    post-install hook already sets dev.sinty.lockscreen:idle-delay to match
+    dev.ncz.screensaver:hack-idle-delay), so two lock clients are no longer
+    started at the same instant and the lock's frame source is no longer
+    clobbered. Suspend locking and DPMS stay with the daemon. As a result, the
+    screensaver actually renders behind the lock at default timings instead
+    of failing closed with no frames.
+  * ncz-screensavers-plugin's desktop file (screensaver.plugin) is now
+    declared app-shipped (X-Singularity-App=dev.sinty.desktop). The
+    Settings > Plugins > "Screensaver and Lockscreen" page is populated as
+    soon as the plugin is discovered, independent of when the postinst
+    gschema override (or ncz-saver ensure-plugin at login) adds the
+    "screensaver" entry to dev.sinty.desktop enabled-plugins. Settings pane
+    is no longer "No settings available" after a clean first login.
+  * Regression tests:
+    - launcher/tests/test-idled-dryrun.sh asserts the new delegated plan
+      shape (no idle lock timer in delegated mode; suspend locking stays).
+    - tools/test-plugin-settings-pane.py reproduces headlessly what the
+      shell's PluginManager does and asserts the settings pane is populated.
+  * Package version bumped to 0.8.13; the installed-target verifier's
+    compiled-in policy defaults are unchanged (lock_fps=8, render_div=2,
+    freeze=always, freeze_after_s=15, battery_lock_fps=6).
 
- -- Jason Perlow <jperlow@gmail.com>  Tue, 13 Oct 2026 00:00:00 -0400
+ -- Jason Perlow <jperlow@gmail.com>  Mon, 13 Oct 2026 00:00:00 -0400
 
 ncz-screensavers (0.8.12) unstable; urgency=medium
 
   * Lock-hosted saver (ncz-screensaver-feed): cool-by-default operation. While
-    the screen is locked the saver runs a short intro at a low, capped frame
-    rate (8 fps, half resolution) and then freezes, handing the lock its last
-    frame to keep. A thermal governor pauses rendering if a sensor approaches
-    about 85 C and resumes when it cools.
+    the screen is locked the saver now runs a short intro at a low, capped
+    frame rate (8 fps, half resolution) and then freezes on every system,
+    handing the lock its last frame to keep. A thermal governor pauses
+    rendering if a sensor approaches ~85 C and resumes when it cools. The
+    effect is a lock screen that sits near the idle power floor instead of
+    driving the GPU and CPU hard for as long as the screen is locked.
   * The freeze is fail-closed and portable: the feed freezes only with a lock
-    that understands the HOLD message. Against an older lock it keeps the low
-    frame rate and the thermal governor and never sends HOLD.
-  * Off-screen renderer: a GBM EGL platform fallback so the lock-hosted saver
-    animates on Arm Mali proprietary drivers. Mesa still uses the surfaceless
-    path unchanged.
-  * ncz-screensaver-feed --print-policy prints the compiled-in policy defaults.
+    that understands the HOLD message. Against an older lock (built before
+    HOLD existed) the feed instead keeps the low frame rate and the thermal
+    governor and never sends HOLD, so it degrades quietly rather than
+    faulting.
+  * Off-screen renderer: on the CIX Mali blob (arm64) the frame source adds a
+    GBM EGL platform, so the lock-hosted saver animates on Mali GPUs instead
+    of showing a static frame. Mesa/AMD/Intel still use the surfaceless path
+    unchanged.
+  * `ncz-screensaver-feed --print-policy` prints the compiled-in policy
+    defaults (lock frame rate, render divisor, freeze mode and timer, battery
+    frame rate) for the image's installed-target verifier.
 
  -- Jason Perlow <jperlow@gmail.com>  Mon, 12 Oct 2026 12:35:00 -0400
 
 ncz-screensavers (0.8.11) unstable; urgency=medium
 
-  * ncz-screensaver-feed: the producer half of the lock-hosted screensaver.
-    Every hack binary gains an off-screen mode that renders into an FBO
-    through EGL surfaceless or a device platform, with no compositor.
-  * ncz-screensaver-idled: delegated mode. When a lock renderer is configured
-    the daemon no longer starts its own wlr-layer-shell saver; at the saver
-    delay it asks the session to lock and the lock hosts the saver.
+  * ncz-screensaver-feed: the producer half of the NCZ lock-hosted
+    screensaver. When the NCZ lockscreen is built with its out-of-process
+    frame-source hook and SINGULARITY_LOCK_RENDERER names this command, the
+    session lock presents screensaver frames instead of a static prompt. The
+    feed reuses the launcher catalog/plan logic and runs each hack off-screen
+    (every hack binary gains an NCZ_FEED_SOCKET mode that renders into an FBO
+    through EGL surfaceless or a device platform, with no compositor).
+  * ncz-screensaver-idled: delegated mode. When /etc/ncz/lock-renderer.env
+    names a renderer, the daemon no longer starts its own wlr-layer-shell
+    saver; at hack-idle-delay it asks the shell to lock (ScreenSaver.Lock)
+    and the lock hosts the saver.
 
  -- Jason Perlow <jperlow@gmail.com>  Sun, 11 Oct 2026 20:00:00 -0400
 
+ncz-screensavers (0.8.10) unstable; urgency=medium
+
+  * Three-feature merge onto integration: the Black Hole randomize work, the
+    in-house neongravity scene and the per-screensaver gear dialog fix are
+    folded into one release branch off 0.8.9 (f7e692c). The ship set and the
+    Mali tier/calibration logic are unchanged; no source file from the
+    Mali-G720 tier branch was edited.
+  * Black Hole: a new `randomize` option re-rolls the look at each screensaver
+    start, with a safe envelope per GPU class (off | look | everything).
+    everything also re-rolls the scene type and palette inside the catalogue
+    and the user's own constraints. The engine pin set honours env/CLI >
+    pinned stored > rolled > default, and the launcher marks
+    `blackhole-color-mode` pinned whenever it is not the literal vendor
+    default `stylized`, so the shipped Cygnus default stays pinned.
+    ncz-screensaver-gsettings override ships with
+    `hack-options={'blackhole_gles3': {'randomize': 'everything'}}`
+    whenever the installed engine lists `randomize` in
+    `blackhole_gles3 --dump-schema`; older engines keep the previous
+    override. Engine bit: src/blackhole_randomize.{c,h},
+    src/gles3_blackhole.c (weak ncz_hack_preinit hook), src/gles3_harness.c
+    (hook call site), src/blackhole_opts.h (option row, basic).
+    Launcher bit: launcher/ncz-screensaver (BASIC_OPTIONS, NCZ_HACK_PINNED).
+    Plugin bit: plugin/screensaver/{screensaver,ncz_backend,backend}.vala
+    (Randomize switch, Roll now button, pin lines with Unpin,
+    option_is_stored). New test: tests/test_blackhole_randomize.c (30000
+    seeded envelope rolls, 20000 pin-respecting rolls, class gating).
+    Schema bit: config/dev.ncz.screensaver.gschema.xml (randomize key,
+    enum off|look|everything). Docs: docs/BLACKHOLE-RANDOMIZE.md.
+  * xshadertoy neongravity: the in-house analytic neongravity scene
+    replaces the third-party CC0 neongravity-1 port in ncz_ship_bins;
+    ship count unchanged at 74. The in-house shader was already in tree
+    but never compiled; it now ships, with xst_common.glsl installed
+    alongside it (the first shipped saver that #includes xst_common.glsl;
+    install rule tied to the ship set). PROVENANCE.tsv records
+    xshadertoy_neongravity as shipped, xshadertoy_neongravity-1,
+    universeball and gravitywell as displaced-by:xshadertoy_neongravity.
+    New test: tools/tests/test_neongravity_inhouse.py. Docs:
+    docs/audit/neongravity-inhouse-2026-10-05.md.
+  * Plugin gear: clicking the per-screensaver gear used to append the
+    HackOptionsPanel below the entire chooser (up to 74 rows) so it
+    landed off the bottom of the page. The panel now opens in a transient
+    dialog (Gtk.Window / Gtk.HeaderBar; Close button; modal,
+    transient-for the root) so it works regardless of the shell's
+    scroller. The inline options_box / configured_id fields are removed;
+    the top "Options" button opens the same dialog. The Developer-mode
+    empty-state hint ("No basic options; enable Developer options in
+    Advanced to see them.") is shown only when the panel has no basic
+    row and Developer mode is off, and follows the Developer switch
+    while the dialog is open. Headless gear test
+    (plugin/screensaver/tests/gear_options_test.vala + tools/test-plugin-gear.sh)
+    instantiates the real ScreensaverSettings against the real NczScreensaverBackend
+    and checks every catalog hack that ships options in engine 0.8.9.
+    Plugin package version is 0.3.16.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 06 Oct 2026 00:43:29 +0000
+
+ncz-screensavers (0.8.9+gtk4ref1) unstable; urgency=medium
+
+  * ncz-screensavers-gtk4-reference: the reference GTK4 front end now matches
+    the engine it drives. It reads the mode, GPU-pool and colour-mode choices
+    out of the installed dev.ncz.screensaver schema instead of keeping its own
+    copies of those lists, so a new engine key reaches the UI without a code
+    change here; the catalogue rows carry the minimum-GPU-class badge the
+    engine reports in `ncz-screensaver list --json`; and the per-screensaver
+    options dialog gained a "Randomize all" button that fills every option
+    inside the range its shipped options/*.tsv declares.
+  * ncz-screensavers-gtk4-reference: libadwaita is no longer required. GTK4 is
+    the only hard dependency (gir1.2-adw-1 moves from Depends to Suggests) and
+    every libadwaita widget has a plain GTK4 fallback, so the app starts and
+    edits the same schema keys on desktops that ship GTK4 without libadwaita.
+    The reference package is still Architecture: all and still not pulled in by
+    the engine package, so image hooks that refuse it keep refusing it.
+  * ncz-screensavers-gtk4-reference: Preview in the options dialog now goes
+    through $NCZ_SCREENSAVER_CLI like every other engine call; it used a
+    hard-coded launcher name and was a silent no-op on a system where the
+    launcher is installed under another name or path. The dead GSK_RENDERER
+    default is gone (it warned on GTK >= 4.10, where "ngl" became "gl").
+  * ncz-screensavers-gtk4-reference: build-time tests. --gtk-smoke builds the
+    window and the options dialog on a throw-away display (Xvfb or Broadway)
+    and asserts the catalogue loaded and the dialog round-trips; the test suite
+    covers the GPU tiers, the schema-derived choice lists, randomize and the
+    no-libadwaita path. Both are wired into `meson test --suite
+    gtk4-reference-app` and skip (exit 77) where PyGObject, GTK 4 or a display
+    is missing.
+  * Docs: rewrote contrib/gtk4-reference-app/README.md for a reader outside
+    the NCZ-OS image - what the reference front end is, how to build and run it
+    on Debian, Fedora and Arch, and how it relates to the engine.
+
+ -- Jason Perlow <jperlow@gmail.com>  Mon, 05 Oct 2026 22:30:00 -0400
+
+ncz-screensavers (0.8.9) unstable; urgency=medium
+
+  * Licence: the project is now Apache-2.0, ending the GPL-2.0-or-later vs
+    Apache-2.0 conflict recorded by the 0.8.7 audit. LICENSE is the pure
+    Apache License 2.0 text, a root NOTICE carries the Apache attribution
+    convention, meson.build's license field is Apache-2.0, README and the
+    package description state the project licence, and debian/copyright is
+    rewritten as machine-readable DEP-5 with per-component stanzas. Each
+    screensaver remains a separate program, so the vendored and ported
+    components keep their own licences. SPDX-License-Identifier: Apache-2.0
+    headers were added to the NCZ-authored harness, launcher, plugin, tools,
+    tests and in-house engines; no third-party header was altered.
+  * xshadertoy: the two shipped shaders that declared CC0 but embedded
+    snippets of unstated provenance no longer do. neontriangulator's two
+    "License: Unknown" hash helpers are replaced with Inigo Quilez's MIT hash
+    routines, and the "License: Unknown" Matt Taylor tonemapper in
+    neontriangulator and neongravity-1 is replaced with an in-house filmic
+    tone curve. The CC0/MIT grants of the shaders themselves are unchanged;
+    both stay in the ship set (74 binaries), and no hack was added or removed.
+  * xshadertoy neongravity: the in-house analytic neongravity scene now ships,
+    replacing the third-party CC0 neongravity-1 port in ncz_ship_bins (ship
+    count unchanged at 74). The scene is home-grown NCZ (Apache-2.0, no
+    third-party snippet inside) and is validated headless on build-host (amd64,
+    Mesa GLES3) and ULTRA (arm64 container); see
+    docs/audit/neongravity-inhouse-2026-10-05.md. This makes the 0.8.2
+    supersession claim true: xshadertoy_universeball and gravitywell are
+    recorded as displaced-by:xshadertoy_neongravity, and the third-party
+    neongravity-1 port is displaced-by:xshadertoy_neongravity and builds as a
+    developer-only target.
+  * Docs: the 0.8.9 correction of the 0.8.2 "displaced by the in-house
+    neongravity" claim (which named the third-party port that shipped at the
+    time) is superseded by the entry above; PROVENANCE.tsv and
+    SHADER-LEDGER.md now record the in-house scene as the shipped one.
+
+ -- Jason Perlow <jperlow@gmail.com>  Mon, 05 Oct 2026 20:00:00 -0400
+
+ncz-screensavers (0.8.8) unstable; urgency=medium
+
+  * xshadertoy: tier the alienbeacon raymarch by GPU class. Alienbeacon is a
+    200-step raymarch whose distance field sums four spiral-noise octave
+    series per step; it ran at about 2.5 fps on the Mali-G720 at the 1080 cap
+    and under 6 fps at its render hint. The existing NCZ_QUALITY hook (0 weak,
+    1 mid, 2 strong) now lowers the march count, noise octaves, shadow steps
+    and ambient-occlusion probes on mid and weak GPUs. The strong path is the
+    original shader, byte-for-byte. On the reference hardware it goes to
+    39.3 fps / p95 28.8 ms on the Mali-G720 and 39.3 fps / 29.4 ms on the
+    UHD 630 at scale 0.5; the Navi14 is unchanged at 60 fps.
+  * tiers.tsv: re-measured the four legacy classics (crackberg, cubestorm,
+    geodesic, datatowers) and xshadertoy_alienbeacon on the reference hosts.
+    All five now hold 30 fps with p95 <= 40 ms on the UHD 630 (native and at
+    scale 0.5) and on the Mali-G720 at the platform default, so all five move
+    from strong to weak. The four classics were already fixed by the 0.8.x
+    shader-engine ports (60 fps on both the UHD 630 and the Mali-G720); only
+    alienbeacon needed the raymarch tier. RTX 2060 left unmeasured.
+
+ -- Jason Perlow <jperlow@gmail.com>  Mon, 05 Oct 2026 19:00:00 -0400
+
+ncz-screensavers (0.8.7) unstable; urgency=medium
+
+  * Catalogue: magmasimplex legacy-id alias presets are no longer listed
+    twice. The schema tool marks each `butterfly-*` alias with an explicit
+    `alias=<canonical>` key in [preset], and generate-catalog.py's
+    build_presets skips alias rows (44 scenes, down from 52). Blackhole and
+    the other conf-with-no-json savers stay listed. presets.tsv regenerated;
+    new tests in tools/tests/test_preset_aliases.py.
+  * tiers.tsv: magmasimplex_gles3 measured on the RTX 2060 (build-host, PRIME
+    offload, native 1920x1080): 58.8 fps / p95 38.8 ms. The class stays mid;
+    the UHD 630 and Mali columns are unchanged.
+  * Provenance and licence audit of the ship set and the built-only savers:
+    NOTICES.md (installed under /usr/share/doc/ncz-screensavers),
+    docs/PROVENANCE.tsv and docs/SHADER-LEDGER.md. Flags the two shipped
+    xshadertoy shaders that declare CC0 but embed "License: Unknown"
+    snippets (neontriangulator, neongravity-1) and the unresolved project
+    licence (meson GPL-2.0-or-later vs root LICENSE Apache-2.0). No hack was
+    added, removed or changed.
+
+ -- Jason Perlow <jperlow@gmail.com>  Mon, 05 Oct 2026 18:00:00 -0400
+
+ncz-screensavers (0.8.6) unstable; urgency=medium
+
+  * magmasimplex: install its shaders with the package. 0.8.5 shipped the
+    magmasimplex_gles3 binary but left goo.frag and the fluid shaders behind
+    the -Dinstall-extras gate; every run then failed with "cannot locate
+    goo.frag". The shaders now install whenever the binary is in
+    ncz_ship_bins, which it has been since 0.8.5.
+  * tiers.tsv: magmasimplex_gles3 is measured mid on the reference GPUs:
+    UHD 630 native 24.5 fps / p95 41.6 ms, UHD 630 at scale 0.5 28.4 fps /
+    35.5 ms, Mali-G720 60.0 fps / 16.7 ms, Navi14 60.0 fps / 16.7 ms;
+    RTX 2060 not measured. It does not hold 30 fps on the UHD 630 (not
+    weak) and holds on the Mali-G720 (not strong).
+
+ -- Jason Perlow <jperlow@gmail.com>  Mon, 05 Oct 2026 16:30:00 -0400
+
+ncz-screensavers (0.8.5) unstable; urgency=medium
+
+  * magmasimplex now ships: the molten-wax lava-lamp simulator joins the ship
+    set (74 binaries). This merges the current magmasimplex line - the live beat
+    engine with audio sync and the photosensitivity limiter, the Flowerchild
+    dendrite layer (ink tree and vein network), and the seeded per-run pattern
+    and light-show layout - and installs its option schema and preset scenes.
+  * catalogue: hacks.tsv, presets.tsv, categories.tsv and tiers.tsv are
+    regenerated from the ship set; magmasimplex is in the Abstract & Fluid
+    style category (origin ncz). The README and package description counts, the
+    chooser taxonomy table and the build-artifact-gate floor follow to 74.
+
+ -- Jason Perlow <jperlow@gmail.com>  Mon, 05 Oct 2026 15:30:00 -0400
+
+ncz-screensavers (0.8.4) unstable; urgency=medium
+
+  * chooser: redesign the settings UI with style-grouped categories, search,
+    an engine filter and favourites; add a Black Hole simple mode and headless
+    `still` previews from the launcher for the settings page.
+  * magmasimplex: rework the wax for realism and add the Flowerchild mode with
+    the Haight-Ashbury and Swinging London preset families and an optional
+    projector mask.
+  * idled: after a greetd restart, wait for the session environment instead of
+    failing with EX_CONFIG.
+
+ -- Jason Perlow <jperlow@gmail.com>  Mon, 05 Oct 2026 12:00:00 -0400
+
+ncz-screensavers (0.8.3) unstable; urgency=medium
+
+  * neonhorizon: rewrite the xshadertoy scene in the Cygnus look — magenta/
+    violet gradient sky, a banded (striped) sun focal point, a varied
+    parallax skyline and the perspective grid road.
+  * fractasia: boundary-view picker that judges candidate views at the tier's
+    real iteration budget (no more near-black picks); a named 13-scheme
+    palette library (fire, ice, aurora, sunset, ocean, synthwave, mono,
+    pastel, oilslick, gold, nebula, acid, film) with per-kind quality gates
+    and a Cygnus-weighted per-cycle draw; per-cycle colour-mapping variation;
+    and a curated table of fourteen effect recipes selected within the GPU
+    tier (--style=auto/classic/enhanced, --effect=NAME). The option schema
+    assets/screensaver-chooser/options/fractasia.tsv is regenerated from
+    --dump-schema.
+  * idled: survive logout/login without a permanent EX_CONFIG failure. A
+    missing Wayland session is now the retriable exit 75 (EX_TEMPFAIL), not
+    78; 78 stays for the permanent causes (compositor without
+    ext-idle-notify-v1, missing schema). The unit is PartOf=/WantedBy=
+    singularity-session.target as well as graphical-session.target, so a new
+    login re-pulls it and a logout stops it cleanly.
+  * Ship set unchanged at 73 binaries; the catalogue, README/package counts
+    and the build-artifact-gate floor stay at 73 (nothing added or removed).
+
+ -- Jason Perlow <jperlow@gmail.com>  Sun, 04 Oct 2026 20:45:00 -0400
+
+ncz-screensavers (0.8.2) unstable; urgency=medium
+
+  * Cygnus MVP cohort cuts. Six binaries leave the ship set (ncz_ship_bins);
+    their sources stay in tree and still build as developer-only targets:
+    - hyprsaver_gridwave: displaced by the in-house neonhorizon look.
+    - xshadertoy_universeball and gravitywell: displaced by the neongravity
+      scene. (Corrected in 0.8.9: the shipped neongravity binary is the
+      third-party CC0 xshadertoy_neongravity-1 port of the mrange Shadertoy
+      scene; the in-house neongravity shader never got a shipped binary.)
+    - xshadertoy_iridescence and xshadertoy_stratus: dropped from the cohort.
+    - xshadertoy_neongravity-0: a duplicate of neongravity-1. neongravity-0 is
+      only the FXAA display pass over the same scene as neongravity-1, so the
+      frames are identical and neongravity-1 (measured, host-test PASS) is the
+      single neongravity render.
+  * Catalogue resynced: hacks.tsv regenerated from ncz_ship_bins (73 entries),
+    with the tiers/sparse/render-hints rows for the removed ids dropped. The
+    build-artifact-gate floor follows to 73, the README/package counts to 73,
+    and the GTK4 reference-app floor stays derived from the catalogue itself.
+  * Harness GL hygiene: drop the pre-glUseProgram iTime/iTimeDelta uploads
+    (GL_INVALID_OPERATION) and the GL1-only glEnable/glDisable(GL_TEXTURE_2D)
+    in klein/projectiveplane (GL_INVALID_ENUM); the smoke tester now fails the
+    new xshadertoy-gl-clean test on any leftover glGetError.
+  * pre-existing failure test_build_plugin.py::test_good_source_builds is
+    unchanged and still expected to fail in this environment.
+
+ -- Jason Perlow <jperlow@gmail.com>  Sun, 04 Oct 2026 19:15:00 -0400
+
+ncz-screensavers (0.8.1) unstable; urgency=medium
+
+  * GLES3 harness: pin a linear (non-sRGB) window surface
+    (EGL_GL_COLORSPACE_LINEAR) and keep GL_FRAMEBUFFER_SRGB off, so the
+    shader's own gamma is the only sRGB encode and the on-screen image
+    matches the frame dump. Harness-wide: every GLES3 saver benefits.
+  * xshadertoy neonhorizon: rewrite as the period-canonical synthwave look
+    (scrolling perspective grid, parallax lit-window skyline, striped sun
+    disc, dark sky), with vendor-independent sin-free hashing.
+  * xshadertoy: force opaque output (alpha 1.0) in the shared wrapper tail.
+    Nine savers (bestill0-0..5-0, darktransit, noxfire, rigrekt) left .a at
+    0, so a layer-shell surface composited them to nothing and they looked
+    blank even though their RGB was correct.
+  * xshadertoy noxfire: the tunnel radius oscillated through zero and the
+    unbounded march overflowed d, collapsing the frame to NaN/black on
+    some drivers and at different times per vendor. Bound the march,
+    reduce the noise angle modulo TAU, keep the tunnel open, and retune the
+    exposure to the warm fire palette (mean luma now >= 0.08 at 4 s / 30 s).
+  * Black hole: the Cygnus palette (NCZ-OS 26.10 magenta/cyan on
+    violet-black) is confirmed present on the integration line
+    (--palette=cygnus, NCZ_BLACKHOLE_PALETTE=cygnus, GSettings
+    blackhole-color-mode nick "cygnus"); the cix-installer hook 62 default
+    keeps working.
+  * tests: pin the linear-surface contract, the opaque wrapper tail, and a
+    blank-saver render gate (alpha 1.0 / mean luma > 0.05 at 2/12/25 s);
+    re-derive the reference-app catalog floor from the real catalogue.
+
+ -- Jason Perlow <jperlow@gmail.com>  Sun, 04 Oct 2026 14:30:00 -0400
+
+ncz-screensavers (0.8.0) unstable; urgency=medium
+
+  * 26.10 Cygnus consolidation. Merged the remaining stranded branches
+    (Ephemeris dramatic composition, neonspacewar Melee items 5-10,
+    Leviathan v2 redesign) and fixed the xshadertoy GLES3 build break.
+  * The jurassicaquarium skeleton branch (fb3b21ea) was reviewed and
+    deliberately not merged: its payload is already on HEAD via fc75a41.
+  * Ship set is unchanged: blackhole + hyprsaver + shipped xshadertoy +
+    the 12 classics. Every new saver is built-but-unshipped. Black Hole
+    remains the default.
+  * Cygnus palette wired where palette plumbing exists (blackhole).
+  * Fixed src/gles3_xshadertoy.c: XSToyState.seed_v build break.
+  * Classics residue sweep (comments/tools only): dropped stale
+    gles3_compat/gl4es comments and the legacy baseline loop in
+    tools/classics/perf-matrix.sh. GL1-era docs and perf tables kept.
+
+ -- Jason Perlow <jperlow@gmail.com>  Sat, 03 Oct 2026 18:54:00 -0400
+
+ncz-screensavers (0.7.11+recovery1) unstable; urgency=medium
+
+  * launcher/tests: cover each of the 0.7.11 fixes (recovered from
+    feat/launcher-ux-test-fixes-2026-09-30 commit e17cf32). The fix
+    itself was cherry-picked onto feat/launcher-ux by the rescue branch
+    feat/launcher-ux-recover-fixes-2026-10-01; the tests were authored
+    by this validator because the original commit added no tests.
+    test_launcher_011_fixes.py has 12 cases across 6 classes
+    (PlanForLegacyTiers, OffloadTargetsSynthesis, RenderEnvSourceField,
+    SystemClassCachePriority, DumpedSchemaTimeout, SupervisorPublishesHack);
+    verified RED on the pre-fix tree and GREEN on the cherry-picked tree.
+
+ -- Jason Perlow <jperlow@gmail.com>  Thu, 01 Oct 2026 03:45:00 -0400
+
+ncz-screensavers (0.7.11) unstable; urgency=medium
+
+  * launcher: legacy tier names ("igpu", "discrete") survive a custom tiers argument; offload
+    honours a synthetic nvidia target when gpu_topology says offload is possible but list_gpus()
+    is empty (degraded sysfs, test envs); render_env stops forcing NCZ_RENDER_SCALE=0.5 on hosts
+    where the "weak" class is only a topology-table guess; Supervisor publishes the picked hack
+    in state.json before the child launch so a parent that observes the supervisor pid also
+    sees the hack; <hack> --dump-schema timeout drops from 5 s to 1 s; system_class trusts a
+    cached measurement over the gpu_topology display-class fallback so seeded test entries
+    and real benchmarks both win.
+  * Report a class for each detected GPU and explain PRIME render offload in
+    the launcher, GTK settings, and Singularity plugin.
+  * Classify the Sky1 Mali-G720 from its renderer and discard cache scores
+    measured on a different GPU.
+
+ -- Jason Perlow <jperlow@gmail.com>  Wed, 30 Sep 2026 16:25:00 -0400
+
+ncz-screensavers (0.7.10) unstable; urgency=medium
+
+  * Neutral catalog ids: hyprsaver_matrix/stonks/tesla become hyprsaver_digitalrain/ticker/arccoil
+    (Digital Rain, Ticker, Arc Coil) and gibson becomes datatowers (Data Towers). Stored hack-id,
+    random-hacks, playlist and hack-options are migrated on load.
+  * Catalog and tier tables also read <name>.d/*.tsv drop-ins for add-on packages.
+  * The neongravity-1, neontriangulator, selfreflect, stardome and stripeytorus shaders no longer
+    ship in this package (moving to the NCZ-only ncz-screensavers-extra).
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 22:30:00 -0400
+
+ncz-screensavers (0.7.9) unstable; urgency=medium
+
+  * Preset table lookup: NCZ_SCREENSAVER_PRESETS replaces the system candidates instead of
+    overriding them inside the loop.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 21:40:00 -0400
+
+ncz-screensavers (0.7.8) unstable; urgency=medium
+
+  * Plugin: typed JSON access for launcher status, list and options documents.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 21:20:00 -0400
+
+ncz-screensavers (0.7.7) unstable; urgency=medium
+
+  * Plugin refreshes after a GPU re-measure; postinst uses POSIX sed and logs schema errors;
+    a scene title that no longer resolves is ignored instead of clearing the stored scene.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 21:10:00 -0400
+
+ncz-screensavers (0.7.6) unstable; urgency=medium
+
+  * --dump-schema is run only for shipped catalog hacks in the system directories, never
+    for a directory override; filter_pool tolerates legacy and unknown tier names.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 21:00:00 -0400
+
+ncz-screensavers (0.7.5) unstable; urgency=medium
+
+  * Option loading hardened (null JSON fields, unreadable presets, XDG_STATE_HOME with ~,
+    undecodable --dump-schema output); build-plugin.sh checks the SDK first.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 20:45:00 -0400
+
+ncz-screensavers (0.7.4) unstable; urgency=medium
+
+  * options: typed JSON schemas (enum choices in range, boolean defaults) and .conf presets
+    are listed; the plugin shows grouped enums (choice_groups, choice_labels) as a two-level picker.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 20:25:00 -0400
+
 ncz-screensavers (0.7.3) unstable; urgency=medium
 
-  * First public source release.
+  * Option schemas from the hack itself: when no options file ships, the launcher reads
+    <hack> --dump-schema (xshadertoy family). choice_groups and choice_labels are passed
+    through for long enums.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 20:20:00 -0400
+
+ncz-screensavers (0.7.2) unstable; urgency=medium
+
+  * ncz-screensaver options HACK|--all --json: option schema, values, scenes and seed for
+    front ends; options/<id>.json schemas and options/presets/<short>/<name>.json scenes
+    (docs/OPTIONS-SCHEMA.md).
 
  -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 20:00:00 -0400
+
+ncz-screensavers (0.7.1) unstable; urgency=medium
+
+  * Suggests (not Recommends) ncz-screensavers-plugin so other distributions do not
+    pull in the Singularity desktop; the NCZ-OS image installs the plugin.
+  * ncz-screensavers-gtk4-reference: Breaks/Replaces for the file move.
+  * Reference application test runs against the tree schema and skips cleanly.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 19:20:00 -0400
+
+ncz-screensavers (0.7.0) unstable; urgency=medium
+
+  * The standalone settings application is no longer part of the engine package.
+    It is now the reference GTK4 application (contrib/gtk4-reference-app) in its own
+    binary package, ncz-screensavers-gtk4-reference, built from this source and
+    released with it. NCZ-OS uses the Singularity plugin (ncz-screensavers-plugin)
+    and does not install the reference application; upgrading the engine removes
+    the old ncz-screensaver-settings files and its desktop entry.
+  * ncz-screensaver ensure-plugin turns the plugin on once per user at login
+    (from ncz-screensaver-idled.service) without touching the rest of the list.
+  * GPU classes (weak, mid, strong): calibration, per-hack requirements, class
+    aware pools, vendor-agnostic per-process offload, broken.tsv.
+  * docs/CLI-CONTRACT.md and docs/IMPLEMENTING-ON-ANOTHER-DISTRO.md describe the
+    interface a front end or another distribution implements.
+  * Password-only test harness transport.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 17:30:00 -0400
+
+ncz-screensavers (0.6.0) unstable; urgency=medium
+
+  * Classics on the shader engine: voronoi, gravitywell, hexstrut, cubestorm,
+    crackberg, cityflow, noof, geodesic and gibson are native GLES3 programs
+    (src/classics_shader); binary names are unchanged. The GL1 emulation
+    layer, the legacy binaries and any gl4es routing are gone from the ship
+    set (no glBegin/glVertex/glu symbols in any shipped binary).
+  * Real 4K measurements on the Sky1 (MS-R1, output scale 1.75): the Mali
+    1080-line render cap stays; render-hints.tsv regenerated at that point.
+  * Test-only NCZ_TEST_SURFACE_SIZE knob; eval tools use password auth only.
+  * debian/copyright: stanzas for the ported classics.
+
+ -- Jason Perlow <jperlow@gmail.com>  Wed, 30 Sep 2026 03:00:00 +0000
+
+ncz-screensavers (0.6.0) unstable; urgency=medium
+
+  * The nine remaining OpenGL 1 classics (voronoi, gravitywell, hexstrut, cubestorm,
+    crackberg, cityflow, noof, geodesic, gibson) are native GLES3 shader-engine ports
+    with retained buffers and instancing (classic and enhanced styles, options per
+    hack); cityflow no longer renders as flat polygons.
+  * hypertorus, klein and projectiveplane lose their fixed-function fallback.
+  * The GL1 immediate-mode layer, gl4es support and every hack not in the ship set
+    (Black Hole, hyprsaver, xshadertoy, the twelve classics) are removed from the source
+    tree and the package.
+
+ -- Jason Perlow <jperlow@gmail.com>  Wed, 30 Sep 2026 00:30:00 +0000
+
+ncz-screensavers (0.5.3) unstable; urgency=medium
+
+  * GPU classes: NCZ_GPU_CLASS (weak, mid, strong) or inferred from
+    GL_RENDERER; weak GPUs (Intel UHD) start at render scale 0.5 and Black Hole
+    drops bloom and halves nebula and star density. All presets declare
+    min-gpu-class and measured fps (presets.tsv columns 8 and 9).
+  * NCZ_ALLOW_SOFTWARE_FALLBACK accepted as an alias (only without a GPU).
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 23:00:00 +0000
+
+ncz-screensavers (0.5.2) unstable; urgency=medium
+
+  * render-hints.tsv: per-hack render scale (measured on Mali-G720) for the
+    shader hacks that miss 45 fps at native 1080p; render scale measurements
+    documented.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 22:00:00 +0000
+
+ncz-screensavers (0.5.1) unstable; urgency=medium
+
+  * Black Hole shader: remove three spec-undefined GLSL operations (pow of a
+    negative base, smoothstep with reversed edges, normalize of a zero
+    vector); no change in the rendered image.
+  * Harness: the Mali and integrated-Intel render-height cap now uses the
+    GL_RENDERER string captured at startup.
+  * Docs: palette distinctness on Mali, preset screenshots, shader hack guide.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 21:00:00 +0000
+
+ncz-screensavers (0.5.0) unstable; urgency=medium
+
+  * Black Hole presets: sagittarius-a-star, m87-star, ton-618, quasar,
+    quasar-edge-on, blazar, microquasar, kerr (faithful or artistic labels);
+    each is also a catalog row (presets.tsv) launching --preset=<id>.
+    New options: preset, disk-outer, jet-length, torus, companion; new eht
+    palette; --list-presets and --print-config.
+  * Render scale ladder ends at 0.35; docs: shader hack guide, scenes design.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 20:00:00 +0000
+
+ncz-screensavers (0.4.0) unstable; urgency=medium
+
+  * Black Hole: configurable through one option table (command line,
+    NCZ_BLACKHOLE_<OPTION>, blackhole.conf): 26 options, three new palettes
+    (singularity, slingshot, whitehole), eight camera flyby types, palette
+    cycling with cross-fades, spin, bloom, exposure, beaming and more.
+    Declarative option schema installed under share/ncz-screensavers/options.
+  * Fix the once-per-second stutter: the diagnostic framebuffer readbacks in
+    the harness, xshadertoy and transitions are now opt-in.
+  * Shared harness: --help/--version/--list-options for every hack, unknown
+    options are an error, render-scale and max-render-height (wp_viewport
+    upscaling, Mali defaults to 1080p), adaptive scale, per-run [stats] line.
+  * Refuse to software render on a machine that has a GPU (exit 3).
+  * Black Hole adaptive ray-step quality that converges without oscillating.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 18:00:00 +0000
+
+ncz-screensavers (0.3.4) unstable; urgency=medium
+
+  * Add sparse.tsv, the list of hacks that are legitimately sparse line art,
+    with a tile floor for test gates; validated against the ship set at build.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 16:00:00 +0000
+
+ncz-screensavers (0.3.3) unstable; urgency=medium
+
+  * Idle daemon restarts an abnormally exited lock command (up to 5 times,
+    1 s apart); greetd scripted re-login helper and recovery documentation.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 15:00:00 +0000
+
+ncz-screensavers (0.3.2) unstable; urgency=medium
+
+  * hyprsaver geometry: visible wireframe (Reinhard capped a lone edge at 50%).
+  * hyprsaver lissajous: continuous curves instead of dots (segment distance).
+  * Launcher latency, reap and DPMS proxy fixes from the four-host matrix.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 14:00:00 +0000
+
+ncz-screensavers (0.3.1) unstable; urgency=medium
+
+  * Black Hole: kipthorne (symmetric amber, no shifts) and faithful (Doppler,
+    redshift and beaming; blue-white approaching side, dim red-orange receding
+    side) are now clearly distinct.
+  * xshadertoy goldenapollian: legal on Mali (global initializer fixed).
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 13:00:00 +0000
+
+ncz-screensavers (0.3.0) unstable; urgency=medium
+
+  * Add the ncz-screensaver launcher, ncz-screensaver-idled idle daemon with
+    its systemd user unit, the GTK4 settings app and the desktop entry.
+  * blackhole-color-mode setting is exported to blackhole_gles3 as
+    NCZ_BLACKHOLE_COLORS by the launcher.
+  * Disable the older swayidle-based ncz-idle-manager user service on install.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 12:00:00 +0000
+
+ncz-screensavers (0.2.0) unstable; urgency=medium
+
+  * Consolidated ship set of 84 hacks (Black Hole, 35 hyprsaver, 36
+    xshadertoy, 12 classics) with install rules and chooser catalog.
+  * Black Hole: restore stylized/kipthorne/faithful color modes selected with
+    NCZ_BLACKHOLE_COLORS; replace the screen-space jet cone (large-dots
+    searchlight artifact) with collimated beams.
+  * Add the dev.ncz.screensaver GSettings schema with blackhole-color-mode.
+
+ -- Jason Perlow <jperlow@gmail.com>  Tue, 29 Sep 2026 00:00:00 +0000

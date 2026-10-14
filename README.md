@@ -61,10 +61,15 @@ The engine builds for `amd64` and `arm64`; see
 
 Since 0.8.11 the saver can run inside the session lock: `ncz-screensaver-feed`
 renders a hack off-screen and hands frames to a lock client that hosts an
-out-of-process frame source. In 0.8.12 the feed runs an intro at 8 fps and half
-resolution, then freezes after 15 seconds (only with a lock that negotiates HOLD),
-and a thermal governor pauses rendering near 85 C. `ncz-screensaver-feed
---print-policy` prints the policy. Release notes: `CHANGELOG.md`.
+out-of-process frame source. The feed renders at 8 fps and half resolution and
+keeps animating while nobody touches the machine; it freezes on a frame only
+when input raises the unlock prompt (the prompt is drawn over that frame), and
+resumes if the prompt lowers again without an unlock (with a lock client that
+supports it). A thermal governor pauses
+rendering near 85 C until the system cools. The older intro-then-freeze timer is
+an opt-in (`NCZ_SAVER_FREEZE=always`). `ncz-screensaver-feed --print-policy`
+prints the policy; details in `docs/LAUNCHER-DESIGN.md` section 8.1. Release
+notes: `CHANGELOG.md`.
 
 ## Build
 

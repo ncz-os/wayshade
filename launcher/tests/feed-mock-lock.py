@@ -78,6 +78,8 @@ def main():
     ap.add_argument("--require-first-within", type=float, default=0.0,
                     help="fail unless the FIRST frame arrives within this many seconds "
                          "(the lock's 3 s frame watchdog budget)")
+    ap.add_argument("--require-nonblack", action="store_true",
+                    help="fail unless at least one frame has visible (non-black) pixels")
     ap.add_argument("--result", required=True)
     ap.add_argument("--timeout", type=float,
                     default=float(os.environ.get("NCZ_TEST_TIMEOUT", "45")))
@@ -197,6 +199,8 @@ def main():
                 hv = 0
                 for off in range(0, min(sz, 1 << 22), 4096):
                     hv = (hv * 31 + mm[off]) & 0xFFFFFFFF
+                    if off + 2 < sz and max(mm[off], mm[off + 1], mm[off + 2]) > 8:
+                        res["nonblack"] = True
                 mm.close()
                 res.setdefault("hashes", [])
                 if hv not in res["hashes"]:
@@ -219,6 +223,8 @@ def main():
             except OSError:
                 pass
         srv.close()
+    if a.require_nonblack and not res.get("nonblack"):
+        res["errors"].append("every frame was black")
     if a.hold and not res["hold"]:
         res["errors"].append("expected a HOLD, none arrived")
     if not a.hold and res["hold"]:

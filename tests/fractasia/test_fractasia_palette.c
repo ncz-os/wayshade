@@ -7,7 +7,7 @@
  *  - is deterministic for a seed and different across seeds;
  *  - produces real variety (hue spread, brightness spread);
  * and that the gate rejects washed-out pastel and grey palettes, the failure
- * that made the first Orion O6N fractint run look like pink on white.
+ * that made the first O6N fractint run look like pink on white.
  * Also: every palette of the named library passes the gate for its kind
  * (and the accidental grey still fails the MONO and FILM gates); the
  * per-cycle palette draw reaches every library entry, keeps the Cygnus

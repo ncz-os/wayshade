@@ -3,10 +3,10 @@
 # Exit-status mapping for ncz-screensaver-idled.
 #
 # Regression targets:
-#   * Orion O6N 2026-10-04: after a logout the unit restarted with no
+#   * O6N 2026-10-04: after a logout the unit restarted with no
 #     WAYLAND_DISPLAY; the daemon exited 78 (EX_CONFIG), which the unit lists in
 #     RestartPreventExitStatus=, so the idle timer sat `failed` across logins.
-#   * Orion O6N 2026-10-05: after `systemctl restart greetd` the auto-restart raced
+#   * O6N 2026-10-05: after `systemctl restart greetd` the auto-restart raced
 #     the new session's environment import and connected to the login greeter,
 #     a compositor without ext-idle-notify-v1, and latched failed 78 again.
 #

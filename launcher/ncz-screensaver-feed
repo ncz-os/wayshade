@@ -69,20 +69,31 @@ _FRAME = struct.Struct("<IIIIIIIII")   # lfs_frame
 _ACK = struct.Struct("<I")             # lfs_ack
 
 # --- lock-hosted saver policy ---------------------------------------------
-# The lock holds the screen for a long time and no human is watching it, so the
-# saver is run deliberately cheaply:
-#   * a CONSIDERABLY lower frame rate than a desktop saver (default 8 fps);
+# On NCZ-OS the lock hosts the screensaver: at the idle time the session is
+# locked with NO prompt and this feed renders the saver behind it. To the user
+# that IS the idle screensaver, so it must keep animating until they interact.
+#   * a lower frame rate than a desktop saver (default 8 fps, 6 on battery);
 #   * a reduced render resolution, nearest-neighbour upscaled by the child;
-#   * the saver runs only a short intro and then FREEZES on EVERY system, amd64
-#     and arm64, Mac and PC, every GPU: after the intro it sends the lock a HOLD
-#     and stops rendering, so the GPU and CPU go idle while the lock keeps
-#     showing the last frame (still held, still fail-closed).
-# All three are overridable (see /etc/ncz/lock-renderer.env and the test seams).
+#   * NO time-based freeze by default (freeze mode "prompt"): the saver animates
+#     for as long as nobody touches the machine. It stops only when the lock
+#     takes over the screen: on input the lock raises its unlock prompt and
+#     freezes the saver at the current frame (lock_framesrc_freeze() in the
+#     lock client), so the prompt composites over a still image. The feed
+#     never sends HOLD on its own in this mode.
+#   * the child's thermal governor stays on as the protection: it drops the
+#     frame rate when warm and pauses rendering (holding the last frame) when
+#     hot, resuming when the system cools.
+# The old intro-then-freeze timer is still available as an opt-in power saver:
+# NCZ_SAVER_FREEZE=always freezes after NCZ_SAVER_FREEZE_AFTER_S (15 s) even
+# with nobody at the machine; NCZ_SAVER_FREEZE=auto does that on Apple T2 Macs
+# only. All knobs are overridable (see /etc/ncz/lock-renderer.env and the test
+# seams).
 DEFAULT_LOCK_FPS = 8
 BATTERY_LOCK_FPS = 6
 DEFAULT_RENDER_DIV = 2
 DEFAULT_FREEZE_AFTER_S = 15.0
-DEFAULT_FREEZE_MODE = "always"   # operator policy: freeze on every system
+DEFAULT_FREEZE_MODE = "prompt"   # freeze only when the lock raises its prompt
+FREEZE_MODES = ("prompt", "always", "auto", "never")
 FALLBACK_AFTER = 2.0        # s without a real frame -> keep the lock's watchdog fed
 READY_TIMEOUT = 2.5         # s awaiting READY from a live lock
 CHILD_HELLO_TIMEOUT = 5.0   # s for a spawned child to connect + HELLO
@@ -158,15 +169,27 @@ def choose_render_div():
     return _int_env("NCZ_SAVER_RENDER_DIV", DEFAULT_RENDER_DIV, 1, 8)
 
 
+def freeze_mode(mode=None):
+    """The configured freeze mode (NCZ_SAVER_FREEZE), normalised. An unknown
+    value falls back to the default so a typo can never enable a timer."""
+    m = (mode if mode is not None else os.environ.get("NCZ_SAVER_FREEZE", DEFAULT_FREEZE_MODE))
+    m = (m or "").strip().lower()
+    return m if m in FREEZE_MODES else DEFAULT_FREEZE_MODE
+
+
 def choose_freeze(mode=None, is_t2=None):
-    """Whether to freeze after the intro. NCZ_SAVER_FREEZE=auto|always|never;
-    default always (operator policy: after the intro the saver freezes on every
-    system). auto is retained as an optional Apple-T2-only hint; never restores
-    the old always-render behaviour for debugging."""
-    m = (mode if mode is not None else os.environ.get("NCZ_SAVER_FREEZE", DEFAULT_FREEZE_MODE)).strip().lower()
+    """Whether the FEED freezes on a timer (sends HOLD NCZ_SAVER_FREEZE_AFTER_S
+    after the first frame). NCZ_SAVER_FREEZE=prompt|always|auto|never:
+      prompt (default) - no timer: the saver animates until the lock raises its
+                         prompt, and the lock freezes it at that frame;
+      always           - opt-in power saver: freeze after the intro on every
+                         system, even with nobody at the machine;
+      auto             - the same, on Apple T2 Macs only;
+      never            - no timer (debugging; the lock still freezes on input)."""
+    m = freeze_mode(mode)
     if m == "always":
         return True
-    if m == "never":
+    if m in ("prompt", "never"):
         return False
     t2 = apple_t2() if is_t2 is None else is_t2
     return bool(t2)
@@ -184,8 +207,9 @@ def freeze_after_s():
 def policy_defaults():
     """The COMPILED-IN defaults, independent of the environment. The
     installed-target verifier runs `--print-policy` on the shipped binary and
-    asserts these, so the operator policy cannot silently regress to the old
-    60 fps always-render behaviour."""
+    asserts these, so the policy cannot silently regress (neither to the old
+    60 fps always-render behaviour nor to a timer freeze of the idle saver).
+    freeze_after_s is the timer used only by the opt-in always/auto modes."""
     return {
         "lock_fps": DEFAULT_LOCK_FPS,
         "render_div": DEFAULT_RENDER_DIV,
@@ -561,8 +585,8 @@ class Feed:
         # HOLD is ever sent to a lock that has not advertised support).
         self.hold_ok = False
         log(f"settings mode={self.settings.get('mode')} fps={self.fps} "
-            f"render_div={self.render_div} freeze={self.freeze} "
-            f"freeze_after={self.freeze_after}s")
+            f"render_div={self.render_div} freeze_mode={freeze_mode()} "
+            f"freeze={self.freeze} freeze_after={self.freeze_after}s")
 
     def choose_fps(self):
         # Kept for callers/tests that predate the lock policy helpers.

@@ -348,7 +348,7 @@ Bool xlockmore_no_events(ModeInfo *mi, XEvent *event) {
  * because a hack whose table is never walked runs with every tunable at its
  * BSS default -- every Bool False, every float 0.0, every string NULL.
  *
- * That is not a cosmetic difference. MEASURED on Orion O6N 2026-08-18: glmatrix
+ * That is not a cosmetic difference. MEASURED on O6N 2026-08-18: glmatrix
  * rendered pure black because `do_texture` stayed False, so init_matrix
  * skipped `load_textures()` entirely and no glyph atlas was ever uploaded.
  * The tell was in the log ordering -- "init_matrix returned" printed BEFORE

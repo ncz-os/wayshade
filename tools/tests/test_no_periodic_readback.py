@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Regression guard: no hack may issue a periodic glReadPixels in its render
 path. A readback is a synchronous GPU drain; every 30th/60th frame it froze
-the animation for 55-110 ms on Orion O6N (Mali-G720) and ~45 ms on radeonsi. Frame
+the animation for 55-110 ms on O6N (Mali-G720) and ~45 ms on radeonsi. Frame
 4 / one-shot samples are fine; periodic ones must go through
 ncz_diag_sample_frame() (opt-in via NCZ_DIAG_FRAMEBUFFER)."""
 

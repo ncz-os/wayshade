@@ -451,8 +451,8 @@ static void surface_configured(struct app *a, uint32_t w, uint32_t h) {
         guard_renderer("surface");
 
         /* Explicitly request vblank-paced eglSwapBuffers. Measured
-         * 2026-09-22 on all three platforms (Orion O6N/Mali, Navi14/radeonsi,
-         * Intel UHD 630/iris): with or without this call, boing_gles3 produced
+         * 2026-09-22 on all three platforms (O6N/Mali, build-host/radeonsi,
+         * build-host/iris): with or without this call, boing_gles3 produced
          * exactly 120 frames in 3 seconds (~40 fps), so the Mesa/CIX
          * Wayland winsys appears to already pace via its own internal
          * wl_surface.frame. But making the request explicit is the
@@ -529,7 +529,7 @@ static const struct xdg_toplevel_listener xdg_top_listener = {
 
 /*
  * Root cause of the AMD64/Mesa (radeonsi, Intel iGPU) animation stall,
- * measured 2026-09-22 via WAYLAND_DEBUG=1 on a Radeon Pro 5500M laptop: the old code here
+ * measured 2026-09-22 via WAYLAND_DEBUG=1 on build-host: the old code here
  * called wl_surface_frame() itself AND used eglSwapBuffers() through
  * Mesa's EGL-Wayland platform, which ALSO issues its own internal
  * wl_surface.frame request as part of normal buffer presentation. Two
@@ -538,7 +538,7 @@ static const struct xdg_toplevel_listener xdg_top_listener = {
  * a surface only gets ONE frame callback fulfilled per commit, so this
  * file's own explicit callback never received its .done event and the
  * loop below never woke up again after the first frame. Panthor/Mesa on
- * Orion O6N happened not to hit this (different winsys timing), which is why
+ * O6N happened not to hit this (different winsys timing), which is why
  * it worked there and nowhere else.
  *
  * Fix: don't manage a manual Wayland frame callback on an EGL-owned
@@ -701,7 +701,7 @@ static void report_framebuffer(struct app *a, unsigned long frame) {
 }
 
 /* Frame 4 is a one-shot sample; periodic full-frame readbacks (a 70-110 ms
- * stall on Orion O6N) are opt-in via NCZ_DIAG_FRAMEBUFFER or NCZ_FRAME_DUMP, which
+ * stall on O6N) are opt-in via NCZ_DIAG_FRAMEBUFFER or NCZ_FRAME_DUMP, which
  * needs the frames. See ncz_diag_sample_frame() in ncz_gl.h. */
 static int report_wanted(unsigned long idx) {
     static int dump = -1;
@@ -1116,11 +1116,11 @@ int main(int argc, char **argv) {
         xdg_toplevel_set_app_id(app.xdg_toplevel, "org.nclawzero.screensaver");
         /* NULL, not app.output: reg_global binds whichever wl_output the
          * registry happens to advertise first, which on a multi-connector
-         * board (Orion O6N: DP-1/DP-2/DP-3 + 6 writeback pseudo-outputs) is not
+         * board (O6N: DP-1/DP-2/DP-3 + 6 writeback pseudo-outputs) is not
          * necessarily the one actually connected to a monitor. Passing NULL
          * tells the compositor to pick a real output itself, per the
          * xdg_toplevel.set_fullscreen protocol spec. Fixed 2026-09-22 after
-         * a live Orion O6N test rendered 4500+ correct frames with zero errors
+         * a live O6N test rendered 4500+ correct frames with zero errors
          * while showing nothing on the actual (DP-2) display -- it was
          * fullscreening onto a disconnected output the whole time. */
         xdg_toplevel_set_fullscreen(app.xdg_toplevel, NULL);

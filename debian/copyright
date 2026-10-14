@@ -1,6 +1,6 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: ncz-screensavers
-Source: https://gitlab.com/ncz-os/wayshade
+Source: https://gitlab.com/ncz-os/ncz-screensavers
 Comment: The project is Apache-2.0. Each screensaver is a separate program, so
  the NCZ-authored glue and in-house engines are Apache-2.0 while every
  vendored or ported component keeps its own licence and notice. The

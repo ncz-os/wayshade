@@ -4,7 +4,7 @@
 # wiring this fix depends on: the unit is pulled and stopped by the real
 # Singularity desktop session target (as well as graphical-session.target),
 # only EX_CONFIG (78) prevents a restart, and the restart policy does not burn
-# the start-limit while a greetd restart brings a new session up (Orion O6N
+# the start-limit while a greetd restart brings a new session up (O6N
 # 2026-10-05).
 #
 # usage: test-idled-unit-lint.sh IDLED_BINARY

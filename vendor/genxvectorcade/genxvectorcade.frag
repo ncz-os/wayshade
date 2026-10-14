@@ -429,7 +429,7 @@ void main(){
     // trail persistence: the faded previous frame is mixed back. Use
     // screen-blend (1 - (1-a)*(1-b)) for additive feel without the
     // pure-additive runaway to white; clamp to keep hot cores intact.
-    // The max-based envelope prevents unbounded accumulation
+    // The max-based envelope (Astra) prevents unbounded accumulation
     // when persistence is set high.
     vec3 faded = prev * phosphorDecay * u_trail_persist;
 

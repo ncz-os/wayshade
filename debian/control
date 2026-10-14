@@ -18,9 +18,7 @@ Build-Depends:
  wayland-protocols,
 Standards-Version: 4.7.0
 Rules-Requires-Root: no
-Homepage: https://gitlab.com/ncz-os/wayshade
-Vcs-Browser: https://gitlab.com/ncz-os/wayshade
-Vcs-Git: https://gitlab.com/ncz-os/wayshade.git
+Homepage: https://gitlab.com/ncz-os/ncz-screensavers
 
 Package: ncz-screensavers
 Architecture: amd64 arm64

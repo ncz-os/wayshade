@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
 # Unit tests for the lock-hosted saver POLICY in ncz-screensaver-feed: the
-# Apple-T2 detection used by the freeze policy, and the three knobs
+# Apple-T2 detection used by the opt-in auto freeze, and the three knobs
 # NCZ_SAVER_LOCK_FPS / NCZ_SAVER_RENDER_DIV / NCZ_SAVER_FREEZE[_AFTER_S].
 #
 # The feed script is loaded as a module with NCZ_SCREENSAVER_LAUNCHER pointed at
@@ -112,9 +112,19 @@ check("auto + T2 -> freeze", feed.choose_freeze(mode="auto", is_t2=True) is True
 check("auto + non-T2 -> no freeze", feed.choose_freeze(mode="auto", is_t2=False) is False)
 check("always -> freeze on a PC", feed.choose_freeze(mode="always", is_t2=False) is True)
 check("never -> no freeze on a T2", feed.choose_freeze(mode="never", is_t2=True) is False)
+check("prompt -> no timer freeze on a T2", feed.choose_freeze(mode="prompt", is_t2=True) is False)
+check("prompt -> no timer freeze on a PC", feed.choose_freeze(mode="prompt", is_t2=False) is False)
 with with_env(NCZ_SAVER_FREEZE=None):
-    check("default freeze mode is always (freezes on a PC too)",
-          feed.choose_freeze(is_t2=False) is True)
+    check("default freeze mode is prompt", feed.freeze_mode() == "prompt")
+    check("default: the idle saver never freezes on a timer (PC)",
+          feed.choose_freeze(is_t2=False) is False)
+    check("default: the idle saver never freezes on a timer (T2)",
+          feed.choose_freeze(is_t2=True) is False)
+with with_env(NCZ_SAVER_FREEZE="bogus"):
+    check("unknown freeze mode falls back to prompt (no timer)",
+          feed.freeze_mode() == "prompt" and feed.choose_freeze(is_t2=True) is False)
+with with_env(NCZ_SAVER_FREEZE=" Always "):
+    check("NCZ_SAVER_FREEZE is case/space-insensitive", feed.choose_freeze(is_t2=False) is True)
 with with_env(NCZ_SAVER_FREEZE_AFTER_S=None):
     check("default freeze-after is 15 s", feed.freeze_after_s() == 15.0)
 with with_env(NCZ_SAVER_FREEZE_AFTER_S="3.5"):
@@ -124,14 +134,14 @@ print("== compiled-in policy defaults (verifier marker) ==")
 d = feed.policy_defaults()
 check("lock_fps default 8", d["lock_fps"] == 8)
 check("render_div default 2", d["render_div"] == 2)
-check("freeze default always", d["freeze"] == "always")
+check("freeze default prompt", d["freeze"] == "prompt")
 check("freeze_after_s default 15.0", d["freeze_after_s"] == 15.0)
 import io
 buf = io.StringIO()
 feed.print_policy(stream=buf)
 line = buf.getvalue().strip()
 check("print_policy emits the marker line",
-      line.startswith("ncz-feed-policy ") and "freeze=always" in line
+      line.startswith("ncz-feed-policy ") and "freeze=prompt" in line
       and "lock_fps=8" in line and "freeze_after_s=15" in line)
 
 print("")

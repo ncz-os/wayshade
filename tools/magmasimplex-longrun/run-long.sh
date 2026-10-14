@@ -10,7 +10,7 @@
 #
 # Deliverable of item MAG (2026-10-04); categories added for item MAGREAL
 # (2026-10-05). Source: tools/magmasimplex-longrun/ in ncz-screensavers;
-# deployed under /home/user/magma-test/ on Orion O6N.
+# deployed under /home/mini/magma-test/ on O6N.
 # Weights: MAGMA_LAMP_PCT MAGMA_SHOW_PCT MAGMA_FLOWERCHILD_PCT MAGMA_CANDY_PCT
 # (defaults 70/15/15/0; candy is the glossy jelly look, opt-in only).
 #   logs/<runid>/slices.tsv   one row per slice: start, every chosen value, cmd
@@ -86,7 +86,7 @@ export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}"
 export DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=$XDG_RUNTIME_DIR/bus}"
 
 # Copy the compositor's GPU environment, exactly as the launcher's
-# build_child_env does (labwc on Orion O6N pins the Mali EGL/Vulkan vendor).
+# build_child_env does (labwc on O6N pins the Mali EGL/Vulkan vendor).
 comp_pid="$(pgrep -x labwc 2>/dev/null | head -1)"
 if [ -n "$comp_pid" ] && [ -r "/proc/$comp_pid/environ" ]; then
     while IFS='=' read -r k v; do

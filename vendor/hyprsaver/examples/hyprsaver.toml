@@ -221,7 +221,7 @@ shaders = [
 
 [playlists.pride]
 palettes = [
-    "achilles",
+    "build-host",
     "sappho",
     "marsha",
     "claude",
@@ -251,6 +251,6 @@ palettes = [
 #
 # [render_preview.palettes]
 # blob      = "marsha"
-# fireflies = "achilles"
+# fireflies = "build-host"
 # mobius    = "cahun"
 # aurora    = "sappho"

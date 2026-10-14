@@ -445,7 +445,7 @@ d = [0.00, 0.33, 0.67]
 # Any shader not listed falls back to a stable hash-based default.
 [render_preview.palettes]
 blob = "marsha"
-mobius = "achilles"
+mobius = "build-host"
 ```
 
 ### Cycle Mode

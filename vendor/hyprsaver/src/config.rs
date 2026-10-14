@@ -329,7 +329,7 @@ pub struct MonitorConfig {
 /// ```toml
 /// [render_preview.palettes]
 /// blob      = "marsha"
-/// fireflies = "achilles"
+/// fireflies = "build-host"
 /// mobius    = "cahun"
 /// ```
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -1083,7 +1083,7 @@ palettes = ["rainbow", "ember"]
         let toml_str = r#"
 [render_preview.palettes]
 blob = "marsha"
-mobius = "achilles"
+mobius = "build-host"
 "#;
         let cfg: Config = toml::from_str(toml_str).expect("render_preview TOML must parse");
         assert_eq!(
@@ -1095,7 +1095,7 @@ mobius = "achilles"
                 .palettes
                 .get("mobius")
                 .map(String::as_str),
-            Some("achilles")
+            Some("build-host")
         );
         assert_eq!(cfg.render_preview.palettes.len(), 2);
     }

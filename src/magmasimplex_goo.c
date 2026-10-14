@@ -88,6 +88,10 @@ static char *load_goo_shader(void) {
         if (!b || fread(b, 1, (size_t)n, f) != (size_t)n) { free(b); fclose(f); return NULL; }
         fclose(f);
         b[n] = 0;
+        /* GLSL ES requires #version on the first line; strict compilers (Arm
+         * Mali) reject the licence comment above it. Start at #version. */
+        char *ver = strstr(b, "#version");
+        if (ver && ver != b) memmove(b, ver, strlen(ver) + 1);
         fprintf(stderr, "[diag] magmasimplex shader=%s\n", p[i]);
         return b;
     }

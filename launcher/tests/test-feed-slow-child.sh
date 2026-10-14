@@ -1,7 +1,7 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # Regression test for the lock-hosted saver warm-up path (the Mali/CIX failure
-# observed on Orion O6N): a hack whose first frame is late - shader compile / EGL
+# observed on O6N): a hack whose first frame is late - shader compile / EGL
 # init on a slow GPU can take longer than the lock's 3 s frame watchdog - must
 # NOT starve the lock. The feed keeps the lock's watchdog fed with a black
 # keepalive frame (FALLBACK_AFTER) and, when the real frame finally lands,
