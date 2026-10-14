@@ -20,7 +20,8 @@ ARGS+=("$EXTRA")
 OUT="${WORK}/captures/${HACK}/${VARIANT}/seed-1"
 mkdir -p "$OUT"
 
-SSH="sshpass -p build-host ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no -o IdentityAgent=none -o IdentitiesOnly=yes -o PreferredAuthentications=password -o NumberOfPasswordPrompts=1 build-host@192.0.2.85"
+: "${SSHPASS:?set SSHPASS in the environment}"; export SSHPASS; : "${LAB_TARGET:?set LAB_TARGET (user@host)}"
+SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no -o IdentityAgent=none -o IdentitiesOnly=yes -o PreferredAuthentications=password -o NumberOfPasswordPrompts=1 $LAB_TARGET"
 
 $SSH "rm -rf /tmp/cap /tmp/cap-* && mkdir -p /tmp/cap" 2>&1 >/dev/null
 

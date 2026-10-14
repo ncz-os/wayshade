@@ -36,8 +36,8 @@ there.
 
 | | |
 |---|---|
-| Host | `build-host@192.0.2.85` |
-| Password | `build-host`/`build-host` |
+| Host | `$LAB_TARGET` (user@host, from the environment) |
+| Login | `SSHPASS` in the environment (password auth via `sshpass -e`) |
 | SSH alias | `build-host` (configured in `~/.ssh/config`) |
 | Build dir | `~/ncz-screensavers/build/blackhole_gles3` (after rebuild) |
 | Compositor | live `wayland-0` on `/run/user/$(id -u)` |
@@ -53,7 +53,7 @@ hard `timeout` per call, strict prompt count, strict connect timeout.
 # Alias to use everywhere:
 peg() {
   local t="${PEGASUS_TIMEOUT:-60}"
-  timeout "$t" sshpass -p build-host ssh \
+  timeout "$t" sshpass -e ssh \
     -o NumberOfPasswordPrompts=1 -o ConnectTimeout=10 \
     build-host "$@"
 }

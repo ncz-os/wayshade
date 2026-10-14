@@ -134,7 +134,7 @@ effect — `xshadertoy_bestill3-0_gles3` was observed running at 60 fps in
 
 * Branch: `fix/gpu-tier-mali-g720-2026-09-30` at `04a79e6`
   (4 commits ahead of `feat/launcher-ux`).
-* Pushed to build-host: `ssh://jasonperlow@192.0.2.101/mnt/datapool/git/ncz-screensavers.git`
+* Pushed to build-host: `ssh://$STORE_USER@$STORE_HOST/mnt/datapool/git/ncz-screensavers.git`
   (the remote URL is `ssh://root@...`, root user with the team's shared
   password works for this LAN git server; the `jasonperlow@` URL rejects
   password auth and needs a public key the worker does not have — push

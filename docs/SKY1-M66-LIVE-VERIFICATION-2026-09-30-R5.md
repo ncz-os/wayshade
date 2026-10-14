@@ -356,11 +356,11 @@ To file:///mnt/argonas_git/ncz-screensavers.git
 $ git ls-remote build-host fix/gpu-tier-mali-g720-2026-09-30
 1c4b8a4...   refs/heads/fix/gpu-tier-mali-g720-2026-09-30
 
-$ git push ssh://jasonperlow@192.0.2.101/mnt/datapool/git/ncz-screensavers.git fix/gpu-tier-mali-g720-2026-09-30
-To ssh://jasonperlow@192.0.2.101/mnt/datapool/git/ncz-screensavers.git
+$ git push ssh://$STORE_USER@$STORE_HOST/mnt/datapool/git/ncz-screensavers.git fix/gpu-tier-mali-g720-2026-09-30
+To ssh://$STORE_USER@$STORE_HOST/mnt/datapool/git/ncz-screensavers.git
    ab5e2c9..1c4b8a4  fix/gpu-tier-mali-g720-2026-09-30 -> fix/gpu-tier-mali-g720-2026-09-30
 
-$ git ls-remote ssh://jasonperlow@192.0.2.101/mnt/datapool/git/ncz-screensavers.git fix/gpu-tier-mali-g720-2026-09-30
+$ git ls-remote ssh://$STORE_USER@$STORE_HOST/mnt/datapool/git/ncz-screensavers.git fix/gpu-tier-mali-g720-2026-09-30
 1c4b8a4...   refs/heads/fix/gpu-tier-mali-g720-2026-09-30
 ```
 

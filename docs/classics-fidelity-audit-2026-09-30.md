@@ -525,7 +525,7 @@ cd ~/Projects/ncz-screensavers
 git checkout audit/classics-fidelity-2026-09-30
 
 # 1. Acquire the build-host host-lock (one hour)
-sshpass -p build-host ssh build-host@192.0.2.85 '~/host-lock.sh acquire test minimax classics-fidelity-audit'
+sshpass -e ssh "$LAB_TARGET" '~/host-lock.sh acquire test minimax classics-fidelity-audit'
 
 # 2. Sweep the matrix.  Each capture is ~10 s end to end.
 #    - core matrix: 12 hacks * 5 variants = 60 captures

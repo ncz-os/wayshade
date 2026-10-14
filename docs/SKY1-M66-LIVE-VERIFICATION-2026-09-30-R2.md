@@ -205,6 +205,6 @@ device symlink. The rig is faithful to the live layout.
 * The branch `fix/gpu-tier-mali-g720-2026-09-30` at `f4097c4` is
   already on `origin/...` (pushed by a prior worker); this turn's
   worker has no build-host SSH credential and cannot issue a fresh push
-  (the `jasonperlow@192.0.2.101` URL rejects password auth, the
+  (the `$STORE_USER@$STORE_HOST` URL rejects password auth, the
   `root@...` URL is also denied — same auth wall documented in the
   prior attempts). The branch state is correct; a re-push is a no-op.

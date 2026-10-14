@@ -21,9 +21,10 @@ OUT="${OUT:-${WORK}/captures/${HACK}/${VARIANT}/seed-${SEED}}"
 mkdir -p "$WORK"/{captures,contact-sheets,logs,metrics}
 mkdir -p "$OUT"
 
-REMOTE_USER="build-host"
-REMOTE_HOST="192.0.2.85"
-SSH="sshpass -p build-host ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no -o IdentityAgent=none -o IdentitiesOnly=yes -o PreferredAuthentications=password -o NumberOfPasswordPrompts=1 ${REMOTE_USER}@${REMOTE_HOST}"
+REMOTE_USER="${REMOTE_USER:?set REMOTE_USER}"
+REMOTE_HOST="${REMOTE_HOST:?set REMOTE_HOST}"
+: "${SSHPASS:?set SSHPASS in the environment}"; export SSHPASS
+SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no -o IdentityAgent=none -o IdentitiesOnly=yes -o PreferredAuthentications=password -o NumberOfPasswordPrompts=1 ${REMOTE_USER}@${REMOTE_HOST}"
 
 ARGS=(--seed="$SEED" --render-scale=1 --render-scale-mode=fixed)
 case "$VARIANT" in

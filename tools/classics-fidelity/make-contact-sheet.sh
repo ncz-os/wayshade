@@ -16,7 +16,8 @@ mkdir -p "$OUT"
 
 HACKS=(voronoi gravitywell hexstrut cubestorm crackberg cityflow noof geodesic gibson hypertorus klein projectiveplane)
 
-SSH="sshpass -p build-host ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no -o IdentityAgent=none -o IdentitiesOnly=yes -o PreferredAuthentications=password -o NumberOfPasswordPrompts=1 build-host@192.0.2.85"
+: "${SSHPASS:?set SSHPASS in the environment}"; export SSHPASS; : "${LAB_TARGET:?set LAB_TARGET (user@host)}"
+SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no -o IdentityAgent=none -o IdentitiesOnly=yes -o PreferredAuthentications=password -o NumberOfPasswordPrompts=1 $LAB_TARGET"
 
 # Make sure the audit dir exists on the host and the references are pushed.
 $SSH "mkdir -p /tmp/audit/ref /tmp/audit/captures /tmp/audit/legend" 2>&1 >/dev/null
@@ -82,10 +83,10 @@ $SSH "$SHEET_CMD" 2>&1 | tail -5
 
 # Pull sheets back
 for hack in "${HACKS[@]}"; do
-    sshpass -p build-host scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+    sshpass -e scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         -o PubkeyAuthentication=no -o IdentityAgent=none -o IdentitiesOnly=yes \
         -o PreferredAuthentications=password -o NumberOfPasswordPrompts=1 \
-        build-host@192.0.2.85:/tmp/audit/sheet_${hack}.png "${OUT}/${hack}-sheet.png" 2>&1 | tail -1
+        $LAB_TARGET:/tmp/audit/sheet_${hack}.png "${OUT}/${hack}-sheet.png" 2>&1 | tail -1
 done
 
 ls -la "$OUT/"

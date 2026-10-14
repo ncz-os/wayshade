@@ -417,7 +417,7 @@ treated as a load-bearing argument for migration:
 Everything quoted in this report was reproduced on build-host via:
 
 ```
-sshpass -p "build-host" ssh ... build-host@192.0.2.85 \
+sshpass -e ssh ... "$LAB_TARGET" \
   "WAYLAND_DISPLAY=wayland-0 XDG_RUNTIME_DIR=/run/user/1000 \
    /path/to/<hack>_gles3" \
   > /tmp/<hack>.stderr 2>&1
