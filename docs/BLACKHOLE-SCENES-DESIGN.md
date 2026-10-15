@@ -24,7 +24,7 @@ Costs below are estimates relative to that baseline (x1.0) and are marked as suc
 |---|---|---|---|---|
 | Kerr (spinning), proper | medium | x1.4 to x1.9 | faithful | Replace the Schwarzschild Binet integrator with Kerr geodesics (Carter constant, Boyer-Lindquist or Kerr-Schild). Gives the real frame-dragging shadow offset and asymmetry. Today `spin` only moves the disk edge (ISCO) and speeds the disk. |
 | Quasar / AGN, proper | medium | x1.1 to x1.3 | artistic | Presets `quasar`, `quasar-edge-on`, `blazar`, `ton-618` exist. Missing: lensed torus, broad-line clouds, jet precession and knots moving at c. |
-| Microquasar (Cygnus X-1), proper | medium | x1.1 | artistic | Preset exists (unlensed star and stream). Proper: lensed Roche-lobe star, stream integrated as geodesic particles. |
+| Microquasar (Cygnus X-1), proper | medium | x1.1 | artistic | Preset exists; the companion is opt-in (`--companion=1`) and is lensed: the star and an analytic Roche-lobe stream are tested on every step of the same bent ray as the disk. Not done: stream integrated as geodesic particles. |
 | Sagittarius A*, extras | medium | x1.1 | faithful | Preset exists. Missing: flares (hourly brightening hot spot on the ISCO orbit, period about 30 minutes at r = 6 GM/c^2), S-stars on Keplerian ellipses (S2 period 16 yr, pericenter 120 AU), scaled time. |
 | M87* | easy | done | faithful | Preset exists; longer jet needs only larger `jet-length`. |
 | TON 618 | easy | done | artistic | Preset exists. |

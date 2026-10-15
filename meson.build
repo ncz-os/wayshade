@@ -13,7 +13,7 @@ project(
         'warning_level=2',
         # Default -O0/-g; downstream packagers usually override.
     ],
-    version: '0.8.15',
+    version: '0.8.16',
     license: 'Apache-2.0',
 )
 
@@ -208,6 +208,9 @@ common_gles3_sources = [
     # gains it; it is inert unless NCZ_FEED_SOCKET is set. See
     # src/ncz_feed_render.c and include/lock_framesrc_proto.h.
     'src/ncz_feed_render.c',
+    # The cadence helper is split out so the unit test can link it without
+    # dragging the entire EGL/GLES/GBM stack in.
+    'src/ncz_feed_render_fps.c',
 ]
 # GLES3-native pilots need -DNCZ_GLES3_BUILD=1 so that the glu*
 # helpers in xscreensaver_compat.c compile to empty stubs (they
@@ -236,12 +239,16 @@ gles3_native_c_args = common_c_args + [
 # + libm (vendored xscreensaver code and our GLES3 helpers use
 # cosf/sinf/sqrtf etc — neither libGLESv2 nor libwayland-client
 # drags libm in transitively on Debian aarch64).
-# Off-screen rendering has no window and so no framebuffer 0: every hack binary
-# routes glBindFramebuffer through src/ncz_fbo_redirect.c, which substitutes
-# the frame-source FBO for 0 while ncz_feed_render.c is driving the hack.
+# Off-screen frame-source mode helpers linked into every hack binary:
+#   * src/ncz_fbo_redirect.c (--wrap=glBindFramebuffer): there is no window and
+#     so no framebuffer 0; a bind of 0 lands on the frame-source FBO;
+#   * src/ncz_time_offset.c (--wrap=clock_gettime): time spent suspended behind
+#     the unlock prompt is taken out of the monotonic clocks, so a resumed saver
+#     continues where it stopped.
+# Both pass through unchanged on screen.
 dep_fbo_redirect = declare_dependency(
-    sources: files('src/ncz_fbo_redirect.c'),
-    link_args: ['-Wl,--wrap=glBindFramebuffer'],
+    sources: files('src/ncz_fbo_redirect.c', 'src/ncz_time_offset.c'),
+    link_args: ['-Wl,--wrap=glBindFramebuffer', '-Wl,--wrap=clock_gettime'],
 )
 
 common_gles3_deps = [
@@ -1092,6 +1099,18 @@ test_ncz_options = executable(
     install: false,
 )
 test('ncz_options', test_ncz_options)
+# Regression guard for the cadence helper in ncz_feed_render_main(): the
+# per-frame budget divides by the effective frame rate, so fps_eff must
+# always be >= 1. The test pins the clamp and the per-level selector.
+test_feed_render_fps = executable(
+    'test_feed_render_fps',
+    files(['tests/test_feed_render_fps.c', 'src/ncz_feed_render_fps.c']),
+    include_directories: inc,
+    c_args: ['-D_GNU_SOURCE'],
+    dependencies: [dep_m],
+    install: false,
+)
+test('feed-render-fps-safety', test_feed_render_fps)
 test_harness_cfg = executable(
     'test_harness_cfg',
     files(['tests/test_harness_cfg.c', 'src/ncz_render.c', 'src/ncz_gpu_guard.c', 'src/ncz_options.c']),
@@ -1124,6 +1143,25 @@ test_blackhole_randomize = executable(
     install: false,
 )
 test('blackhole-randomize-roll', test_blackhole_randomize)
+# blackhole cadence predicate / transition: the adaptive-quality controller
+# must classify a frame's inter-draw dt against the ACTIVE feed budget
+# (warm-15, capped-30, capped-60), not just the panel refresh. This test
+# exercises the production predicate ncz_feed_adapt_classify() (in
+# ncz_feed_render_fps.c) and the budget accessor / change flag in
+# ncz_time_offset.c, plus the warm-transition rebase the BH saver applies in
+# bh_pace(). The test stub for __real_clock_gettime is local to the test
+# source (the host-side --wrap is in scope for the on-host harness, not here).
+test_blackhole_cadence = executable(
+    'test_blackhole_cadence',
+    files(['tests/test_blackhole_cadence.c',
+           'src/ncz_feed_render_fps.c',
+           'src/ncz_time_offset.c']),
+    include_directories: inc,
+    c_args: ['-D_GNU_SOURCE'],
+    dependencies: [dep_m],
+    install: false,
+)
+test('blackhole-cadence', test_blackhole_cadence)
 # magmasimplex goo: several distinct wax masses at 20/60/120/300 s and never
 # fewer than two, over 240 seeded runs (the operator's blob gate).
 test_magmasimplex_goo = executable(

@@ -82,7 +82,7 @@ NCZ_BLACKHOLE_SCENE=binary NCZ_BLACKHOLE_SEED=42 blackhole_gles3
 | `--disk-outer` | float | `12` | 6 to 80 | Outer radius of the accretion disk in Schwarzschild radii. Presets use large values for quasars. |
 | `--jet-length` | float | `22.2` | 5 to 250 | Length scale of the polar jets in Schwarzschild radii (brightness falls off exponentially). |
 | `--torus` | float | `0` | 0 to 1 | Opacity of a dusty torus ring around the disk (quasar look). Artistic straight-ray approximation. |
-| `--companion` | float | `0` | 0 to 1 | Show a blue companion star and the gas stream it feeds the disk with (microquasar look). Artistic. |
+| `--companion` | float | `0` | 0 to 1 | Show a blue supergiant companion star and the gas stream it feeds the disk with (microquasar look). Both follow the same bent light rays as the disk, so they are lensed and hidden by the hole and the disk. Costs some frame time. Artistic. Off in every preset; opt in with `--companion=1`. |
 | `--lensing` | bool | `true` |  | Turn off to draw straight rays (debugging). |
 
 ## System

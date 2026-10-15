@@ -56,10 +56,17 @@ LFS_TRANSPORT_DMABUF = 0x2
 LFS_HELLO, LFS_FRAME, LFS_BYE = 1, 2, 3
 LFS_HOLD = 4                 # saver -> lock: freeze here, keep the last frame
 LFS_WELCOME, LFS_READY, LFS_STOP = 0x80, 0x81, 0x82
+# lock -> saver: the unlock prompt is up / was dismissed. Only sent to a saver
+# whose HELLO carried LFS_FLAG_PAUSE, so an old feed never sees them.
+LFS_PAUSE, LFS_RESUME = 0x83, 0x84
 # WELCOME message-header capability bit. A lock that understands LFS_HOLD sets
 # it; a lock built before HOLD existed sends 0. We only ever send HOLD when the
 # WELCOME we received carried this bit, so a new feed never trips an old lock.
 LFS_FLAG_HOLD = 0x0001
+# HELLO message-header capability bit (saver -> lock): this saver understands
+# LFS_PAUSE / LFS_RESUME. A lock that sees it suspends the saver instead of
+# ending it when the prompt comes up.
+LFS_FLAG_PAUSE = 0x0002
 LFS_FMT_ARGB8888, LFS_FMT_XRGB8888 = 0, 1
 _MSG = struct.Struct("<IHHI")          # lfs_msg
 _HELLO = struct.Struct("<III")         # lfs_hello
@@ -72,8 +79,12 @@ _ACK = struct.Struct("<I")             # lfs_ack
 # On NCZ-OS the lock hosts the screensaver: at the idle time the session is
 # locked with NO prompt and this feed renders the saver behind it. To the user
 # that IS the idle screensaver, so it must keep animating until they interact.
-#   * a lower frame rate than a desktop saver (default 8 fps, 6 on battery);
-#   * a reduced render resolution, nearest-neighbour upscaled by the child;
+#   * a real animation: 30 fps at full render resolution by default, capped at
+#     the display refresh rate; 15 fps on battery; 15 fps at half resolution on
+#     a weak GPU class (the launcher's GPU-class cache decides). Settings
+#     (dev.ncz.screensaver lock-fps / lock-render-divisor, 0 = Auto) and
+#     /etc/ncz/lock-renderer.env (NCZ_SAVER_LOCK_FPS / NCZ_SAVER_RENDER_DIV)
+#     override the automatic choice, the environment first;
 #   * NO time-based freeze by default (freeze mode "prompt"): the saver animates
 #     for as long as nobody touches the machine. It stops only when the lock
 #     takes over the screen: on input the lock raises its unlock prompt and
@@ -88,9 +99,12 @@ _ACK = struct.Struct("<I")             # lfs_ack
 # with nobody at the machine; NCZ_SAVER_FREEZE=auto does that on Apple T2 Macs
 # only. All knobs are overridable (see /etc/ncz/lock-renderer.env and the test
 # seams).
-DEFAULT_LOCK_FPS = 8
-BATTERY_LOCK_FPS = 6
-DEFAULT_RENDER_DIV = 2
+DEFAULT_LOCK_FPS = 30
+BATTERY_LOCK_FPS = 15
+DEFAULT_RENDER_DIV = 1
+WEAK_LOCK_FPS = 15          # GPU class "weak" (Auto): fewer, cheaper frames
+WEAK_RENDER_DIV = 2
+CADENCE_LOG_S = float(os.environ.get("NCZ_FEED_CADENCE_S") or 60.0)  # cadence log period (s)
 DEFAULT_FREEZE_AFTER_S = 15.0
 DEFAULT_FREEZE_MODE = "prompt"   # freeze only when the lock raises its prompt
 FREEZE_MODES = ("prompt", "always", "auto", "never")
@@ -149,24 +163,94 @@ def apple_t2(root="/"):
     return False
 
 
-def choose_lock_fps():
-    """Frames/second while the lock is held. NCZ_SAVER_LOCK_FPS wins; the legacy
-    NCZ_FEED_FPS is honoured next; then 8 (6 on battery, never quieter than 1)."""
-    if "NCZ_SAVER_LOCK_FPS" in os.environ:
-        return _int_env("NCZ_SAVER_LOCK_FPS", DEFAULT_LOCK_FPS, 1, 240)
-    if "NCZ_FEED_FPS" in os.environ:
-        return _int_env("NCZ_FEED_FPS", DEFAULT_LOCK_FPS, 1, 240)
+def _setting_int(settings, key, lo, hi):
+    """A positive integer GSettings value in [lo, hi], or None for Auto (0/absent)."""
     try:
-        if not LAUNCHER.ac_online():
-            return BATTERY_LOCK_FPS
+        v = int((settings or {}).get(key, 0) or 0)
+    except (TypeError, ValueError):
+        return None
+    return max(lo, min(hi, v)) if v > 0 else None
+
+
+def display_refresh_hz():
+    """Lowest current refresh rate of the enabled outputs (Hz), or None when it
+    cannot be read. Best effort through wlr-randr; never fatal."""
+    exe = shutil.which("wlr-randr")
+    if not exe or not os.environ.get("WAYLAND_DISPLAY"):
+        return None
+    try:
+        r = subprocess.run([exe, "--json"], capture_output=True, text=True, timeout=3)
+        import json
+        rates = []
+        for o in json.loads(r.stdout or "[]"):
+            if not o.get("enabled"):
+                continue
+            for m in o.get("modes", []):
+                if m.get("current") and m.get("refresh"):
+                    rates.append(float(m["refresh"]))
+        return min(rates) if rates else None
     except Exception:
-        pass
-    return DEFAULT_LOCK_FPS
+        return None
 
 
-def choose_render_div():
-    """Render divisor (>=1) for the off-screen child; 2 = half resolution."""
-    return _int_env("NCZ_SAVER_RENDER_DIV", DEFAULT_RENDER_DIV, 1, 8)
+def choose_lock_fps(settings=None, gpu_class=None, refresh=None, on_ac=None):
+    """Frames per second for the lock-hosted saver.
+
+    Order: NCZ_SAVER_LOCK_FPS (legacy NCZ_FEED_FPS) from the environment or
+    /etc/ncz/lock-renderer.env; then the Settings value dev.ncz.screensaver
+    lock-fps (0 = Auto); then Auto: NCZ_SAVER_AUTO_FPS when the image sets it
+    (hot-running hardware), else 30; at most 15 on battery or a weak GPU class.
+    Every choice is capped at the display refresh rate when it is known."""
+    if "NCZ_SAVER_LOCK_FPS" in os.environ:
+        fps = _int_env("NCZ_SAVER_LOCK_FPS", DEFAULT_LOCK_FPS, 1, 240)
+    elif "NCZ_FEED_FPS" in os.environ:
+        fps = _int_env("NCZ_FEED_FPS", DEFAULT_LOCK_FPS, 1, 240)
+    else:
+        fps = _setting_int(settings, "lock-fps", 1, 240)
+        if fps is None:
+            # NCZ_SAVER_AUTO_FPS: what Auto means on this platform (written by the
+            # image for hardware that runs hot, e.g. Apple T2 Macs). Unlike
+            # NCZ_SAVER_LOCK_FPS it does not override the Settings value.
+            fps = _int_env("NCZ_SAVER_AUTO_FPS", DEFAULT_LOCK_FPS, 1, 240)
+            if gpu_class == "weak":
+                fps = min(fps, WEAK_LOCK_FPS)
+            if on_ac is None:
+                try:
+                    on_ac = LAUNCHER.ac_online()
+                except Exception:
+                    on_ac = True
+            if not on_ac:
+                fps = min(fps, BATTERY_LOCK_FPS)
+    if refresh and refresh >= 1:
+        fps = min(fps, int(refresh + 0.5))
+    return max(1, fps)
+
+
+def choose_render_div(settings=None, gpu_class=None):
+    """Render divisor (>=1) for the off-screen child; 1 = full resolution.
+    NCZ_SAVER_RENDER_DIV, then dev.ncz.screensaver lock-render-divisor
+    (0 = Auto), then Auto: 2 on a weak GPU class, else 1. The launcher's own
+    per-saver render scale (render-scale, max-render-height) still applies
+    inside the saver."""
+    if "NCZ_SAVER_RENDER_DIV" in os.environ:
+        return _int_env("NCZ_SAVER_RENDER_DIV", DEFAULT_RENDER_DIV, 1, 8)
+    v = _setting_int(settings, "lock-render-divisor", 1, 8)
+    if v is not None:
+        return v
+    return WEAK_RENDER_DIV if gpu_class == "weak" else DEFAULT_RENDER_DIV
+
+
+def hack_gpu_class(hack_id, settings):
+    """GPU class ("weak"|"mid"|"strong") that will render this hack, from the
+    launcher's cache (no benchmark here); None when unknown. NCZ_FEED_GPU_CLASS
+    overrides it (test seam)."""
+    forced = os.environ.get("NCZ_FEED_GPU_CLASS", "").strip().lower()
+    if forced in ("weak", "mid", "strong"):
+        return forced
+    try:
+        return LAUNCHER.plan_for(hack_id, settings)["class"]
+    except Exception:
+        return None
 
 
 def freeze_mode(mode=None):
@@ -216,6 +300,8 @@ def policy_defaults():
         "freeze": DEFAULT_FREEZE_MODE,
         "freeze_after_s": DEFAULT_FREEZE_AFTER_S,
         "battery_lock_fps": BATTERY_LOCK_FPS,
+        "weak_lock_fps": WEAK_LOCK_FPS,
+        "weak_render_div": WEAK_RENDER_DIV,
     }
 
 
@@ -224,9 +310,9 @@ def print_policy(stream=None):
     stream = stream or sys.stdout
     stream.write(
         "ncz-feed-policy lock_fps=%d render_div=%d freeze=%s freeze_after_s=%g "
-        "battery_lock_fps=%d\n"
+        "battery_lock_fps=%d weak_lock_fps=%d weak_render_div=%d\n"
         % (d["lock_fps"], d["render_div"], d["freeze"], d["freeze_after_s"],
-           d["battery_lock_fps"])
+           d["battery_lock_fps"], d["weak_lock_fps"], d["weak_render_div"])
     )
     stream.flush()
 
@@ -297,8 +383,8 @@ def recv_packet(sock, maxlen=LFS_MAX_MSG):
     return data, fds
 
 
-def encode_msg(mtype, payload=b""):
-    return _MSG.pack(LFS_MAGIC, mtype, 0, len(payload)) + payload
+def encode_msg(mtype, payload=b"", flags=0):
+    return _MSG.pack(LFS_MAGIC, mtype, flags, len(payload)) + payload
 
 
 def decode_header(data):
@@ -338,6 +424,7 @@ class Renderer:
         self.output = output            # dict: name_hash, bw, bh, scale_120
         self.hack_id = hack_id
         self.fps = fps
+        self.render_div = DEFAULT_RENDER_DIV
         self.proc = None
         self.conn = None
         self.listen = None
@@ -369,9 +456,12 @@ class Renderer:
             log(f"no executable for {self.hack_id}")
             return False
         env = LAUNCHER.build_child_env(self.hack_id, self.feed.settings)
+        cls = hack_gpu_class(self.hack_id, self.feed.settings)
+        self.fps = choose_lock_fps(self.feed.settings, cls, self.feed.refresh)
+        self.render_div = choose_render_div(self.feed.settings, cls)
         env["NCZ_FEED_SOCKET"] = spath
         env["NCZ_FEED_FPS"] = str(self.fps)
-        env["NCZ_FEED_RENDER_DIV"] = str(self.feed.render_div)
+        env["NCZ_FEED_RENDER_DIV"] = str(self.render_div)
         # A child must never outlive the feed.
         self.proc = subprocess.Popen(
             [binary],
@@ -384,8 +474,14 @@ class Renderer:
         )
         self.opened_at = time.monotonic()
         self.hello_seen = False
-        log(f"out {self.index}: started {self.hack_id} pid={self.proc.pid}")
+        log(f"out {self.index}: started {self.hack_id} pid={self.proc.pid} "
+            f"fps={self.fps} render_div={self.render_div} gpu_class={cls or 'unknown'}")
         return True
+
+    def signal_group(self, sig):
+        if self.proc is not None and self.proc.poll() is None:
+            with contextlib.suppress(OSError):
+                os.killpg(self.proc.pid, sig)
 
     def stop(self, quiet=False):
         if self.listen is not None:
@@ -408,6 +504,9 @@ class Renderer:
                 self.conn.close()
             self.conn = None
         if self.proc is not None and self.proc.poll() is None:
+            # A suspended renderer handles SIGTERM only once it runs again.
+            with contextlib.suppress(OSError):
+                os.killpg(self.proc.pid, signal.SIGCONT)
             try:
                 os.killpg(self.proc.pid, signal.SIGTERM)
             except OSError:
@@ -574,23 +673,51 @@ class Feed:
         # Selection state, reused verbatim from the launcher.
         selector = _Selector(self.settings, self.catalog)
         self.selector = selector
-        self.fps = choose_lock_fps()
-        self.render_div = choose_render_div()
+        self.refresh = display_refresh_hz()
+        self.fps = choose_lock_fps(self.settings, None, self.refresh)
+        self.render_div = choose_render_div(self.settings)
+        # Frame cadence actually delivered to the lock (fresh frames only).
+        self.cad_t0 = time.monotonic()
+        self.cad_n = 0
+        self.cad_last = 0.0
+        self.cad_max_gap = 0.0
         self.freeze = choose_freeze()
         self.freeze_after = freeze_after_s()
         self.freeze_at = 0.0
         self.frozen = False
+        self.paused = False          # PAUSE from the lock: renderers SIGSTOPped
         # Whether the LOCK on the other end understands LFS_HOLD. Only set from
         # the WELCOME capability bit; until then we assume NOT (fail-safe: no
         # HOLD is ever sent to a lock that has not advertised support).
         self.hold_ok = False
         log(f"settings mode={self.settings.get('mode')} fps={self.fps} "
             f"render_div={self.render_div} freeze_mode={freeze_mode()} "
+            f"refresh={'%g' % self.refresh if self.refresh else 'unknown'} "
             f"freeze={self.freeze} freeze_after={self.freeze_after}s")
 
     def choose_fps(self):
         # Kept for callers/tests that predate the lock policy helpers.
-        return choose_lock_fps()
+        return choose_lock_fps(self.settings, None, self.refresh)
+
+    def note_frame(self, now):
+        """Record one fresh frame delivered to the lock; log the cadence
+        (frames per second and the longest gap between frames) once a minute."""
+        if self.cad_last:
+            self.cad_max_gap = max(self.cad_max_gap, now - self.cad_last)
+        self.cad_last = now
+        self.cad_n += 1
+        if now - self.cad_t0 >= CADENCE_LOG_S:
+            self.log_cadence(now)
+
+    def log_cadence(self, now=None):
+        now = now or time.monotonic()
+        span = now - self.cad_t0
+        if self.cad_n and span > 0:
+            log(f"cadence: {self.cad_n} frames in {span:.1f} s = {self.cad_n / span:.1f} fps, "
+                f"max gap {self.cad_max_gap * 1000:.0f} ms")
+        self.cad_t0 = now
+        self.cad_n = 0
+        self.cad_max_gap = 0.0
 
     # -- lock side --
     def connect_lock(self):
@@ -613,7 +740,8 @@ class Feed:
         s.setblocking(False)
         self.lock_fd = s
         self.sel.register(s, selectors.EVENT_READ, ("lock", None))
-        send_packet(s, encode_msg(LFS_HELLO, _HELLO.pack(LFS_VERSION, LFS_TRANSPORT_SHM, 0)))
+        send_packet(s, encode_msg(LFS_HELLO, _HELLO.pack(LFS_VERSION, LFS_TRANSPORT_SHM, 0),
+                                  LFS_FLAG_PAUSE))
         log(f"HELLO sent to lock at {path}")
 
     def read_welcome(self):
@@ -690,6 +818,7 @@ class Feed:
         for r in self.outputs:
             with contextlib.suppress(Exception):
                 r.stop(quiet=True)
+        self.log_cadence()
         log(f"HOLD after {self.frames_sent} frame(s); saver frozen, "
             "renderers stopped, lock keeps the last frame")
 
@@ -747,13 +876,47 @@ class Feed:
         elif mtype == LFS_STOP:
             log("STOP from the lock; exiting")
             self.running = False
+        elif mtype == LFS_PAUSE:
+            self.pause()
+        elif mtype == LFS_RESUME:
+            self.resume()
         else:
             log(f"unexpected message type {mtype} from lock; exiting")
             self.running = False
 
+    def pause(self):
+        """The prompt is up: suspend every renderer (no GL work, no frame path).
+        The lock keeps the last frame it presented. A renderer that dies while
+        suspended is restarted on resume; nothing here waits on it."""
+        if self.paused:
+            return
+        self.log_cadence()
+        self.paused = True
+        for r in self.outputs:
+            r.signal_group(signal.SIGSTOP)
+        log("PAUSE from the lock: renderers suspended, last frame held by the lock")
+
+    def resume(self):
+        """The prompt was dismissed without an unlock: continue the renderers
+        from where they stopped (a dead one is restarted)."""
+        if not self.paused:
+            return
+        self.paused = False
+        now = time.monotonic()
+        for r in self.outputs:
+            if r.proc is not None and r.proc.poll() is None:
+                r.signal_group(signal.SIGCONT)
+            elif r not in self.restart_queue:
+                self.schedule_restart(r)
+        self.last_send_ms = now
+        self.cad_t0, self.cad_n, self.cad_last, self.cad_max_gap = now, 0, 0.0, 0.0
+        if self.rotate_at:
+            self.arm_rotation()
+        log("RESUME from the lock: renderers continue")
+
     # -- the lock wants exactly one buffer in flight --
     def pump_lock(self):
-        if self.frozen:
+        if self.frozen or self.paused:
             return
         if self.awaiting is not None or self.lock_fd is None:
             return
@@ -791,6 +954,7 @@ class Feed:
             self.lock_seq += 1
             self.last_send_ms = now
             self.frames_sent += 1
+            self.note_frame(now)
             if self.frames_sent == 1 or self.frames_sent % 60 == 0:
                 log(f"forwarded {self.frames_sent} frame(s) to the lock")
             return
@@ -849,6 +1013,9 @@ class Feed:
             if self.freeze and self.hold_ok and self.frames_sent > 0 and now >= self.freeze_at:
                 self.freeze_now()
                 continue
+            if self.paused:
+                # Suspended: no restarts, no rotation, no keepalive frames.
+                continue
             # Restarts due?
             for r in list(self.restart_queue):
                 if now >= self.restart_at.get(r.index, 0.0):
@@ -866,6 +1033,8 @@ class Feed:
             self.pump_lock()
 
     def shutdown(self):
+        with contextlib.suppress(Exception):
+            self.log_cadence()
         for r in self.outputs:
             with contextlib.suppress(Exception):
                 r.stop(quiet=True)

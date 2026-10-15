@@ -35,6 +35,9 @@ export GSETTINGS_SCHEMA_DIR="$T/schemas"
 # hardware probe is pointed at an empty root because a build sandbox has no
 # /dev/dri (the real host leaves NCZ_FEED_GUARD_ROOT unset).
 export NCZ_ALLOW_SOFTWARE=1
+# The build host may run hot; pin the thermal governor so a hot pause cannot
+# starve the test of frames (the governor has its own tests).
+export NCZ_FEED_TEMP_MC=${NCZ_FEED_TEMP_MC:-40000}
 export LIBGL_ALWAYS_SOFTWARE=1
 mkdir -p "$T/empty"
 export NCZ_FEED_GUARD_ROOT="$T/empty"

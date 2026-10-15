@@ -30,7 +30,7 @@ The list comes from `meson.build` and `docs/round20/`: every saver that builds b
 
 ## Method
 
-**Builds.** Built in a `debian:forky` container (NCZ-OS is forky, glibc 2.43) on build-host (amd64) and ULTRA (arm64) with `-Dinstall-extras=true`. The target binaries were copied from the build tree. The branch head moved during testing: `09b56be`, then `f97e11e`, `d126fc6` and `ace1c81`. Every table row names the build it used.
+**Builds.** Built in a `debian:forky` container (NCZ-OS is forky, glibc 2.43) on build-host (amd64) and an arm64 build host with `-Dinstall-extras=true`. The target binaries were copied from the build tree. The branch head moved during testing: `09b56be`, then `f97e11e`, `d126fc6` and `ace1c81`. Every table row names the build it used.
 
 **Runner.** `tools/new-saver-test.py` runs on the host, inside the user's Wayland session. The saver environment comes from the branch launcher's `build_child_env()` with Auto settings. Offload and render scale are set per process only; nothing is ambient. The three render-scale configurations:
 

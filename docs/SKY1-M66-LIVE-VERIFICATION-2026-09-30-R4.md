@@ -1,4 +1,4 @@
-# Sky1 (MS-R1 / cixmini / 192.0.2.66) re-validation evidence — 2026-09-30 (turn 5)
+# Sky1 (MS-R1 / 192.0.2.66) re-validation evidence — 2026-09-30 (turn 5)
 
 Independent re-validation of the live `.66` host (CIX Sky1 / MS-R1 /
 Mali-G720-Immortalis / `mali_kbase`, kernel `7.3.0-rc5-sky1-ncz`,
@@ -302,7 +302,7 @@ This dispatch also adds two more pins:
 * Worktree-only work: `~/Projects/ncz-ss-m66-weak-tier-r18/worktrees/dispatch-r18-2026-09-30`.
 * Formatter + tests before commit: ruff clean, pytest 207 passed.
 * Branch tip is on `build-host/` (file:///mnt/argonas_git) and `origin`
-  (LAN ssh) and the studio mirror (`ssh://root@…`) at this commit.
+  (LAN ssh) and the workstation mirror (`ssh://root@…`) at this commit.
 
 ## 12. Source pointers
 

@@ -5,14 +5,14 @@ these are genuinely interesting (like the tie dye one) but some do not look
 like lava wax (such as the orange one)". This document is the written rubric
 built from the real-lamp references, the diagnosis of the three photographed
 looks, what changed, the measurable gates, and the butterfly light-show mode
-added on 2026-10-05 (display name "Flowerchild", option value `butterfly`). Evidence captures live outside the repository (ULTRA
+added on 2026-10-05 (display name "Flowerchild", option value `butterfly`). Evidence captures live outside the repository (the arm64 build host
 `~/oc-cyg/magma-realism-evidence/`, report `~/oc-cyg/MAGREAL.md`).
 
 ## 1. References studied
 
 Real-lamp footage on build-host (`new-screensavers/magmasimplex-60s/references-video/`,
 all 360p web video; the four reference photographs are root-owned 0600 behind
-`root_squash` and could not be read from ULTRA):
+`root_squash` and could not be read from the arm64 build host):
 
 | source | frames | what it shows |
 |---|---|---|
@@ -243,7 +243,7 @@ Seven GPU-bound lamp configs, mean p50: before 31.56 ms, r4 32.51 ms (+3.0 %); a
 MAGMA_CANDY_PCT=5 ./run-long.sh 60 20261004   # replayable, with the candy look opted in
 ./run-slice.sh logs/<runid>/slices.tsv <n>    # reproduce one slice (column 4 is the category)
 ./run-sweep.sh sweep-lamp.tsv <runid> 30 "25" # the fixed regression list
-# ULTRA, in the worktree
+# the arm64 build host, in the worktree
 python3 tools/magmasimplex-realism-gates.py gate <frames...>
 python3 tools/magmasimplex-realism-gates.py calibrate refs.tsv   # path<TAB>x0,y0,x1,y1 per globe crop
 ```

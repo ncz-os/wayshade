@@ -205,6 +205,15 @@ public interface ScreensaverBackend : Object {
     public abstract string pool_class { owned get; set; }
     public abstract string render_quality { owned get; set; }
     public abstract int max_render_height { get; set; }
+    // Frame rate and render divisor of the saver shown behind the lock
+    // (dev.ncz.screensaver lock-fps / lock-render-divisor, 0 = Auto). False when
+    // the installed engine predates those keys; the rows are then hidden.
+    public abstract bool lock_motion_supported { get; }
+    public abstract int lock_fps { get; set; }
+    public abstract int lock_render_divisor { get; set; }
+    // What Auto means on this computer when the image lowers it for hardware
+    // that runs hot (NCZ_SAVER_AUTO_FPS); 0 = the normal Auto.
+    public abstract int lock_auto_fps { get; }
     public abstract int start_delay { get; set; }
     public abstract int rotate_delay { get; set; }
     public abstract bool lock_supported { get; }

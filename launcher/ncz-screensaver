@@ -47,6 +47,8 @@ DEFAULTS = {
     "render-scale-mode": "auto",
     "render-scale": 1.0,
     "max-render-height": 0,
+    "lock-fps": 0,
+    "lock-render-divisor": 0,
     "pool-gpu-class": "auto",
     "show-all-hacks": False,
 }
@@ -56,6 +58,8 @@ INT_RANGES = {
     "cycle-delay": (5, 86400),
     "lock-delay": (0, 86400),
     "display-off-delay": (0, 86400),
+    "lock-fps": (0, 120),
+    "lock-render-divisor": (0, 4),
 }
 ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 WORD_RE = re.compile(r"^[a-z0-9_-]+$")
@@ -628,7 +632,7 @@ RENDERER_TABLE = (
 # consulted by class_from_topology() when calibration has no score for a GPU
 # and the renderer string is unknown. The platform-bus 'mali' (CIXH5000:00 on
 # Sky1, a glue driver around the upstream mali_kbase) is intentionally listed
-# here — without it a fresh install on MS-R1 / cixmini would classify the
+# here — without it a fresh install on a Sky1 machine would classify the
 # actual GPU as 'weak' because only the device-tree / sysfs topology is
 # available before the calibrator has had a chance to run.
 MID_DRIVERS = (
@@ -1218,7 +1222,7 @@ def _kernel_release():
     """The running kernel release string (e.g. "7.2.9-sky1-ncz").
 
     Bumping the running kernel can change GPU rendering performance by enough to
-    flip the calibrated class (the O6N / Mali-G720 went 9.94 ms on 7.2.8-sky1-ncz
+    flip the calibrated class (a Sky1 Mali-G720 went 9.94 ms on 7.2.8-sky1-ncz
     to 28.21 ms on 7.2.9-sky1-ncz with no other change). The cache invalidation in
     gpu_class() compares the entry's kernel field to this value, so a kernel
     upgrade forces a fresh calibration on the next call with run=True.
@@ -2048,7 +2052,7 @@ def build_child_env(
     # Offload is per hack process and only on request. NVIDIA documents
     # __NV_PRIME_RENDER_OFFLOAD=1 alone for EGL (and the optimus layer for
     # Vulkan); __EGL_VENDOR_LIBRARY_FILENAMES is never set, because pinning the
-    # vendor breaks Wayland compositors (labwc died that way on build-host).
+    # vendor breaks Wayland compositors (labwc died that way on an Intel + NVIDIA laptop).
     for name in OFFLOAD_VARS:
         env.pop(name, None)
     if isinstance(offload, dict):

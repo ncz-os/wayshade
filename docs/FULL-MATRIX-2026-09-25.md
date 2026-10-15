@@ -22,7 +22,7 @@ not accepted. FAIL targets are set aside below with their observed mode.
 
 | Host | Architecture | Renderer | Build | Coverage | Result |
 |---|---|---|---|---:|---:|
-| O6N | arm64 | Mali-G720-Immortalis | native ULTRA arm64 at `251bf22` + focused fixes | 140/140 | 105 PASS / 35 FAIL |
+| O6N | arm64 | Mali-G720-Immortalis | native the arm64 build host arm64 at `251bf22` + focused fixes | 140/140 | 105 PASS / 35 FAIL |
 | build-host | amd64 | Mesa Intel UHD Graphics CML GT2 (the active compositor GPU; not RTX 2060) | fresh native Meson/Ninja build + focused fixes | 140/140 | 110 PASS / 30 FAIL |
 
 Each target has stderr, an exit-code file, two 480px evidence thumbnails,

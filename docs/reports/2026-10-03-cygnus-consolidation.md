@@ -81,7 +81,7 @@ Both failures seen at `8637b6a` are now resolved; neither was pre-existing-and-u
    `skipped`). The ELF-class check is unchanged, and the machine check
    still catches a stale or mismatched object in the tree — it is just
    anchored to the *expected* machine instead of a literal aarch64, so the
-   x86 test run and the arm64 ULTRA packaging run each validate their own
+   x86 test run and the arm64 packaging run each validate their own
    tree. The deb stage derives its arch the same way. The meson test
    passes the plugin state straight from `get_option('singularity-plugin')`.
 
@@ -122,7 +122,7 @@ Both failures seen at `8637b6a` are now resolved; neither was pre-existing-and-u
    `ncz_ship_bins`, the default chooser rows, or plugin defaults, so the
    ship-set rule is unaffected (still `79 binaries`, diff empty).
 
-Arm64 native build, arm64/x86 packaging to the ULTRA datapool, the Singularity
+Arm64 native build, arm64/x86 packaging to the build-artifact storage, the Singularity
 plugin builds on both arches, and the zoder local-ladder review (qwen38 author,
 gemma4-31b reviewer, EIH nemotron-3-ultra backup) were **not run** in this
 attempt — the run was scoped to the x86 build break, the two gate failures, and
@@ -146,8 +146,8 @@ stale — the merges had already landed):
 
 | Branch | Head | Verdict |
 | --- | --- | --- |
-| `wip/hydra/2026-09-30-lead19-newsavers` | `119c0df7` | merged (`656cefd`) |
-| `wip/hydra/2026-09-30-lead19-rescue` | `e573d94b` | merged (`9e8d7ee`) |
+| New-saver work branch (2026-09-30) | `119c0df7` | merged (`656cefd`) |
+| Rescue work branch (2026-09-30) | `e573d94b` | merged (`9e8d7ee`) |
 | `feat/leviathan-redesign-2026-09-29` | `935ccd75` | merged (`27be5c4`) |
 | `wip/build-host/jurassicaquarium-skeleton-2026-09-28` | `fb3b21ea` | **content already on HEAD; branch deliberately not merged** |
 

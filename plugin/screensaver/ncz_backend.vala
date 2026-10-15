@@ -839,6 +839,47 @@ public class NczScreensaverBackend : Object, ScreensaverBackend {
         set { settings.set_int ("max-render-height", value); }
     }
 
+    public int lock_auto_fps {
+        get {
+            string? env = Environment.get_variable ("NCZ_SAVER_AUTO_FPS");
+            if (env != null && int.parse (env) > 0)
+                return int.parse (env);
+            string text;
+            try {
+                if (!FileUtils.get_contents ("/etc/ncz/lock-renderer.env", out text))
+                    return 0;
+            } catch (Error e) {
+                return 0;
+            }
+            foreach (unowned string line in text.split ("\n")) {
+                string l = line.strip ();
+                if (l.has_prefix ("NCZ_SAVER_AUTO_FPS=")) {
+                    int v = int.parse (l.substring ("NCZ_SAVER_AUTO_FPS=".length).strip ());
+                    return v > 0 ? v : 0;
+                }
+            }
+            return 0;
+        }
+    }
+
+    // Guarded: reading a key the installed schema lacks aborts the shell.
+    public bool lock_motion_supported {
+        get {
+            return settings.settings_schema.has_key ("lock-fps")
+                && settings.settings_schema.has_key ("lock-render-divisor");
+        }
+    }
+
+    public int lock_fps {
+        get { return lock_motion_supported ? settings.get_int ("lock-fps") : 0; }
+        set { if (lock_motion_supported) settings.set_int ("lock-fps", value); }
+    }
+
+    public int lock_render_divisor {
+        get { return lock_motion_supported ? settings.get_int ("lock-render-divisor") : 0; }
+        set { if (lock_motion_supported) settings.set_int ("lock-render-divisor", value); }
+    }
+
     public string pool_class {
         owned get {
             string v = settings.get_string ("pool-gpu-class");

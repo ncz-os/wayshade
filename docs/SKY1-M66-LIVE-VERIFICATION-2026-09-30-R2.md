@@ -1,4 +1,4 @@
-# Sky1 (MS-R1 / cixmini / 192.0.2.66) re-validation evidence — 2026-09-30 (turn 2)
+# Sky1 (MS-R1 / 192.0.2.66) re-validation evidence — 2026-09-30 (turn 2)
 
 Re-run of the live verification on host `ncz-megrez-8585` (CIX Sky1 / MS-R1
 / Mali-G720-Immortalis / mali_kbase, kernel `7.3.0-rc5-sky1-ncz`, build

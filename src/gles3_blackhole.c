@@ -22,6 +22,9 @@
 #include "ncz_render.h"
 #include "gles3_harness_hooks.h"
 #include "ncz_hack_shim.h"
+#include "ncz_feed_render.h"
+#include "ncz_time_offset.h"
+#include "bh_pacer_state.h"
 /* gcc 14+ makes implicit declarations an error under -std=c11 even though
  * both headers above declare this; explicit forward decl avoids the
  * regression if the header order ever changes. */
@@ -62,11 +65,14 @@ typedef struct {
  float last_fade;
  double started;
  /* frame pacing + adaptive quality (see bh_pace) */
- double prev_t,last_change,refr,fail_level,dtmax;
+ double prev_t,last_change,refr;
  float level,levelmax;
  unsigned long nfr;
- unsigned char mring[60];int mcnt;
- unsigned char nring[60];int ncnt;   /* near misses: frame longer than 1.08 refresh periods */
+ /* Budget-specific failure history (see bh_pacer_state.h). The miss/near
+  * rings and the cached fail_level are cleared on a budget transition so
+  * the new mode does not inherit the previous mode's misses. The ray-step
+  * level itself lives outside this seam (it's the controller's "keep" set). */
+ BhPacerState pace;
  float dtring[300];int dtn;float wdt[120];unsigned long hit[16];int nhit;
  // 0:seed 1:radius 2:temp 3:density 4:rotation 5:inclination 6:orbit_rate
  // 7:jet 8:star_density 9:camera_mode 10:palette 11:approach 12:periapsis
@@ -764,12 +770,40 @@ static void init_blackhole(ModeInfo*m){
  * with hysteresis. Resolution is handled by the shared harness (render-scale).
  * It steps down when more than 10% of the last 60 frames missed, steps up
  * slowly after 10 s without a miss, and never returns to a level that failed
- * until 90 s have passed, so it converges instead of oscillating. */
+ * until 90 s have passed, so it converges instead of oscillating.
+ *
+ * The miss / near decision uses the ACTIVE feed cadence (the budget the
+ * renderer publishes through ncz_time_offset_frame before each draw), not
+ * just the panel period. Without that, an intentional 30 fps cap (33.33 ms
+ * inter-frame) or a warm-15 fallback (66.67 ms) is misclassified as missed
+ * display frames on a 60 Hz panel and the controller drops ray steps all
+ * the way to the floor. Standalone / on-screen runs (ncz_time_offset not
+ * armed) keep the original panel-only behaviour. A change in the active
+ * budget rebases the miss / near window and the budget-specific failure
+ * history without forcing quality back up. */
 static int cmpf(const void*a,const void*b){float x=*(const float*)a,y=*(const float*)b;return x<y?-1:x>y;}
 static void bh_level_split(float level,float*q,float*scale){*q=level;*scale=1.f;}
+/* Reset the adaptive controller's budget-specific failure history without
+ * touching the current ray-step level. Called when the active feed budget
+ * changes (warm <-> 30 <-> 60) so the previous mode's misses do not poison
+ * the new mode's first window. The shared seam lives in bh_pacer_state.h so
+ * the unit test can exercise the same code path. */
 static void bh_pace(State*s,double tn){
  static int perf=-1;
  if(perf<0){const char*e=getenv("NCZ_BLACKHOLE_PERF_LOG");perf=e?(atoi(e)>=2?2:1):0;}
+ /* The active feed budget the renderer publishes through ncz_time_offset_frame
+  * BEFORE drawing. 0 when the renderer is not in off-screen frame-source mode
+  * (standalone / harness / capture): the controller falls back to the panel
+  * period only. */
+ long long eff_budget_ns=ncz_time_offset_budget_ns();
+ /* On a budget change (warm-15 <-> capped-30 <-> 60) rebase the miss/near
+  * window and the budget-specific failure history without forcing quality. */
+ int budget_changed=ncz_time_offset_budget_changed();
+ if(budget_changed){
+  fprintf(stderr,"[diag] blackhole pace budget change eff_ns=%lld panel_ms=%.2f\n",
+   (long long)eff_budget_ns,s->refr);
+  s->dtn=0;
+ }
  if(s->prev_t>0){
   double dt=(tn-s->prev_t)*1000.;
   s->nfr++;
@@ -777,40 +811,43 @@ static void bh_pace(State*s,double tn){
    if(s->nfr==150){float t[120];memcpy(t,s->wdt,sizeof t);qsort(t,120,sizeof(float),cmpf);
     /* vsync-paced frames cluster at the refresh interval; assume 60 Hz unless the median says faster */
     s->refr=(t[60]<12.5f&&t[60]>=5.f)?t[60]:16.67;}}
-  int miss=(s->nfr>150)&&dt>s->refr*1.3;
-  if(perf>=2&&dt>25.&&s->nhit<16)s->hit[s->nhit++]=s->nfr;
-  int i=(int)(s->nfr%60);
-  s->mcnt+=miss-s->mring[i];s->mring[i]=(unsigned char)miss;
-  int near_=(s->nfr>150)&&dt>s->refr*1.08;
-  s->ncnt+=near_-s->nring[i];s->nring[i]=(unsigned char)near_;
-  s->dtring[s->dtn++%300]=(float)dt;if(dt>s->dtmax)s->dtmax=dt;
+  bh_pacer_state_update(&s->pace,s->nfr,dt,s->refr,eff_budget_ns,budget_changed);
+  if(!budget_changed){
+   if(perf>=2&&dt>25.&&s->nhit<16)s->hit[s->nhit++]=s->nfr;
+   s->dtring[s->dtn++%300]=(float)dt;
+  }
   if(s->nfr>150&&(s->nfr%30)==0){
-   double miss_rate=s->mcnt/60.;
-   if(g_b.adaptive){
+   double miss_rate=s->pace.mcnt/60.;
+   double target_ms=s->refr;
+   if(eff_budget_ns>0){double m=(double)eff_budget_ns/1.0e6;if(m>target_ms)target_ms=m;}
+   if(g_b.adaptive&&!budget_changed){
     /* step down on real misses, or when a quarter of the frames run over the
-     * refresh period (a panel that is not vsync-locked shows long frames
+     * active cadence (a panel that is not vsync-locked shows long frames
      * instead of missed ones) */
-    if((miss_rate>0.10||s->ncnt>15)&&tn-s->last_change>1.0&&s->level>0.f){
-     s->fail_level=s->level;s->level=fmaxf(0.f,s->level-0.08f);s->last_change=tn;
+    if((miss_rate>0.10||s->pace.ncnt>15)&&tn-s->last_change>1.0&&s->level>0.f){
+     s->pace.cur_fail_level=s->level;s->level=fmaxf(0.f,s->level-0.08f);s->last_change=tn;
      float q,sc;bh_level_split(s->level,&q,&sc);
-     fprintf(stderr,"[diag] blackhole adapt down level=%.2f steps=%d scale=%.2f miss=%.0f%% refresh=%.1fms\n",s->level,80+(int)(180*q+.5f),sc,miss_rate*100,s->refr);
-    }else if(s->mcnt==0&&s->ncnt==0&&tn-s->last_change>10.&&s->level<s->levelmax){   /* climb only with headroom */
+     fprintf(stderr,"[diag] blackhole adapt down level=%.2f steps=%d scale=%.2f miss=%.0f%% panel_ms=%.1f target_ms=%.1f\n",
+      s->level,80+(int)(180*q+.5f),sc,miss_rate*100,s->refr,target_ms);
+    }else if(s->pace.mcnt==0&&s->pace.ncnt==0&&tn-s->last_change>10.&&s->level<s->levelmax){   /* climb only with headroom */
      float cand=fminf(s->levelmax,s->level+0.04f);
-     if(s->fail_level<=0.||cand<=s->fail_level-0.06){
+     if(s->pace.cur_fail_level<=0.||cand<=s->pace.cur_fail_level-0.06){
       s->level=cand;s->last_change=tn;
       float q,sc;bh_level_split(s->level,&q,&sc);
       fprintf(stderr,"[diag] blackhole adapt up level=%.2f steps=%d scale=%.2f\n",s->level,80+(int)(180*q+.5f),sc);
      }
     }
-    if(s->fail_level>0.&&tn-s->last_change>90.){s->fail_level+=0.1;if(s->fail_level>=1.)s->fail_level=0.;s->last_change=tn;}
+    if(s->pace.cur_fail_level>0.&&tn-s->last_change>90.){s->pace.cur_fail_level+=0.1;if(s->pace.cur_fail_level>=1.)s->pace.cur_fail_level=0.;s->last_change=tn;}
    }
   }
-  if(perf>=2&&s->nfr%300==0){
+  if(perf>=2&&s->nfr%300==0&&s->dtn>0){
+   double target_ms=s->refr;
+   if(eff_budget_ns>0){double m=(double)eff_budget_ns/1.0e6;if(m>target_ms)target_ms=m;}
    float w[300];int n=s->dtn<300?s->dtn:300;memcpy(w,s->dtring,sizeof(float)*n);qsort(w,n,sizeof(float),cmpf);
-   int m=0;for(int k=0;k<n;k++)if(w[k]>s->refr*1.3)m++;
+   int m=0;for(int k=0;k<n;k++)if(w[k]>target_ms*1.3)m++;
    float q,sc;bh_level_split(s->level,&q,&sc);
-   fprintf(stderr,"[diag] blackhole pace frames=%lu p50=%.2f p95=%.2f p99=%.2f max=%.2f ms miss=%d/%d refresh=%.2fms level=%.2f steps=%d scale=%.2f\n",
-    s->nfr,w[n/2],w[(int)(n*0.95)],w[(int)(n*0.99)],(double)w[n-1],m,n,s->refr,s->level,g_b.adaptive?80+(int)(180*q+.5f):-1,sc);
+   fprintf(stderr,"[diag] blackhole pace frames=%lu p50=%.2f p95=%.2f p99=%.2f max=%.2f ms miss=%d/%d panel_ms=%.2f target_ms=%.2f level=%.2f steps=%d scale=%.2f\n",
+    s->nfr,w[n/2],w[(int)(n*0.95)],w[(int)(n*0.99)],(double)w[n-1],m,n,s->refr,target_ms,s->level,g_b.adaptive?80+(int)(180*q+.5f):-1,sc);
    if(s->nhit){fprintf(stderr,"[diag] blackhole hitches(>25ms) at frames:");for(int k=0;k<s->nhit;k++)fprintf(stderr," %lu",s->hit[k]);fprintf(stderr,"\n");s->nhit=0;}
   }
  }else{s->refr=33.3;}

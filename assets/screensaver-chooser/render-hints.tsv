@@ -1,5 +1,5 @@
 # Per-hack render scale hints for Mali-G720 (Sky1). Columns (tab separated): id, scale, measured fps at that scale, note.
-# Measured on MS-R1 (mali_kbase, ViewSonic VP2488-4K 3840x2160 at output scale 1.75, so hacks get a 2194x1234 surface), package 0.5.3 plus NCZ_TEST_SURFACE_SIZE knob.
+# Measured on a Sky1 machine (mali_kbase, ViewSonic VP2488-4K 3840x2160 at output scale 1.75, so hacks get a 2194x1234 surface), package 0.5.3 plus NCZ_TEST_SURFACE_SIZE knob.
 # Operating point: the Mali default cap (1080 lines, render 1919x1080 at scale 1). A hint is the smallest reduction from the ladder 1, 0.75, 0.5, 0.35 that reaches 45 fps.
 # On a 1080p panel the same scale applies to a 1080 surface (slightly smaller render than measured here; hints stay valid).
 # Hacks not listed run at scale 1 (they reach 45 fps with the cap). A hint seeds NCZ_RENDER_SCALE; the adaptive mode may still step lower.

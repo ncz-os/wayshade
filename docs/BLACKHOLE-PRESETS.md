@@ -22,7 +22,7 @@ Precedence, lowest to highest: built-in defaults, `blackhole.conf`, **the preset
 | quasar | artistic | bright disk, dusty torus, twin jets, viewed 25 degrees off the pole | unified model (Antonucci 1993, Urry and Padovani 1995) |
 | quasar-edge-on | artistic | the same nucleus seen through the torus plane: disk hidden, jets to the sides | same |
 | blazar | artistic | jet pointing at us, strong beaming, disk face-on | Urry and Padovani 1995 |
-| microquasar | artistic | stellar-mass hole, blue supergiant companion, gas stream into the disk | Cygnus X-1: 21.2 and 40.6 solar masses, inclination 27 degrees, 2.2 kpc, period 5.6 d (Miller-Jones 2021); the real system is wind fed, and the star and stream are drawn unlensed |
+| microquasar | artistic | stellar-mass hole, small hot disk, faint jet; the blue supergiant companion and its gas stream are opt-in with `--companion=1` | Cygnus X-1: 21.2 and 40.6 solar masses, inclination 27 degrees, 2.2 kpc, period 5.6 d (Miller-Jones 2021); the real system is wind fed, so the stream is drawn for effect; with `--companion=1` the star and stream are traced along the same bent rays as the disk |
 | kerr | artistic | near-maximal spin: disk edge close to the horizon, strongly beamed; since 2026-09-29 the shadow follows the analytic Kerr outline (Bardeen 1973) for the spin and viewing angle | Bardeen, Press and Teukolsky 1972 (ISCO 3 r_s at spin 0 to about 0.6 r_s at 0.998, prograde) |
 | binary | artistic | two holes with minidisks inside a circumbinary ring, mutual lensing, gravitational-wave ripples | Kepler orbit; see `BLACKHOLE-SCENES-DESIGN.md` |
 | binary-quasars | artistic | a feeding supermassive pair in faithful colors, mass ratio 0.35, seen from above | OJ 287 as the motivating candidate |
@@ -32,7 +32,7 @@ Precedence, lowest to highest: built-in defaults, `blackhole.conf`, **the preset
 | three-body | artistic | three equal holes on the figure-eight choreography | Moore 1993, Chenciner and Montgomery 2000 |
 | psychedelic | artistic | the psychedelic palette cross-fading to synthwave | art direction |
 
-`inclination` in the files is the elevation above the disk plane, so "30 degrees from the pole" is 60. New extras used by presets: `disk-outer` (disk size in r_s), `jet-length`, `torus` (opacity of the dusty ring, a straight-ray approximation) and `companion` (star and stream, artistic). The `eht` palette (Event Horizon Telescope false color) is the seventh palette.
+`inclination` in the files is the elevation above the disk plane, so "30 degrees from the pole" is 60. New extras used by presets: `disk-outer` (disk size in r_s), `jet-length`, `torus` (opacity of the dusty ring, a straight-ray approximation) and `companion` (a hot blue supergiant on a tidally stretched orbit and its Roche-lobe stream into the disk edge, lensed and occluded with the rest of the scene; artistic; off by default in every preset, including microquasar). The `eht` palette (Event Horizon Telescope false color) is the seventh palette.
 
 ## Screenshots
 
@@ -69,3 +69,7 @@ The eight original presets and Black Hole itself clear the bar on the weakest re
 | psychedelic | 52, 33.5 ms | 60, 16.7 ms | 60 | weak |
 
 Every scene clears the weak bar at the weak-class defaults, so none is strong-only (the design-doc estimate was strong-only). Forcing the rich mode on the UHD 630 fails for the multi-hole scenes: about 42 fps, but p95 is 50 ms. At native 1080p on the UHD 630 the tidal disruption (10 fps) and the galaxy zoom (18 fps) fail; the weak class always renders at scale 0.5. `tiers.tsv` carries the preset rows (`tools/measure-tiers.py`, merged per id).
+
+## Companion star cost
+
+`--companion` adds a per-step test of the star and the stream to the ray loop, only when the option is on (no cost otherwise). Measured on a Radeon 780M (Mesa radeonsi) in capture mode, 200 ray steps, median GPU time per frame: 3840x2160 3.7 ms without, 4.4 to 4.5 ms with the companion (about +0.7 ms, +20 percent), also with the star near the camera; 1920x1080 about 0.5 ms with a difference inside the measurement noise (0.1 to 0.2 ms). Frame-to-frame change (strobe metric, 30 steps per second) is 0.0004 with and without the companion. Mali-class GPUs were not measured for this change; they keep the existing render-scale auto behaviour.

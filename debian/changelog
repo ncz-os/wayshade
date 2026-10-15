@@ -1,3 +1,38 @@
+ncz-screensavers (0.8.16) unstable; urgency=medium
+
+  * The screensaver behind the lock looks like a real animation: 30 frames per
+    second at full render resolution by default (capped at the display refresh
+    rate), 15 fps on battery, and 15 fps at half resolution on a weak GPU class.
+    The previous 8 fps at half resolution looked nearly frozen.
+  * New settings keys dev.ncz.screensaver lock-fps and lock-render-divisor
+    (0 = Auto); the Singularity Screensaver and Lock page shows them as Frame
+    rate and Render resolution. NCZ_SAVER_LOCK_FPS and NCZ_SAVER_RENDER_DIV in
+    /etc/ncz/lock-renderer.env still win.
+  * The thermal warm band renders at 15 fps (was 10) and never faster than the
+    normal rate; the hot pause is unchanged.
+  * The frame path no longer touches pixels on the CPU: the GPU flips, scales
+    and (where the driver reads back only RGBA) swizzles each frame into a
+    lock-sized buffer, glReadPixels writes it straight into one of three
+    reused shared-memory buffers, and frame pacing keeps an even cadence. At
+    3072x1920 on an AMD GPU this went from 39 ms of CPU per frame (at most
+    about 10 fps) to 2 ms per frame at 30 fps. The old path stays available
+    as NCZ_FEED_LEGACY_COPY=1 for comparison.
+  * The unlock prompt suspends the saver: a lock that supports it sends PAUSE,
+    the renderer is stopped (no GPU or CPU work) and the lock keeps the last
+    frame; when the prompt is dismissed the saver continues from that frame
+    (its clock skips the suspended time). Older locks keep working.
+  * NCZ_FEED_RENDER_DRIVER (or NCZ_FEED_RENDER_NODE) pins the saver to one GPU
+    by kernel driver name, for the saver only; the log names the render node
+    and driver in use. NCZ_SAVER_AUTO_FPS sets what Auto means on hardware the
+    image marks as hot-running.
+  * The feed logs the delivered frame cadence (frames per second and the
+    longest gap between frames) once a minute; the renderer logs its cost per
+    frame.
+  * Comments, the Black Hole shader, render hints and the package changelog
+    describe test machines generically.
+
+ -- Jason Perlow <jperlow@gmail.com>  Wed, 14 Oct 2026 12:00:00 -0400
+
 ncz-screensavers (0.8.15) unstable; urgency=medium
 
   * ncz-screensaver-idled honours the Singularity "Lock on Suspend" setting
@@ -213,8 +248,8 @@ ncz-screensavers (0.8.9) unstable; urgency=medium
   * xshadertoy neongravity: the in-house analytic neongravity scene now ships,
     replacing the third-party CC0 neongravity-1 port in ncz_ship_bins (ship
     count unchanged at 74). The scene is home-grown NCZ (Apache-2.0, no
-    third-party snippet inside) and is validated headless on build-host (amd64,
-    Mesa GLES3) and ULTRA (arm64 container); see
+    third-party snippet inside) and is validated headless on an amd64 build host
+    (Mesa GLES3) and in an arm64 build container; see
     docs/audit/neongravity-inhouse-2026-10-05.md. This makes the 0.8.2
     supersession claim true: xshadertoy_universeball and gravitywell are
     recorded as displaced-by:xshadertoy_neongravity, and the third-party
@@ -256,7 +291,7 @@ ncz-screensavers (0.8.7) unstable; urgency=medium
     build_presets skips alias rows (44 scenes, down from 52). Blackhole and
     the other conf-with-no-json savers stay listed. presets.tsv regenerated;
     new tests in tools/tests/test_preset_aliases.py.
-  * tiers.tsv: magmasimplex_gles3 measured on the RTX 2060 (build-host, PRIME
+  * tiers.tsv: magmasimplex_gles3 measured on an RTX 2060 laptop (PRIME
     offload, native 1920x1080): 58.8 fps / p95 38.8 ms. The class stays mid;
     the UHD 630 and Mali columns are unchanged.
   * Provenance and licence audit of the ship set and the built-only savers:
@@ -543,7 +578,7 @@ ncz-screensavers (0.6.0) unstable; urgency=medium
     (src/classics_shader); binary names are unchanged. The GL1 emulation
     layer, the legacy binaries and any gl4es routing are gone from the ship
     set (no glBegin/glVertex/glu symbols in any shipped binary).
-  * Real 4K measurements on the Sky1 (MS-R1, output scale 1.75): the Mali
+  * Real 4K measurements on a Sky1 machine (output scale 1.75): the Mali
     1080-line render cap stays; render-hints.tsv regenerated at that point.
   * Test-only NCZ_TEST_SURFACE_SIZE knob; eval tools use password auth only.
   * debian/copyright: stanzas for the ported classics.

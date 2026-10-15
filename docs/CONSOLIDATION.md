@@ -9,15 +9,15 @@ stays reachable on its original `origin/*` ref only.
 | `bh-task1-task2` | a301b47 | Partly taken | Taken: `NCZ_BLACKHOLE_FIXED_SEED` env override (C driver only). Skipped: shader perf hacks (skip second fbm layer when `trans<.5`, early `trans<.04` break, gated `exp()` in the integrator). They lower image quality, and the shader was rewritten around it since (disk tilt, tier steps); blackhole is the visual bar for the set. |
 | `recovered/build-host-gpu-tier-2026-09-29` (= `recovered/build-host-ncz-screensavers-...`) | b53596e | Taken (merged) | Shared GPU tier module (`ncz_gpu_tier.c`, `NCZ_GPU_TIER` override) wired into blackhole `max_steps`, plus the quality-ladder and audit docs. Already committed work; it is not the pending fidelity-tier design. |
 | `recovered/build-host-ncz-screensavers-2026-09-29` | 3e4356e | Taken (merged) | `ridgeline.glsl` iGPU budget cut. Not in the ship set (calibration shader), harmless. |
-| `recovered/ultra-ncz-screensavers-jwz-2026-09-29` | 42d5991 | Taken (merged) | jwz Apple API reference doc only. |
-| `recovered/ultra-ncz-screensavers-wayshade-2026-09-29` | 0156158 | Skipped | Wayshade and adaptive presentation path (out of MVP scope). Its `iSeed` commit (5d512b0) competes with the `iSeed` already on master; master's version is kept and its duplicate declaration removed (see below). Float feedback buffers for xshadertoy are not needed by any ship-set shader. |
+| Recovered jwz reference branch (2026-09-29) | 42d5991 | Taken (merged) | jwz Apple API reference doc only. |
+| Recovered presentation prototype branch (2026-09-29) | 0156158 | Skipped | Wayshade and adaptive presentation path (out of MVP scope). Its `iSeed` commit (5d512b0) competes with the `iSeed` already on master; master's version is kept and its duplicate declaration removed (see below). Float feedback buffers for xshadertoy are not needed by any ship-set shader. |
 | `recovered/build-host-ncz-screensavers-root-2026-09-29`, `recovered/build-host-screensaver-smoke-2026-09-29` | 1cfcc9a / d80ee4f | Skipped | Wayshade automatic fidelity-tier design (pending operator approval) and a 10 s smoke copy. |
 | `recovered/build-host-ncz-screensavers-2026-09-29` | 0db1ed1 | Nothing to take | Same as master. |
-| `recovered/ultra-ncz-screensavers-2026-09-29` | 584d2e2 | Nothing to take | Ancestor of master. |
+| Recovered screensaver branch (2026-09-29) | 584d2e2 | Nothing to take | Ancestor of master. |
 | `wip/build-host-afterimage-2026-09-26` | b6da3d6 | Nothing to take | Already an ancestor of master (neonhorizon, stratus, iridescence clean-room ports). |
-| `recovered/hydra-ncz-screensavers-2026-09-29`, `recovered/hydra-capture-reports-2026-09-29` | 73b7079 | Skipped | 51 capture PNGs/reports (matte-plastic evidence on build-host). Evidence, not source. |
-| `recovered/hydra-lavafield-2026-09-29` | 11b4925 | Skipped | `lavafield` hack: not in the ratified ship set. Still on its ref if the operator wants it later. |
-| `nvidia-linear-buffer-poc-2026-09-22`, `recovered/ultra-nvidia-poc-...` | 886d5c8 | Skipped | Proof of concept, result was negative (NVIDIA cannot import Intel-allocated LINEAR dma-buf); 2.8k lines of test tooling and logs. |
+| Recovered screensaver and capture-report branches (2026-09-29) | 73b7079 | Skipped | 51 capture PNGs/reports (matte-plastic evidence on build-host). Evidence, not source. |
+| Recovered lavafield branch (2026-09-29) | 11b4925 | Skipped | `lavafield` hack: not in the ratified ship set. Still on its ref if the operator wants it later. |
+| NVIDIA linear-buffer proof-of-concept branches (2026-09-22) | 886d5c8 | Skipped | Proof of concept, result was negative (NVIDIA cannot import Intel-allocated LINEAR dma-buf); 2.8k lines of test tooling and logs. |
 | `feat/launcher-ux` | (LEAD 2) | Separate | Launcher, idle daemon and settings live in `launcher/`; wired in through the optional `subdir('launcher')` hook in `meson.build`. |
 
 ## Changes made on the consolidated branch

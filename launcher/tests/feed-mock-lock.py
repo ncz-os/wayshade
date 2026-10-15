@@ -78,6 +78,12 @@ def main():
     ap.add_argument("--require-first-within", type=float, default=0.0,
                     help="fail unless the FIRST frame arrives within this many seconds "
                          "(the lock's 3 s frame watchdog budget)")
+    ap.add_argument("--pause-at", type=int, default=0,
+                    help="after this many frames send PAUSE (needs the saver's LFS_FLAG_PAUSE)")
+    ap.add_argument("--pause-s", type=float, default=3.0,
+                    help="seconds to stay paused; any frame in that window is an error")
+    ap.add_argument("--pause-marker", default="",
+                    help="file created while paused (lets the test inspect the renderer)")
     ap.add_argument("--require-nonblack", action="store_true",
                     help="fail unless at least one frame has visible (non-black) pixels")
     ap.add_argument("--result", required=True)
@@ -118,6 +124,7 @@ def main():
         if len(data) < _MSG.size + _HELLO.size:
             raise SystemExit("short HELLO")
         abi, transports, _n = _HELLO.unpack_from(data, _MSG.size)
+        res["pause_capable"] = bool(_f & 0x0002)
         if abi != LFS_VERSION or not (transports & 0x1):
             raise SystemExit("bad HELLO abi/transports")
         payload = _WELCOME.pack(LFS_VERSION, 0x1, len(outs))
@@ -214,6 +221,42 @@ def main():
             send(conn, LFS_READY, _ACK.pack(seq))
             expect += 1
             res["frames"] += 1
+            if a.pause_at and res["frames"] == a.pause_at:
+                if not res.get("pause_capable"):
+                    res["errors"].append("saver did not advertise LFS_FLAG_PAUSE")
+                    break
+                send(conn, 0x83, b"")                      # LFS_PAUSE
+                if a.pause_marker:
+                    open(a.pause_marker, "w").close()
+                end = time.monotonic() + a.pause_s
+                during = 0
+                while True:
+                    left = end - time.monotonic()
+                    if left <= 0:
+                        break
+                    conn.settimeout(left)
+                    try:
+                        d2, f2 = recv(conn)
+                    except socket.timeout:
+                        break
+                    for x in f2:
+                        os.close(x)
+                    if d2 and len(d2) >= _MSG.size and _MSG.unpack_from(d2, 0)[1] == LFS_FRAME:
+                        during += 1
+                        # still ack so the protocol stays consistent
+                        fs = _FRAME.unpack_from(d2, _MSG.size)
+                        send(conn, LFS_READY, _ACK.pack(fs[0]))
+                        expect += 1
+                res["frames_while_paused"] = during
+                if during > 1:   # one frame may already have been in flight
+                    res["errors"].append(f"{during} frames arrived while paused")
+                if a.pause_marker:
+                    try:
+                        os.unlink(a.pause_marker)
+                    except OSError:
+                        pass
+                send(conn, 0x84, b"")                      # LFS_RESUME
+                res["resumed_at_frame"] = res["frames"]
         send(conn, LFS_STOP, _ACK.pack(expect))
         time.sleep(0.2)
     finally:
@@ -223,6 +266,8 @@ def main():
             except OSError:
                 pass
         srv.close()
+    if a.pause_at and res["frames"] <= res.get("resumed_at_frame", 1 << 30):
+        res["errors"].append("no frame after RESUME")
     if a.require_nonblack and not res.get("nonblack"):
         res["errors"].append("every frame was black")
     if a.hold and not res["hold"]:

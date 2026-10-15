@@ -35,7 +35,10 @@ export XDG_RUNTIME_DIR="$T/xdg"
 export XDG_CONFIG_HOME="$T/cfg"
 export GSETTINGS_BACKEND=keyfile
 export GSETTINGS_SCHEMA_DIR="$T/schemas"
-export NCZ_ALLOW_SOFTWARE=1 LIBGL_ALWAYS_SOFTWARE=1
+export NCZ_ALLOW_SOFTWARE=1
+# The build host may run hot; pin the thermal governor so a hot pause cannot
+# starve the test of frames (the governor has its own tests).
+export NCZ_FEED_TEMP_MC=${NCZ_FEED_TEMP_MC:-40000} LIBGL_ALWAYS_SOFTWARE=1
 export NCZ_FEED_GUARD_ROOT="$T/empty"
 export NCZ_SCREENSAVER_DIRS="$BIN"
 export NCZ_SCREENSAVER_CATALOG="$SRC/assets/screensaver-chooser/hacks.tsv"

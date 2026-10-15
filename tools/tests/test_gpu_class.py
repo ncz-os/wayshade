@@ -221,7 +221,7 @@ def test_renderer_table(env, renderer, expected):
     assert env.class_from_renderer(renderer) == expected
 
 
-# Strings captured on 2026-09-29 from MS-R1 / cixmini (192.0.2.66, Sky1,
+# Strings captured on 2026-09-29 from MS-R1 (192.0.2.66, Sky1,
 # Mali-G720-Immortalis). Both the GLES renderer string returned by the
 # calibrator and the Vulkan deviceName/driverName returned by vulkaninfo, plus
 # every plausible variant ARM has shipped for the Valhall/Immortalis family
@@ -669,7 +669,7 @@ def test_sky1_cmd_status_reports_mid_class(env, monkeypatch, capsys):
     assert out["gpu_class_source"] in ("table", "calibration")
 
 
-# Strings captured on 2026-09-30 from MS-R1 / cixmini (192.0.2.66, Sky1,
+# Strings captured on 2026-09-30 from MS-R1 (192.0.2.66, Sky1,
 # Mali-G720-Immortalis) running kernel 7.3.0-rc5-sky1-ncz with the
 # `module_blacklist=panthor` cmdline. Source of truth: live
 # `/home/mini/.cache/ncz-screensavers/gpu-class.json` after the calibrated
@@ -2193,7 +2193,7 @@ def test_calibration_happens_inside_the_supervisor_after_state_exists(env, monke
 # The operator's complaint (2026-09-30, after the previous passes had merged
 # their fixes into the source tree) was that
 #   $ ncz-screensaver gpus
-# still reported "weak" for every card on .66 (cixmini / MS-R1 / Sky1 /
+# still reported "weak" for every card on the MS-R1 (Sky1 /
 # Mali-G720-Immortalis). The previous tests pin the underlying detection
 # logic in isolation (renderer pattern, sysfs layout, topology fallback,
 # stale cache), but the operator-visible behaviour is the integration of
@@ -3369,7 +3369,7 @@ def test_per_gpu_dual_gpu_layout_panel_first_then_offload(env):
 
 
 def test_prime_offload_explanation_single_soc_uses_panel_label(env):
-    """Single-GPU "no offload" path on a Sky1 / cixmini .66 host: the
+    """Single-GPU "no offload" path on a Sky1 / MS-R1 host: the
     explanation names the panel GPU driver (mali), states that offload is
     not available and never implies a software fallback. This is the path
     the Vala plugin renders in the Settings > Screensaver and Lockscreen

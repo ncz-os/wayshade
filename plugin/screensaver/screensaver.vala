@@ -1056,6 +1056,10 @@ public class ScreensaverSettings : Gtk.Box {
     private const string[] GPU_IDS = { "auto", "prime", "off" };
     private const string[] GPU_LABELS = { "Automatic (discrete on AC)", "Always the discrete GPU", "Same GPU as the desktop" };
     private const string[] RENDER_IDS = { "auto", "high", "balanced", "fast", "custom" };
+    private const int[] LOCK_FPS_IDS = { 0, 15, 30, 60 };
+    private const string[] LOCK_FPS_LABELS = { "Auto (30 fps; 15 on battery or a weak GPU)", "15 fps", "30 fps", "60 fps" };
+    private const int[] LOCK_DIV_IDS = { 0, 1, 2 };
+    private const string[] LOCK_DIV_LABELS = { "Auto (full; half on a weak GPU)", "Full resolution", "Half resolution" };
     private const string[] RENDER_LABELS = { "Auto (recommended)", "High (native resolution)", "Balanced (75%)", "Fast (50%, 1080p cap)", "Custom" };
     private const string[] POOL_IDS = { "auto", "weak", "mid", "all" };
     private const string[] POOL_LABELS = {
@@ -1078,6 +1082,9 @@ public class ScreensaverSettings : Gtk.Box {
     private SwitchRow? show_all_row = null;
     private SwitchRow verify_row;
     private SelectionRow render_row;
+    private SelectionRow? lock_fps_row = null;
+    private string[] lock_fps_labels = {};
+    private SelectionRow? lock_div_row = null;
     private SpinRow render_height_row;
     private SwitchRow? lock_row = null;
     private SpinRow? lock_delay_row = null;
@@ -1833,6 +1840,79 @@ public class ScreensaverSettings : Gtk.Box {
                 backend.max_render_height = (int) render_height_row.spin_btn.value;
         });
         group.add_row (render_height_row);
+
+        if (!backend.lock_motion_supported)
+            return;
+        // The saver the lock shows while the session is idle (NCZ-OS hosts the
+        // idle screensaver in the lock). /etc/ncz/lock-renderer.env overrides these.
+        lock_fps_labels = LOCK_FPS_LABELS;
+        int auto_fps = backend.lock_auto_fps;
+        if (auto_fps > 0)
+            lock_fps_labels[0] = "Auto (%d fps on this computer)".printf (auto_fps);
+        lock_fps_row = new SelectionRow ("Frame rate", lock_fps_labels, lock_fps_labels[0]);
+        lock_fps_row.selected.connect ((label) => {
+            if (refreshing)
+                return;
+            int i = index_of (lock_fps_labels, label);
+            if (i < 0)
+                return;
+            int fps = LOCK_FPS_IDS[i];
+            int lowered = backend.lock_auto_fps;
+            if (lowered > 0 && fps > lowered)
+                confirm_fps (fps);
+            else
+                backend.lock_fps = fps;
+        });
+        group.add_row (lock_fps_row);
+
+        lock_div_row = new SelectionRow ("Render resolution", LOCK_DIV_LABELS, LOCK_DIV_LABELS[0]);
+        lock_div_row.selected.connect ((label) => {
+            if (refreshing)
+                return;
+            int i = index_of (LOCK_DIV_LABELS, label);
+            if (i >= 0)
+                backend.lock_render_divisor = LOCK_DIV_IDS[i];
+        });
+        group.add_row (lock_div_row);
+    }
+
+    // This computer's Auto is lowered because it runs hot: say what a higher
+    // rate costs before applying it. A plain GTK alert, like the preview one.
+    private void confirm_fps (int fps) {
+        var window = get_root () as Gtk.Window;
+        if (window == null) {
+            backend.lock_fps = fps;
+            return;
+        }
+        var dialog = new Gtk.AlertDialog ("Use a higher frame rate?");
+        dialog.detail = "The screensaver will keep the graphics chip busy the whole time it runs. This makes the computer warmer and can make the fans louder.";
+        dialog.buttons = { "Cancel", "Use %d fps".printf (fps) };
+        dialog.default_button = 0;
+        dialog.cancel_button = 0;
+        dialog.modal = true;
+        dialog.choose.begin (window, null, (obj, res) => {
+            bool ok = false;
+            try {
+                ok = dialog.choose.end (res) == 1;
+            } catch (Error e) {
+                // dismissed
+            }
+            if (ok) {
+                backend.lock_fps = fps;
+            } else if (lock_fps_row != null) {
+                refreshing = true;
+                int fi = index_of_int (LOCK_FPS_IDS, backend.lock_fps);
+                lock_fps_row.current_value = lock_fps_labels[fi >= 0 ? fi : 0];
+                refreshing = false;
+            }
+        });
+    }
+
+    private static int index_of_int (int[] ids, int v) {
+        for (int i = 0; i < ids.length; i++)
+            if (ids[i] == v)
+                return i;
+        return -1;
     }
 
     // Older engines without per-hack options: the Black Hole palette through the legacy key.
@@ -1964,6 +2044,14 @@ public class ScreensaverSettings : Gtk.Box {
         int ri = index_of (RENDER_IDS, backend.render_quality);
         render_row.current_value = RENDER_LABELS[ri >= 0 ? ri : 0];
         render_height_row.spin_btn.value = backend.max_render_height;
+        if (lock_fps_row != null) {
+            int fi = index_of_int (LOCK_FPS_IDS, backend.lock_fps);
+            lock_fps_row.current_value = lock_fps_labels[fi >= 0 ? fi : 0];
+        }
+        if (lock_div_row != null) {
+            int di = index_of_int (LOCK_DIV_IDS, backend.lock_render_divisor);
+            lock_div_row.current_value = LOCK_DIV_LABELS[di >= 0 ? di : 0];
+        }
         int pi = index_of (POOL_IDS, backend.pool_class);
         pool_row.current_value = POOL_LABELS[pi >= 0 ? pi : 0];
         verify_row.switch_btn.active = backend.verify_render;

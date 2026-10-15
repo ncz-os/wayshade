@@ -1,4 +1,4 @@
-# Sky1 (MS-R1 / cixmini / 192.0.2.66) re-validation evidence — 2026-09-30 (turn 4)
+# Sky1 (MS-R1 / 192.0.2.66) re-validation evidence — 2026-09-30 (turn 4)
 
 Re-validation of the live `.66` host (CIX Sky1 / MS-R1 / Mali-G720-Immortalis /
 `mali_kbase`, kernel `7.3.0-rc5-sky1-ncz`, NCZ-OS build

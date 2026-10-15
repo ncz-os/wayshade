@@ -14,7 +14,7 @@
 #   WANT_MACHINE   the ELF machine the build tree is expected to hold, as the
 #                  `file` spelling: "ARM aarch64" or "x86-64". Defaults to the
 #                  machine this script is running on, so an x86 test run and
-#                  the arm64 packaging run on ULTRA each check their own tree.
+#                  the arm64 packaging run on the arm64 build host each check their own tree.
 #   WANT_PLUGIN    "required" (default) or "skipped". Pass "skipped" when the
 #                  build was configured with -Dsingularity-plugin=disabled, so
 #                  the gate validates the savers and launcher without demanding

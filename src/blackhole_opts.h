@@ -90,7 +90,7 @@ static const ncz_opt_def BH_OPTS[] = {
  {"torus", NCZ_OPT_FLOAT, "0", 0, 1, "", "", NULL,
   "Dusty torus", "Opacity of a dusty torus ring around the disk (quasar look). Artistic straight-ray approximation.", "Physics"},
  {"companion", NCZ_OPT_FLOAT, "0", 0, 1, "", "", NULL,
-  "Companion star", "Show a blue companion star and the gas stream it feeds the disk with (microquasar look). Artistic.", "Physics"},
+  "Companion star", "Show a blue supergiant companion star and the gas stream it feeds the disk with (microquasar look). Both follow the same bent light rays as the disk, so they are lensed and hidden by the hole and the disk. Costs some frame time. Artistic.", "Physics"},
  {"style", NCZ_OPT_ENUM, "classic", 0, 0, "classic,enhanced", "", NULL,
   "Style", "classic: the original Black Hole look (default). enhanced: opt-in improvements from the 2026-09-29 review, each also settable on its own: the director camera for flyby=auto, luminance tone map, disk hot spots and spiral wave, photon ring, bright star layer, jet precession and occlusion, jet duty 0.75 and burn-in drift. Options set explicitly always win.", "Look"},
  {"jet-duty", NCZ_OPT_FLOAT, "1", 0, 1, "", "", NULL,

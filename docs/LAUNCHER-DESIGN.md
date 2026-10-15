@@ -260,20 +260,53 @@ client can instead import a buffer fd from a separate renderer over an
   back to its own prompt: the feed never signals the lock client; any fault
   makes it exit, and the lock reaps it with backoff.
 
-### 8.1 Lock-saver power policy (0.8.12; freeze rule revised after 0.8.13)
+### 8.1 Lock-saver policy (0.8.12; freeze rule 0.8.14; frame rate 0.8.16)
 
 On NCZ-OS the lock IS the idle screensaver: at the idle time the session is
 locked with no prompt and the feed renders the saver behind it. Nobody is
-interacting, but someone may be watching, so the saver runs cheaply yet keeps
-moving. The defaults are compiled in (no env/gsettings needed) and printed by
-`ncz-screensaver-feed --print-policy`:
+interacting, but someone may be watching, so the saver must look like a real
+animation. The defaults are compiled in (no env/gsettings needed) and printed by
+`ncz-screensaver-feed --print-policy`. Each knob is chosen in this order: the
+environment (`/etc/ncz/lock-renderer.env`), the Settings value (Screensaver and
+Lock page; `dev.ncz.screensaver` keys, 0 = Auto), then Auto. `NCZ_SAVER_AUTO_FPS`
+in the env file changes what Auto means (the image writes it for hardware that
+runs hot) without overriding the Settings value; the Settings page then warns
+before a higher rate is applied:
 
 | knob | default | env override | meaning |
 |---|---|---|---|
-| lock frame rate | 8 fps (6 on battery) | `NCZ_SAVER_LOCK_FPS` (`NCZ_FEED_FPS` legacy) | frames forwarded while locked |
-| render divisor | 2 | `NCZ_SAVER_RENDER_DIV` | render at half resolution, nearest-neighbour upscaled |
+| frame rate | Auto: 30 fps, 15 on battery, 15 on a weak GPU class; never above the display refresh | `NCZ_SAVER_LOCK_FPS` (`NCZ_FEED_FPS` legacy); key `lock-fps` | frames forwarded to the lock |
+| render divisor | Auto: 1 (full resolution), 2 on a weak GPU class | `NCZ_SAVER_RENDER_DIV`; key `lock-render-divisor` | render at 1/N resolution, nearest-neighbour upscaled |
 | freeze mode | `prompt` | `NCZ_SAVER_FREEZE=prompt\|always\|auto\|never` | when the saver stops on a frame (below) |
 | freeze after | 15 s | `NCZ_SAVER_FREEZE_AFTER_S` | intro length, used only by `always`/`auto` |
+
+**Suspend behind the prompt.** A saver that advertises `LFS_FLAG_PAUSE` in its
+HELLO is suspended, not ended, when input raises the unlock prompt: the lock
+sends `LFS_PAUSE`, the feed stops the renderer's process group (SIGSTOP) and
+forwards nothing, and the lock keeps presenting the last frame it received. CPU
+and GPU work for the saver drop to zero. When the prompt is dismissed without
+an unlock (60 s without input at most; every key or pointer event restarts the
+timeout) the lock sends `LFS_RESUME`, the renderer continues (SIGCONT) and its
+monotonic clock skips the suspended time, so the animation continues from the
+held frame. A renderer that dies while suspended is restarted on resume. With a
+saver or lock that predates the pair, the lock falls back to freezing the
+source and starting a new one when the prompt goes away.
+
+**Frame path.** The renderer draws into its FBO; the GPU flips it to top-down
+rows, scales it to the lock buffer and, where the driver reads back only RGBA,
+swizzles it to BGRA, into a lock-sized FBO. glReadPixels then writes the frame
+straight into one of three reused memfds that the lock imports as wl_shm
+buffers. No pixel is touched by the CPU and nothing is allocated per frame.
+`NCZ_FEED_LEGACY_COPY=1` restores the old CPU copy for comparison. The renderer
+logs its cost per frame (draw, readback, convert, send, CPU ms) once a minute.
+
+**Render GPU.** By default the renderer uses the GPU the launcher's plan picks
+(the display GPU, or a faster PRIME offload target for shader savers). For the
+saver process only, `NCZ_FEED_RENDER_DRIVER=<kernel driver>` or
+`NCZ_FEED_RENDER_NODE=/dev/dri/renderDNNN` pins it to one GPU (resolved by
+driver name through sysfs, never by index); if that GPU cannot be used the
+renderer refuses to start rather than falling back. The log line
+`render node /dev/dri/renderDNNN (<driver>)` names the GPU in use.
 
 **When the saver freezes.** With the default `prompt` mode the saver never
 freezes on a timer: it animates for as long as nobody touches the machine. It
@@ -281,7 +314,7 @@ freezes exactly when the lock takes over the screen: the first key press or
 pointer motion raises the unlock prompt, and the lock client freezes the saver
 at the frame on screen (`lock_framesrc_freeze()`), ends the renderer and
 composites the prompt over that still frame. If the prompt is left alone until
-it lowers again (`SINGULARITY_LOCK_RENDERER_DELAY_MS`, 5 min by default), the
+it lowers again (60 s without input, `SINGULARITY_LOCK_RENDERER_DELAY_MS` may shorten it), the
 lock restarts the frame source and the saver animates again (lock clients
 built before that change keep the frozen frame until unlock); a successful
 unlock ends the lock and the saver with it. `always` restores the older
@@ -291,11 +324,24 @@ intro-then-freeze power saver (HOLD after 15 s even with nobody at the machine);
 
 **Thermal protection.** A thermal governor in the off-screen child re-reads
 hwmon once a second (sysfs only, never amdgpu debugfs). Above the warm trip
-(75 C) it drops to the warm frame rate and half resolution; at the hot trip
+(75 C, `NCZ_FEED_TEMP_WARM_MC`) it drops to the warm frame rate (15 fps,
+`NCZ_FEED_FPS_WARM`; never faster than the normal rate) and half resolution; at
+the hot trip
 (85 C; 98 C on Apple T2 Macs when the image sets `NCZ_FEED_TEMP_HOT_MC`) it
 stops rendering and the lock keeps the last frame until the sensors have cooled
 5 C below the trip, then the saver resumes. This pause is the only freeze an
 unattended saver can show, and only while the machine is hot.
+
+**GPU class.** The class comes from the launcher's GPU-class cache (the same
+calibration the chooser uses; no benchmark runs in the feed) for the GPU that
+renders the saver, including a PRIME offload target. The launcher's per-saver
+render scale (`render-scale`, `max-render-height`, the weak-GPU and Sky1 caps)
+still applies inside the saver on top of the divisor.
+
+**Frame cadence.** The feed logs, once a minute and when it stops, how many
+fresh frames reached the lock and the longest gap between two of them
+(`cadence: N frames in T s = F fps, max gap G ms` in
+`$XDG_RUNTIME_DIR/ncz-screensaver/ncz-saver-feed/feed.log` and the session log).
 
 **HOLD capability negotiation.** The freeze is only sent to a lock that
 understands it. A HOLD-aware lock sets `LFS_FLAG_HOLD` in the `flags` field of

@@ -4,6 +4,25 @@ Release history of `ncz-screensavers` (engine, launcher and lock-hosted feed).
 The Debian changelog in `debian/changelog` carries the same entries in package
 form, plus every release before 0.8.10.
 
+## 0.8.16 - 2026-10-14
+
+Tag `v0.8.16`. Package `ncz-screensavers 0.8.16` (amd64, arm64); settings
+plugin `ncz-screensavers-plugin 0.3.23`.
+
+* The saver behind the lock runs at 30 fps and full resolution by default
+  (display refresh cap; 15 fps on battery; 15 fps at half resolution on a weak
+  GPU). Settings: Frame rate and Render resolution on the Screensaver and Lock
+  page (keys `lock-fps`, `lock-render-divisor`).
+* The CPU no longer touches pixels: GPU flip/scale/swizzle into reused shared
+  buffers (3072x1920 on AMD: 39 ms CPU per frame at about 10 fps before, 2 ms
+  at 30 fps now).
+* The unlock prompt suspends the saver (no rendering) and it continues from the
+  same frame when the prompt is dismissed.
+* `NCZ_FEED_RENDER_DRIVER` / `NCZ_FEED_RENDER_NODE` pin the saver's GPU;
+  `NCZ_SAVER_AUTO_FPS` lowers Auto on hot-running hardware.
+* Thermal warm band 15 fps (was 10); the feed logs its frame cadence and the
+  renderer its cost per frame.
+
 ## 0.8.15 - 2026-10-13
 
 Tag `v0.8.15`. Package `ncz-screensavers 0.8.15` (amd64, arm64); the settings

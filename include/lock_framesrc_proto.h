@@ -44,6 +44,11 @@
  * an old lock instead of tripping its "unknown message type" fault loop on
  * every restart. This bit is only meaningful on a lock -> saver message. */
 #define LFS_FLAG_HOLD   0x0001u
+/* Saver -> lock (HELLO header flags): the saver understands LFS_PAUSE and
+ * LFS_RESUME. A lock that sees this bit suspends the saver behind the unlock
+ * prompt instead of ending it; without it the lock freezes and later restarts
+ * the source, so old savers keep working. */
+#define LFS_FLAG_PAUSE  0x0002u
 
 enum lfs_type {
     LFS_HELLO   = 1,   /* saver -> lock : who I am, what I can send */
@@ -54,6 +59,8 @@ enum lfs_type {
     LFS_WELCOME = 0x80,/* lock -> saver : accepted; here is the geometry to use */
     LFS_READY   = 0x81,/* lock -> saver : previous frame consumed; send the next */
     LFS_STOP    = 0x82,/* lock -> saver : stop and exit (input arrived / unlocking) */
+    LFS_PAUSE   = 0x83,/* lock -> saver : prompt is up: suspend all rendering */
+    LFS_RESUME  = 0x84,/* lock -> saver : prompt dismissed: continue rendering */
 };
 
 /* Buffer pixel formats. LFS_FMT_TOKEN covers both transports and maps to

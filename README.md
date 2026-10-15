@@ -61,8 +61,11 @@ The engine builds for `amd64` and `arm64`; see
 
 Since 0.8.11 the saver can run inside the session lock: `ncz-screensaver-feed`
 renders a hack off-screen and hands frames to a lock client that hosts an
-out-of-process frame source. The feed renders at 8 fps and half resolution and
-keeps animating while nobody touches the machine; it freezes on a frame only
+out-of-process frame source. The feed renders at 30 fps and full resolution by
+default (15 fps on battery; 15 fps at half resolution on a weak GPU; never above
+the display refresh rate; adjustable on the Screensaver and Lock page or in
+`/etc/ncz/lock-renderer.env`) and keeps animating while nobody touches the
+machine; it freezes on a frame only
 when input raises the unlock prompt (the prompt is drawn over that frame), and
 resumes if the prompt lowers again without an unlock (with a lock client that
 supports it). A thermal governor pauses

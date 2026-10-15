@@ -1,4 +1,4 @@
-# Sky1 (MS-R1 / cixmini / 192.0.2.66) re-validation evidence — 2026-09-30 (turn 7)
+# Sky1 (MS-R1 / 192.0.2.66) re-validation evidence — 2026-09-30 (turn 7)
 
 Continuation dispatch — operator requested "Continue the SAME fix...
 the previous attempt was NOT accepted. Address ALL of the following

@@ -238,7 +238,7 @@ vec3 stars(vec3 d,float fw){
  // longitude/latitude grid. The old 720x360 lat/long grid packs cells ever
  // tighter toward the poles: a lensed image of a pole (bright grainy
  // "searchlight" patch) and cells stretched into horizontal dashes elsewhere
- // (reported on build-host 2026-09-28 in all colour modes). Each cell now holds
+ // (reported on an Intel + NVIDIA laptop 2026-09-28 in all colour modes). Each cell now holds
  // at most one round, softly falling-off star at a jittered position, so
  // magnification by the lens enlarges a dot instead of a square cell.
  vec3 ad=abs(d);
@@ -523,7 +523,7 @@ vec3 disk_color(vec3 p,vec3 diskN,float drama){
  // NOTE: `a` is atan(p.y,p.x) and therefore JUMPS from +PI to -PI along one
  // radial line. Driving hue LINEARLY from it (previously (a/(2.*PI))*.18)
  // stepped bandHue by a full 0.18 across that seam, which rendered as a hard
- // straight colour boundary splitting the disk - observed live on build-host as a
+ // straight colour boundary splitting the disk - observed live on a T2 MacBook Pro as a
  // teal/gold edge down the middle. Use a periodic function of the angle
  // instead: sin/cos are continuous across the wrap and keep comparable
  // amplitude (+/-.09 here vs the old 0.18 peak-to-peak), so the disk gets the
@@ -534,7 +534,7 @@ vec3 disk_color(vec3 p,vec3 diskN,float drama){
  // A real disk-space hot sector also appears in the lensed disk images.
  // Hot sector. Previously cos^4 at 0.65 amplitude, which rotated as a hard
  // narrow lobe and read as a searchlight sweeping the disk (reported on
- // build-host 2026-09-28, visible in ALL colour modes). Widened to cos^2 and
+ // an Intel + NVIDIA laptop 2026-09-28, visible in ALL colour modes). Widened to cos^2 and
  // cut to 0.22 so it is a broad brightening rather than a spotlight.
  float sector=max(cos(a-(.22*u_time+.00001*u_seed)),0.);
  sector*=sector;
@@ -569,7 +569,7 @@ vec3 jet_tint(){
 // This replaces a screen-fixed cone test (smoothstep on |dot(ray,axis)|) that
 // painted a large ellipse wherever the view direction was within ~13 degrees of
 // the axis, textured by screen-space noise: the "searchlight with large dots"
-// artifact reported on build-host 2026-09-28 in ALL colour modes.
+// artifact reported on an Intel + NVIDIA laptop 2026-09-28 in ALL colour modes.
 vec3 jet_glow(vec3 cam,vec3 ray,vec3 axis0){
  // slow 5-degree precession of the jet around the disk normal
  vec3 e1=normalize(cross(axis0,abs(axis0.x)<.9?vec3(1.,0.,0.):vec3(0.,1.,0.))),e2=cross(axis0,e1);
@@ -594,7 +594,13 @@ vec3 jet_glow(vec3 cam,vec3 ray,vec3 axis0){
   prof=.75*prof+.35*exp(-dot(q,q)/(w2*w2));
  }
  // Knots streaming outward, smooth in beam-space (no screen-space blocks).
- float knots=.55+.45*noise(vec2(h*.55-u_time*1.6*sign(sa),atan(q.y,q.x)*.0+u_seed*.01));
+ // h is unsigned distance along the axis (abs(sa)), so the phase uses h alone:
+ // dh/dt = +1.6/0.55 = +2.909 world units/s on BOTH poles, i.e. every knot
+ // marches away from the hole. The sign(sa) term that used to be here flipped
+ // the phase on the negative pole
+ // (sa<0), making dh/dt negative there -- one jet ran inward while the other
+ // ran outward, so both appeared to travel the same way on screen.
+ float knots=.55+.45*noise(vec2(h*.55-u_time*1.6,atan(q.y,q.x)*.0+u_seed*.01));
  float fade=smoothstep(3.2,5.5,h)*exp(-h/u_jet_len);
  float near=smoothstep(1.,7.,t);       // no hard cut where the closest approach passes the camera
  return jet_tint()*prof*knots*fade*pole*near;
@@ -620,40 +626,142 @@ vec4 torusAlong(vec3 cam,vec3 ray,vec3 axis){
  }
  return vec4(em,tau);
 }
-// Companion star (blue supergiant sphere) plus a gas stream spiralling from
-// its near side into the disk. Returns radiance, or zero when not hit.
-vec3 companionAlong(vec3 cam,vec3 ray,vec3 axis){
- float R=u_disk_out*1.7;                 // orbital radius
- float th=u_time*.035;
- vec3 e1=normalize(cross(axis,abs(axis.x)<.9?vec3(1.,0.,0.):vec3(0.,1.,0.)));vec3 e2=cross(axis,e1);
- vec3 C=R*(cos(th)*e1+sin(th)*e2);
- float rs=R*.13;
- vec3 oc=cam-C;float b=dot(oc,ray),c=dot(oc,oc)-rs*rs,disc=b*b-c;
- vec3 col=vec3(0.);
- if(disc>0.&&-b>0.){
-  float t=-b-sqrt(disc);
-  vec3 n=normalize(oc+ray*t);
-  float mu=clamp(-dot(n,ray),0.,1.);
-  col+=vec3(.45,.58,1.)*(.25+.75*mu)*.85;   // limb-darkened blue-white surface
+// ---- Companion star and its Roche-lobe-overflow stream (microquasar look) ----
+// Both are traced along the SAME bent ray the disk uses (they are tested on each
+// integration step of the geodesic loop), so the star is lensed like everything
+// else: it smears into arcs and forms a secondary image near the photon ring
+// when it is behind the hole, is hidden by the hole, and is dimmed by the disk
+// it is seen through. Cost is paid only when u_comp > 0. Everything is a pure
+// function of u_time and u_seed: no state, no per-frame allocation.
+//   star   : hot blue supergiant, a prolate ellipsoid stretched toward the hole
+//            (tidal elongation), limb darkened, gravity darkened at the inner
+//            Lagrange point, with a soft glow in the scene's bloom colour.
+//   stream : a continuous tube that leaves the star's inner Lagrange point, is
+//            swept ahead of the orbit as it falls inward (angular momentum is
+//            conserved, so it winds forward faster than the star moves), tapers,
+//            and ends in a hot impact region at the disk edge.
+vec3 g_cEx=vec3(1.,0.,0.),g_cEy=vec3(0.,1.,0.),g_cEz=vec3(0.,0.,1.),g_cC=vec3(0.),g_cA=vec3(1.,0.,0.);
+vec3 g_cStar=vec3(0.),g_cMid=vec3(0.),g_cGas=vec3(0.),g_cHot=vec3(0.),g_cGlow=vec3(0.),g_cP1=vec3(0.);
+float g_cRs=1.,g_cR0=1.,g_cR1=1.,g_cTh=0.,g_cSig=1.,g_cPix=0.,g_cFade=1.,g_cRmin=0.,g_cZmax=1.;
+const float COMP_LEAD=1.5;       // how far ahead of the star the stream lands on the disk edge (rad)
+const float COMP_ELONG=1.14;     // semi-axis of the star toward the hole / its radius
+// Inverse of toDiskLocal: disk-local vector -> world.
+vec3 fromDiskLocal(vec3 q,vec3 n){
+ vec3 cz=cross(n,vec3(0.,0.,1.));
+ if(length(cz)<1e-5)return q;
+ vec3 ax=normalize(cz);
+ float ang=acos(clamp(n.z,-1.,1.)),c=cos(ang),s=sin(ang);
+ return q*c-cross(ax,q)*s+ax*dot(ax,q)*(1.-c);
+}
+void compInit(vec3 cam,vec3 diskN){
+ float R=u_disk_out*1.7;
+ g_cEx=fromDiskLocal(vec3(1.,0.,0.),diskN);g_cEy=fromDiskLocal(vec3(0.,1.,0.),diskN);g_cEz=cross(g_cEx,g_cEy);
+ g_cSig=u_rotation<0.?-1.:1.;                         // orbits the way the disk turns
+ float ph0=6.2831853*fract(sin(mod(u_seed,6283.185)*12.9898)*43758.5453);
+ g_cTh=ph0+g_cSig*u_time*.035;
+ g_cRs=R*.13;
+ g_cC=R*(cos(g_cTh)*g_cEx+sin(g_cTh)*g_cEy);
+ g_cA=-normalize(g_cC);
+ g_cR0=R-g_cRs*1.0;                                   // stream leaves the star's near side
+ g_cR1=u_disk_out*.97;                                // and lands on the disk edge
+ float ph1=g_cTh+g_cSig*(COMP_LEAD+.14);
+ g_cP1=g_cR1*(cos(ph1)*g_cEx+sin(ph1)*g_cEy);
+ g_cRmin=g_cR1-g_cRs*1.3;g_cZmax=g_cRs*1.5;
+ g_cPix=g_fw*max(length(cam-g_cC),1.);
+ g_cFade=smoothstep(.5,3.,length(cam-g_cC)/g_cRs)*clamp(u_comp,0.,1.);   // option strength; fades out if a camera path passes close
+ // colours: the star stays a hot blue-white supergiant tinted by the active palette;
+ // the gas runs from the star's colour to the palette's hot colour and is kept saturated.
+ vec3 bluish=srgbLin(vec3(.56,.74,1.));
+ if(u_pal_a>8.5){
+  vec3 cy=srgbLin(vec3(.133,.827,.933)),mg=srgbLin(vec3(.878,.188,.620));
+  g_cStar=mixOk(bluish,cy,.5);g_cGas=mg;
+  g_cHot=satBoost(mixOk(mg,srgbLin(vec3(1.,.55,.80)),.35),1.2);
+ }else{
+  // the gas takes the colour of the disk it falls onto: sample that palette's own disk
+  // colour (receding side, mid heat) and keep only its hue and saturation
+  vec3 warm=palTint(u_pal_a,.55,1.,.85,u_disk_out*.75,-.6,.55,0.,0.);
+  vec3 hotc=palTint(u_pal_a,1.,1.,.85,u_disk_out*.75,-.6,.9,0.,0.);
+  if(u_pal_mix>.001){warm=mixOk(warm,palTint(u_pal_b,.55,1.,.85,u_disk_out*.75,-.6,.55,0.,0.),u_pal_mix);hotc=mixOk(hotc,palTint(u_pal_b,1.,1.,.85,u_disk_out*.75,-.6,.9,0.,0.),u_pal_mix);}
+  g_cStar=mixOk(bluish,jet_tint(),.30);
+  g_cGas=satBoost(warm/max(max(warm.r,max(warm.g,warm.b)),1e-3)*.85,(u_pal_a>2.5&&u_pal_a<3.5)?1.:2.);
+  g_cHot=satBoost(hotc/max(max(hotc.r,max(hotc.g,hotc.b)),1e-3)*1.1,1.25);
  }
- // stream: from the star's inner side toward the disk edge, curving ahead of the orbit
- vec3 P0=C*(1.-rs/R*1.1);
- vec3 prev=P0;
- for(int i=1;i<=10;i++){
-  float s=float(i)/10.;
-  float ang=th-1.6*s*s;                    // trails behind the star's motion
-  float rad=mix(R*(1.-.22*1.1),u_disk_out*.9,s);
-  vec3 P=rad*(cos(ang)*e1+sin(ang)*e2);
-  vec3 seg=P-prev;float sl=dot(seg,seg);
-  float h=clamp(dot(cam-prev,-seg)/max(sl,1e-4),0.,1.);
-  // closest point between ray and segment (approximate via projection onto the segment)
-  vec3 q=prev+seg*h;float t=dot(q-cam,ray);
-  float d=length(cam+ray*max(t,0.)-q);
-  float w=.35+.9*(1.-s);
-  col+=vec3(1.,.66,.36)*exp(-(d*d)/(w*w))*(.5+.9*s)*.9;
-  prev=P;
+ g_cMid=mixOk(g_cStar,g_cGas,u_pal_a>8.5?.5:.7);
+ g_cGlow=g_cStar*(.10+.22*min(u_bloom,1.2));
+}
+// One integration step a->b of the bent ray. Adds the star's glow, its limb-darkened
+// surface and the stream, attenuated by what the ray already passed (disk, stream).
+// Returns true when the star blocks the ray.
+bool compSeg(vec3 a,vec3 b,inout vec3 color,inout float trans){
+ vec3 sg=b-a;float sl=length(sg);
+ if(sl<1e-5)return false;
+ // --- star: ellipsoid -> unit sphere (stretch removed along the hole axis)
+ vec3 o=(a-g_cC)/g_cRs,d=sg/g_cRs;
+ o+=g_cA*dot(o,g_cA)*(1./COMP_ELONG-1.);d+=g_cA*dot(d,g_cA)*(1./COMP_ELONG-1.);
+ float dd=dot(d,d),bq=dot(o,d);
+ float h=clamp(-bq/dd,0.,1.);
+ vec3 q=o+d*h;float dq=length(q);
+ if(dq<4.5){
+  color+=trans*g_cFade*g_cGlow*exp(-max(dq-1.,0.)*3.)*min(sl/g_cRs,2.)*.5;
+  float pw=g_cPix/g_cRs;
+  float cov=1.-smoothstep(1.-pw,1.+pw,dq);
+  if(cov>.002){
+   vec3 n=q/max(dq,1e-4);
+   if(dq<1.){float t=clamp((-bq-sqrt(max(bq*bq-dd*(dot(o,o)-1.),0.)))/dd,0.,1.);n=normalize(o+d*t);}
+   float mu=clamp(dot(n,-d/sqrt(dd)),0.,1.);
+   float limb=.06+.94*pow(mu,1.1);                              // strong limb darkening (display gamma flattens it)
+   float nose=1.-.35*smoothstep(.55,1.,dot(n,g_cA));             // gravity darkening toward L1
+   vec3 surf=(g_cStar*2.1+vec3(.30,.34,.40)*mu*mu*mu)*limb*nose;  // saturated limb, blue-white core
+   color+=trans*g_cFade*cov*surf;
+   trans*=1.-cov*g_cFade;
+   if(cov>.995&&g_cFade>.99){trans=0.;return true;}
+  }
  }
- return col*u_comp;
+ // --- stream: only when the segment is near the orbital plane and inside the shell
+ float za=dot(a,g_cEz),zb=dot(b,g_cEz);
+ float zmin=(za*zb<0.)?0.:min(abs(za),abs(zb));
+ if(zmin<g_cZmax){
+  vec3 m=.5*(a+b);
+  float rm=length(m-g_cEz*dot(m,g_cEz));
+  if(rm-.5*sl<g_cR0+g_cRs*.2&&rm+.5*sl>g_cRmin){
+   float dl=sl*.25;                              // 4 samples per step, spaced dl apart
+   float box=dl*dl*.1667;                        // box prefilter, so a thin tube never falls between samples
+   float r01=g_cR0-g_cR1;
+   for(int j=0;j<4;j++){
+    vec3 X=a+sg*((float(j)+.5)*.25);
+    vec3 lp=vec3(dot(X,g_cEx),dot(X,g_cEy),dot(X,g_cEz));
+    float r=length(lp.xy);
+    float s=(g_cR0-r)/r01,sc=clamp(s,0.,1.);
+    float edge=smoothstep(-.02,.07,s)*(1.-smoothstep(.97,1.06,s));
+    float w=g_cRs*mix(.30,.12,sc);
+    float we2=w*w+box;
+    vec3 em=vec3(0.);float kab=0.;
+    if(edge>.001){
+     float ph=g_cTh+g_cSig*(COMP_LEAD*pow(sc,1.7)+.14*sc);
+     float dph=g_cSig*(COMP_LEAD*1.7*pow(sc,.7)+.14)*(-1./r01);          // d(phase)/dr along the path
+     vec2 u=lp.xy/max(r,1e-3);vec2 cv=vec2(cos(ph),sin(ph));
+     float f=atan(u.y*cv.x-u.x*cv.y,dot(u,cv));
+     float dperp=r*f/sqrt(1.+r*r*dph*dph);                                // distance to the path
+     float dens=exp(-(dperp*dperp+lp.z*lp.z*1.2)/we2)*(w*w/we2)*edge;
+     vec3 col=satBoost(mix(mix(g_cStar,g_cMid,smoothstep(0.,.22,sc)),g_cGas,smoothstep(.12,.5,sc)),1.35);
+     em=col*dens*(.42+.30*sc);
+     kab=dens*.30;
+    }
+    // hot impact region where the stream meets the disk edge
+    // (a flattened splash in the disk plane, longer along the orbit than across it)
+    vec3 dp=X-g_cP1;
+    vec3 rh=normalize(g_cP1),th=cross(g_cEz,rh)*g_cSig;
+    float wr=g_cRs*.30,wt=g_cRs*.62,wz=g_cRs*.17;
+    float er=wr*wr+box,et=wt*wt+box,ez=wz*wz+box;
+    float hx=dot(dp,rh),hy=dot(dp,th),hz=dot(dp,g_cEz);
+    float hd=exp(-(hx*hx/er+hy*hy/et+hz*hz/ez))*sqrt(wr*wr*wt*wt*wz*wz/(er*et*ez));
+    em+=g_cHot*hd*1.6;
+    color+=trans*g_cFade*em*dl;
+    trans*=exp(-kab*dl*g_cFade);
+   }
+  }
+ }
+ return false;
 }
 // Sky/bloom constants per palette: x = nebula scale, base sky color, star tint,
 // nebula tint, halo color, palette bloom strength, interior haze amount.
@@ -1170,6 +1278,7 @@ void main(){
    captured=impact<mix(r0,r1,ty);
   }
  }
+ if(u_comp>0.)compInit(cam,diskN);
  float u=1./length(cam),phi=0.;vec3 normal=normalize(cam),perp=cross(cross(normal,ray),normal);float plen=length(perp);vec3 tangent=plen>1e-6?perp/plen:right;float tang=dot(ray,tangent),du=abs(tang)>1e-6?-dot(ray,normal)/tang*u:200.*u;vec3 old=cam,pos=cam;int nhit=0;
  // Disk-plane crossing test against diskN (the plane through the origin
  // with normal diskN). When old and pos are on opposite sides, their dot
@@ -1188,6 +1297,7 @@ void main(){
    if(u>=1.||u<=.0005)break;
    old=pos;
    pos=(cos(phi)*normal+sin(phi)*tangent)/u;
+   if(u_comp>0.&&compSeg(old,pos,color,trans))break;
 #if BH_SCENE==3
    {vec4 st=tdeStar(old,pos);if(st.w>0.){color+=trans*st.rgb;trans=0.;captured=true;break;}}
 #endif
@@ -1283,7 +1393,6 @@ void main(){
   float tJet=(bj*ej-dj)/max(1.-bj*bj,1e-4);
   if(!captured||(u_enh>.5&&tJet<tHole-3.))color+=(captured?1.:trans)*u_jet*jetK*u_jet_duty*1.2*jet_glow(cam,ray,diskN);
  }
- if(u_comp>0.&&!captured){color+=trans*companionAlong(cam,ray,diskN);}
  if(u_torus>0.){vec4 tr=torusAlong(cam,ray,diskN);float a=1.-exp(-tr.w*u_torus);color=color*(1.-a)+tr.rgb*u_torus*(1.-exp(-tr.w));}
 #endif
  // Reinhard tonemap -> 1/2.2 gamma -> contrast toe + black point.

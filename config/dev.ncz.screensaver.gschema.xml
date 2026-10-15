@@ -125,6 +125,18 @@
       <summary>Maximum render height</summary>
       <description>Cap on the render height in pixels (passed as NCZ_MAX_RENDER_HEIGHT). A non-zero value overrides the platform default in auto mode; 0 lets auto mode decide, and in fixed mode 0 means no cap.</description>
     </key>
+    <key name="lock-fps" type="i">
+      <range min="0" max="120"/>
+      <default>0</default>
+      <summary>Screensaver frame rate</summary>
+      <description>Frames per second of the screensaver shown behind the lock. 0 is Auto: 30, capped at the display refresh rate, 15 on battery or on a weak GPU. NCZ_SAVER_LOCK_FPS in /etc/ncz/lock-renderer.env overrides it.</description>
+    </key>
+    <key name="lock-render-divisor" type="i">
+      <range min="0" max="4"/>
+      <default>0</default>
+      <summary>Screensaver render resolution</summary>
+      <description>Render the screensaver behind the lock at 1/N of the screen resolution and scale it up: 1 full, 2 half. 0 is Auto: full resolution, half on a weak GPU. NCZ_SAVER_RENDER_DIV in /etc/ncz/lock-renderer.env overrides it.</description>
+    </key>
     <key name="hack-options" type="a{sa{ss}}">
       <default>{'blackhole_gles3': {'randomize': 'everything'}}</default>
       <summary>Per-screensaver options</summary>

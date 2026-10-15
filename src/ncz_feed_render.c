@@ -32,6 +32,7 @@
 #include "ncz_stats.h"
 #include "gles3_harness_hooks.h"
 #include "ncz_fbo_redirect.h"
+#include "ncz_time_offset.h"
 
 #include <errno.h>
 #include <dirent.h>
@@ -68,7 +69,7 @@
 
 #define FR_DEFAULT_FPS   30
 #define FR_T2_FPS        8      /* Apple T2 Macs: the lock saver runs slow by policy */
-#define FR_WARM_FPS      10     /* thermal governor: FPS above the warm trip   */
+#define FR_WARM_FPS      15     /* thermal governor: FPS above the warm trip   */
 #define FR_WARM_MC       75000  /* 75 C */
 #define FR_HOT_MC        85000  /* 85 C: pause and hold the last frame          */
 #define FR_HYST_MC       5000   /* hysteresis band to stop level flapping       */
@@ -298,11 +299,17 @@ struct fr_gbm {
 static struct fr_gbm g_gbm = { .lib = NULL, .fd = -1, .dev = NULL, .active = 0,
                                .create_device = NULL, .destroy_device = NULL };
 
+static EGLDisplay try_gbm_nodes(const char *const *nodes, EGLint *maj, EGLint *minn);
+
 static EGLDisplay try_gbm(EGLint *maj, EGLint *minn) {
     static const char *const nodes[] = {
         "/dev/dri/renderD128", "/dev/dri/renderD129", "/dev/dri/renderD130",
         "/dev/dri/card0", "/dev/dri/card1", NULL,
     };
+    return try_gbm_nodes(nodes, maj, minn);
+}
+
+static EGLDisplay try_gbm_nodes(const char *const *nodes, EGLint *maj, EGLint *minn) {
     if (!g_gbm.lib) {
         g_gbm.lib = dlopen("libgbm.so.1", RTLD_NOW | RTLD_LOCAL);
         if (!g_gbm.lib) g_gbm.lib = dlopen("libgbm.so", RTLD_NOW | RTLD_LOCAL);
@@ -334,6 +341,96 @@ static EGLDisplay try_gbm(EGLint *maj, EGLint *minn) {
         g_gbm.active = 0;
     }
     return EGL_NO_DISPLAY;
+}
+
+/* ---- render node selection ---------------------------------------------
+ *
+ * NCZ_FEED_RENDER_NODE=/dev/dri/renderDNNN or NCZ_FEED_RENDER_DRIVER=<kernel
+ * driver> (i915, xe, amdgpu, nvidia, panthor, mali_kbase, ...) pins the saver
+ * child to one GPU. The driver is resolved to a node through sysfs
+ * (the device/driver link of each /sys/class/drm render node), never by index. Only this process is
+ * affected: no PRIME variables are involved. */
+
+/* Kernel driver of a render node ("renderD129" or a /dev/dri path), or "". */
+static void fr_node_driver(const char *node, char *out, size_t outlen) {
+    out[0] = 0;
+    if (!node || !*node) return;
+    const char *b = strrchr(node, '/');
+    b = b ? b + 1 : node;
+    const char *root = getenv("NCZ_FEED_DRM_ROOT");   /* test seam */
+    char link[512], tgt[512];
+    snprintf(link, sizeof link, "%s/sys/class/drm/%s/device/driver", root ? root : "", b);
+    ssize_t n = readlink(link, tgt, sizeof tgt - 1);
+    if (n <= 0) return;
+    tgt[n] = 0;
+    const char *d = strrchr(tgt, '/');
+    snprintf(out, outlen, "%s", d ? d + 1 : tgt);
+}
+
+/* The render node to use, from NCZ_FEED_RENDER_NODE / NCZ_FEED_RENDER_DRIVER;
+ * 0 = no request, 1 = found (path in out), -1 = requested but not present. */
+static int fr_requested_node(char *out, size_t outlen) {
+    const char *node = getenv("NCZ_FEED_RENDER_NODE");
+    if (node && *node) { snprintf(out, outlen, "%s", node); return 1; }
+    const char *drv = getenv("NCZ_FEED_RENDER_DRIVER");
+    if (!drv || !*drv) return 0;
+    const char *root = getenv("NCZ_FEED_DRM_ROOT");
+    char dir[512];
+    snprintf(dir, sizeof dir, "%s/sys/class/drm", root ? root : "");
+    DIR *d = opendir(dir);
+    if (!d) return -1;
+    struct dirent *e;
+    char best[256] = "";
+    while ((e = readdir(d))) {
+        if (strncmp(e->d_name, "renderD", 7) != 0) continue;
+        char got[128];
+        fr_node_driver(e->d_name, got, sizeof got);
+        if (strcmp(got, drv) == 0 && (!best[0] || strcmp(e->d_name, best) < 0))
+            snprintf(best, sizeof best, "%s", e->d_name);
+    }
+    closedir(d);
+    if (!best[0]) return -1;
+    snprintf(out, outlen, "/dev/dri/%s", best);
+    return 1;
+}
+
+/* EGL device platform on exactly this render node, else GBM on it. */
+static EGLDisplay try_node(const char *node, EGLint *maj, EGLint *minn, const char **how) {
+    PFNEGLQUERYDEVICESEXTPROC query =
+        (PFNEGLQUERYDEVICESEXTPROC)eglGetProcAddress("eglQueryDevicesEXT");
+    PFNEGLQUERYDEVICESTRINGEXTPROC qstr =
+        (PFNEGLQUERYDEVICESTRINGEXTPROC)eglGetProcAddress("eglQueryDeviceStringEXT");
+    if (query && qstr) {
+        EGLDeviceEXT devs[16];
+        EGLint n = 0;
+        if (query(16, devs, &n)) {
+            for (EGLint i = 0; i < n; i++) {
+                const char *rn = qstr(devs[i], EGL_DRM_RENDER_NODE_FILE_EXT);
+                if (!rn || strcmp(rn, node) != 0) continue;
+                EGLDisplay d = eglGetPlatformDisplay(EGL_PLATFORM_DEVICE_EXT, devs[i], NULL);
+                if (d != EGL_NO_DISPLAY && eglInitialize(d, maj, minn)) { *how = "device"; return d; }
+                if (d != EGL_NO_DISPLAY) eglTerminate(d);
+            }
+        }
+    }
+    const char *nodes[] = { node, NULL };
+    EGLDisplay d = try_gbm_nodes(nodes, maj, minn);
+    if (d != EGL_NO_DISPLAY) *how = "gbm";
+    return d;
+}
+
+/* The render node an initialised display really uses ("" if unknown). */
+static void fr_display_node(EGLDisplay dpy, char *out, size_t outlen) {
+    out[0] = 0;
+    PFNEGLQUERYDISPLAYATTRIBEXTPROC qda =
+        (PFNEGLQUERYDISPLAYATTRIBEXTPROC)eglGetProcAddress("eglQueryDisplayAttribEXT");
+    PFNEGLQUERYDEVICESTRINGEXTPROC qstr =
+        (PFNEGLQUERYDEVICESTRINGEXTPROC)eglGetProcAddress("eglQueryDeviceStringEXT");
+    EGLAttrib dev = 0;
+    if (qda && qstr && qda(dpy, EGL_DEVICE_EXT, &dev) && dev) {
+        const char *rn = qstr((EGLDeviceEXT)dev, EGL_DRM_RENDER_NODE_FILE_EXT);
+        if (rn) snprintf(out, outlen, "%s", rn);
+    }
 }
 
 /* Called exactly once, after eglTerminate, on the normal exit path. Only the
@@ -421,6 +518,145 @@ static unsigned char *fr_alloc_readback(uint32_t w, uint32_t h,
     return malloc(*out_size);
 }
 
+/* Colour-only FBO the size of the lock buffer: the GPU flips (and, at a reduced
+ * render size, scales) the saver's frame into it, so the CPU never touches a
+ * pixel. */
+static GLuint make_color_fbo(int w, int h) {
+    GLuint tex = 0, fbo = 0;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, w, h);
+    glGenFramebuffers(1, &fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        glDeleteFramebuffers(1, &fbo);
+        glDeleteTextures(1, &tex);
+        return 0;
+    }
+    return fbo;
+}
+
+/* ---- GPU swizzle pass ----------------------------------------------------- */
+static GLuint g_swz_prog, g_swz_vao;
+static GLint g_swz_loc;
+
+static GLuint swz_shader(GLenum type, const char *src) {
+    GLuint sh = glCreateShader(type);
+    glShaderSource(sh, 1, &src, NULL);
+    glCompileShader(sh);
+    GLint ok = 0;
+    glGetShaderiv(sh, GL_COMPILE_STATUS, &ok);
+    if (!ok) { glDeleteShader(sh); return 0; }
+    return sh;
+}
+
+/* 1 when the pass is usable, 0 when the driver refused it (the caller then
+ * falls back to the CPU R/B swap). */
+static int swz_init(void) {
+    static const char *vs =
+        "#version 300 es\n"
+        "out vec2 uv;\n"
+        "void main() {\n"
+        "  vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));\n"
+        "  uv = vec2(p.x, 1.0 - p.y);\n"          /* top-down rows in the readback */
+        "  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);\n"
+        "}\n";
+    static const char *fs =
+        "#version 300 es\n"
+        "precision mediump float;\n"
+        "uniform sampler2D src;\n"
+        "in vec2 uv;\n"
+        "out vec4 o;\n"
+        "void main() { o = vec4(texture(src, uv).bgr, 1.0); }\n";
+    GLuint v = swz_shader(GL_VERTEX_SHADER, vs), f = swz_shader(GL_FRAGMENT_SHADER, fs);
+    if (!v || !f) { if (v) glDeleteShader(v); if (f) glDeleteShader(f); return 0; }
+    GLuint pr = glCreateProgram();
+    glAttachShader(pr, v); glAttachShader(pr, f);
+    glLinkProgram(pr);
+    glDeleteShader(v); glDeleteShader(f);
+    GLint ok = 0;
+    glGetProgramiv(pr, GL_LINK_STATUS, &ok);
+    if (!ok) { glDeleteProgram(pr); return 0; }
+    g_swz_prog = pr;
+    g_swz_loc = glGetUniformLocation(pr, "src");
+    glGenVertexArrays(1, &g_swz_vao);
+    return 1;
+}
+
+/* Draw src_fbo's colour texture into dst_fbo (dw x dh), flipped and swizzled. */
+static void swz_draw(GLuint src_fbo, GLuint dst_fbo, int dw, int dh, int scaled) {
+    GLint prog, vao, active, tex0, samp0, vp[4], wm[4];
+    GLboolean en_blend, en_depth, en_scissor, en_cull, en_stencil;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vao);
+    glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
+    glActiveTexture(GL_TEXTURE0);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &tex0);
+    glGetIntegerv(GL_SAMPLER_BINDING, &samp0);
+    glGetIntegerv(GL_VIEWPORT, vp);
+    glGetIntegerv(GL_COLOR_WRITEMASK, wm);
+    en_blend = glIsEnabled(GL_BLEND); en_depth = glIsEnabled(GL_DEPTH_TEST);
+    en_scissor = glIsEnabled(GL_SCISSOR_TEST); en_cull = glIsEnabled(GL_CULL_FACE);
+    en_stencil = glIsEnabled(GL_STENCIL_TEST);
+
+    GLint src_tex = 0;
+    glBindFramebuffer(GL_FRAMEBUFFER, src_fbo);
+    glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                          GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME, &src_tex);
+    glBindFramebuffer(GL_FRAMEBUFFER, dst_fbo);
+    glViewport(0, 0, dw, dh);
+    glDisable(GL_BLEND); glDisable(GL_DEPTH_TEST); glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_CULL_FACE); glDisable(GL_STENCIL_TEST);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glUseProgram(g_swz_prog);
+    glBindVertexArray(g_swz_vao);
+    glBindSampler(0, 0);
+    glBindTexture(GL_TEXTURE_2D, (GLuint)src_tex);
+    GLint filt = scaled ? GL_LINEAR : GL_NEAREST;
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filt);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filt);
+    glUniform1i(g_swz_loc, 0);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+
+    glBindTexture(GL_TEXTURE_2D, (GLuint)tex0);
+    glBindSampler(0, (GLuint)samp0);
+    glActiveTexture((GLenum)active);
+    glBindVertexArray((GLuint)vao);
+    glUseProgram((GLuint)prog);
+    glViewport(vp[0], vp[1], vp[2], vp[3]);
+    glColorMask(wm[0], wm[1], wm[2], wm[3]);
+    if (en_blend) glEnable(GL_BLEND);
+    if (en_depth) glEnable(GL_DEPTH_TEST);
+    if (en_scissor) glEnable(GL_SCISSOR_TEST);
+    if (en_cull) glEnable(GL_CULL_FACE);
+    if (en_stencil) glEnable(GL_STENCIL_TEST);
+}
+
+/* Compute the effective per-frame rate from the configured fps, the warm-band
+ * fps, and the current level. Always returns >= 1, so the caller can use it
+ * directly in a 1.0 / fps_eff cadence budget without a divide-by-zero. The
+ * implementation lives in ncz_feed_render_fps.c (kept separate so the unit
+ * test does not have to link the entire EGL/GLES/GBM stack). */
+extern int ncz_feed_effective_fps(int fps, int warm_fps, int level);
+#define fr_effective_fps(fps, warm, level) ncz_feed_effective_fps((fps), (warm), (level))
+
+/* Tear the swizzle program down before we lose the current GL context. The
+     * VAO only exists when swz_init() succeeded; both names are 0 otherwise. */
+static void swz_fini(void) {
+    if (g_swz_vao) { glDeleteVertexArrays(1, &g_swz_vao); g_swz_vao = 0; }
+    if (g_swz_prog) { glDeleteProgram(g_swz_prog); g_swz_prog = 0; }
+}
+
+static double fr_ms(const struct timespec *a, const struct timespec *b) {
+    return (b->tv_sec - a->tv_sec) * 1e3 + (b->tv_nsec - a->tv_nsec) / 1e6;
+}
+
+#ifndef GL_BGRA_EXT
+#define GL_BGRA_EXT 0x80E1
+#endif
+#define FR_RING 3        /* frame buffers in rotation (one in flight at the lock) */
+
 int ncz_feed_render_main(struct xscreensaver_function_table *hack,
                          int argc, char **argv) {
     (void)argc; (void)argv;
@@ -506,8 +742,26 @@ int ncz_feed_render_main(struct xscreensaver_function_table *hack,
     /* EGL: surfaceless first, then a device platform, then GBM (the CIX Mali
      * blob exposes neither of the first two but does expose EGL_KHR_platform_gbm). */
     EGLint maj = 0, minn = 0;
-    EGLDisplay dpy = try_surfaceless(&maj, &minn);
+    EGLDisplay dpy = EGL_NO_DISPLAY;
     const char *how = "surfaceless";
+    char want[256];
+    int req = fr_requested_node(want, sizeof want);
+    if (req < 0) {
+        fprintf(stderr, "ncz-feed-render: requested render driver '%s' has no render node; not rendering\n",
+                getenv("NCZ_FEED_RENDER_DRIVER"));
+        close(fd);
+        return 4;
+    }
+    if (req > 0) {
+        dpy = try_node(want, &maj, &minn, &how);
+        if (dpy == EGL_NO_DISPLAY) {
+            /* Fail loudly: never fall back to another GPU or to software. */
+            fprintf(stderr, "ncz-feed-render: requested render node %s is not usable\n", want);
+            close(fd);
+            return 4;
+        }
+    }
+    if (dpy == EGL_NO_DISPLAY) dpy = try_surfaceless(&maj, &minn);
     if (dpy == EGL_NO_DISPLAY) {
         dpy = try_device(&maj, &minn);
         how = "device";
@@ -532,8 +786,15 @@ int ncz_feed_render_main(struct xscreensaver_function_table *hack,
         close(fd);
         return 4;
     }
-    fprintf(stderr, "ncz-feed-render: EGL %d.%d via %s, GL_RENDERER=%s\n",
-            maj, minn, how, (const char *)glGetString(GL_RENDERER));
+    {
+        char node[256], drv[128];
+        fr_display_node(dpy, node, sizeof node);
+        if (!node[0] && g_gbm.active && req > 0) snprintf(node, sizeof node, "%s", want);
+        fr_node_driver(node, drv, sizeof drv);
+        fprintf(stderr, "ncz-feed-render: EGL %d.%d via %s, GL_RENDERER=%s, render node %s (%s)\n",
+                maj, minn, how, (const char *)glGetString(GL_RENDERER),
+                node[0] ? node : "unknown", drv[0] ? drv : "unknown driver");
+    }
     fflush(stderr);
 
     /* Never software-render on a machine that has a GPU (same policy as the
@@ -594,6 +855,61 @@ int ncz_feed_render_main(struct xscreensaver_function_table *hack,
     size_t rstride = 0, rsize = 0;
     unsigned char *tmp = fr_alloc_readback(rw, rh, &rstride, &rsize);
     if (!tmp) { fr_log("readback allocation failed"); close(fd); return 4; }
+
+    /* Suspended time (the lock pauses the saver behind its prompt) never
+     * reaches the saver's clock. */
+    ncz_time_offset_arm();
+
+    /* Frame output path. Default: the GPU flips/scales into a lock-sized FBO and
+     * glReadPixels writes BGRA straight into one of FR_RING reused memfds, so the
+     * CPU copies nothing per pixel and no buffer is allocated per frame. The old
+     * CPU path (readback + per-pixel swizzle/upscale into a fresh memfd) stays
+     * behind NCZ_FEED_LEGACY_COPY=1 for comparison. */
+    const char *lc = getenv("NCZ_FEED_LEGACY_COPY");
+    int legacy = (lc && *lc == '1');
+    GLuint ofbo = 0;
+    GLenum rfmt = GL_RGBA;
+    int swizzle = 0;   /* GPU writes .bgra so an RGBA readback is already XRGB8888 */
+    int ring_fd[FR_RING];
+    unsigned char *ring_map[FR_RING];
+    for (int i = 0; i < FR_RING; i++) { ring_fd[i] = -1; ring_map[i] = NULL; }
+    if (!legacy) {
+        ofbo = make_color_fbo((int)bw, (int)bh);
+        for (int i = 0; ofbo && i < FR_RING; i++) {
+            ring_fd[i] = memfd_create("ncz-feed-frame", MFD_CLOEXEC);
+            if (ring_fd[i] < 0 || ftruncate(ring_fd[i], (off_t)size) != 0) { legacy = 1; break; }
+            void *mp = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, ring_fd[i], 0);
+            if (mp == MAP_FAILED) { legacy = 1; break; }
+            ring_map[i] = mp;
+        }
+        if (!ofbo) legacy = 1;
+        if (!legacy) {
+            GLint f = 0, t = 0;
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, ofbo);
+            glGetIntegerv(GL_IMPLEMENTATION_COLOR_READ_FORMAT, &f);
+            glGetIntegerv(GL_IMPLEMENTATION_COLOR_READ_TYPE, &t);
+            if (f == GL_BGRA_EXT && t == GL_UNSIGNED_BYTE) rfmt = GL_BGRA_EXT;
+        }
+        const char *ns = getenv("NCZ_FEED_NO_SWIZZLE");
+        if (!legacy && rfmt != GL_BGRA_EXT && !(ns && *ns == '1') && swz_init())
+            swizzle = 1;
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        while (glGetError() != GL_NO_ERROR) { /* drain */ }
+    }
+    fprintf(stderr, "ncz-feed-render: frame path %s (render %ux%u -> lock %ux%u)\n",
+            legacy ? "cpu-copy (legacy)" : (rfmt == GL_BGRA_EXT ? "gpu-blit + BGRA readback"
+                                       : swizzle ? "gpu-swizzle + RGBA readback"
+                                                 : "gpu-blit + RGBA readback + cpu swap"),
+            rw, rh, bw, bh);
+    fflush(stderr);
+
+    /* Per-stage cost, logged once a minute (wall ms per frame; CPU ms is this
+     * thread's CPU time per frame, which is what heats a laptop). */
+    double c_draw = 0, c_read = 0, c_conv = 0, c_send = 0, c_cpu = 0;
+    unsigned c_n = 0;
+    struct timespec c_t0, c_cpu0;
+    clock_gettime(CLOCK_MONOTONIC, &c_t0);
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &c_cpu0);
 
     ncz_stats_start();
     uint32_t seq = 0;
@@ -675,16 +991,42 @@ int ncz_feed_render_main(struct xscreensaver_function_table *hack,
             nanosleep(&sl, NULL);
             continue;
         }
-        int fps_eff = (level == 1) ? warm_fps : fps;
+        /* The warm band only ever slows the saver down. fr_effective_fps() always
+         * returns >= 1, so the cadence budget below cannot divide by zero even
+         * if a future change relaxes the NCZ_FEED_FPS_WARM clamp. */
+        int fps_eff = fr_effective_fps(fps, warm_fps, level);
 
+        ncz_time_offset_frame((long long)(1e9 / (double)fps_eff));
         ncz_harness_attach_frame_size((int)rw, (int)rh);
+        struct timespec ta, tb, tc, td, te;
+        clock_gettime(CLOCK_MONOTONIC, &ta);
         /* Each frame starts and is read back on the screen FBO, whatever
          * framebuffer the hack left bound. */
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
         hack->draw_cb(&mi);
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-        glReadPixels(0, 0, (GLsizei)rw, (GLsizei)rh, GL_RGBA,
-                     GL_UNSIGNED_BYTE, tmp);
+        int slot = (int)(seq % FR_RING);
+        if (!legacy && swizzle) {
+            swz_draw(fbo, ofbo, (int)bw, (int)bh, !(rw == bw && rh == bh));
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, ofbo);
+        } else if (!legacy) {
+            /* Flip to top-down and scale to the lock buffer on the GPU. */
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, ofbo);
+            glBlitFramebuffer(0, 0, (GLint)rw, (GLint)rh, 0, (GLint)bh, (GLint)bw, 0,
+                              GL_COLOR_BUFFER_BIT,
+                              (rw == bw && rh == bh) ? GL_NEAREST : GL_LINEAR);
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, ofbo);
+        }
+        clock_gettime(CLOCK_MONOTONIC, &tb);
+        if (legacy)
+            glReadPixels(0, 0, (GLsizei)rw, (GLsizei)rh, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
+        else {
+            glPixelStorei(GL_PACK_ALIGNMENT, 4);
+            glReadPixels(0, 0, (GLsizei)bw, (GLsizei)bh, rfmt, GL_UNSIGNED_BYTE, ring_map[slot]);
+            glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        }
+        clock_gettime(CLOCK_MONOTONIC, &tc);
         /* Hacks routinely leave benign GL errors set; never make that fatal
          * (the on-screen harness logs and continues too). */
         GLenum e = glGetError();
@@ -695,7 +1037,20 @@ int ncz_feed_render_main(struct xscreensaver_function_table *hack,
         }
         while (glGetError() != GL_NO_ERROR) { /* drain */ }
 
-        int mfd = memfd_create("ncz-feed-frame", MFD_CLOEXEC);
+        int mfd = -1;
+        if (!legacy) {
+            mfd = ring_fd[slot];
+            if (rfmt != GL_BGRA_EXT && !swizzle) {
+                /* RGBA in memory -> XRGB8888 (bytes B,G,R,X): swap R and B. */
+                uint32_t *px = (uint32_t *)ring_map[slot];
+                size_t npx = (size_t)bw * bh;
+                for (size_t i = 0; i < npx; i++) {
+                    uint32_t v = px[i];
+                    px[i] = (v & 0x0000ff00u) | ((v >> 16) & 0xffu) | ((v & 0xffu) << 16) | 0xff000000u;
+                }
+            }
+        } else {
+        mfd = memfd_create("ncz-feed-frame", MFD_CLOEXEC);
         if (mfd < 0) { fr_die("memfd_create"); }
         if (ftruncate(mfd, (off_t)size) != 0) fr_die("ftruncate");
         unsigned char *dst = mmap(NULL, size, PROT_READ | PROT_WRITE,
@@ -723,6 +1078,8 @@ int ncz_feed_render_main(struct xscreensaver_function_table *hack,
             }
         }
         munmap(dst, size);
+        }
+        clock_gettime(CLOCK_MONOTONIC, &td);
 
         struct lfs_frame fm = {
             .seq = seq, .output_hash = outs[0].name_hash,
@@ -730,12 +1087,12 @@ int ncz_feed_render_main(struct xscreensaver_function_table *hack,
             .format = LFS_FMT_XRGB8888, .modifier_lo = 0, .modifier_hi = 0,
         };
         if (send_msg(fd, &fm, sizeof fm, LFS_FRAME, mfd) < 0) {
-            close(mfd);
+            if (legacy) close(mfd);
             fr_log("feed closed during FRAME");
             g_run = 0;
             break;
         }
-        close(mfd);
+        if (legacy) close(mfd);
         seq++;
         ncz_stats_frame();
 
@@ -760,24 +1117,52 @@ int ncz_feed_render_main(struct xscreensaver_function_table *hack,
             }
         }
 
-        /* Frame-rate cap (governor-adjusted). */
+        clock_gettime(CLOCK_MONOTONIC, &te);
+        c_draw += fr_ms(&ta, &tb); c_read += fr_ms(&tb, &tc);
+        c_conv += fr_ms(&tc, &td); c_send += fr_ms(&td, &te); c_n++;
+        if (fr_ms(&c_t0, &te) >= 60000.0) {
+            struct timespec cpu1;
+            clock_gettime(CLOCK_THREAD_CPUTIME_ID, &cpu1);
+            c_cpu = fr_ms(&c_cpu0, &cpu1);
+            fprintf(stderr, "ncz-feed-render: cost per frame over %u frames: draw+blit %.1f ms, "
+                    "readback %.1f ms, convert %.1f ms, send+ready %.1f ms; CPU %.1f ms/frame "
+                    "(%.0f%% of a core at %.1f fps)\n",
+                    c_n, c_draw / c_n, c_read / c_n, c_conv / c_n, c_send / c_n, c_cpu / c_n,
+                    c_cpu / fr_ms(&c_t0, &te) * 100.0, c_n * 1000.0 / fr_ms(&c_t0, &te));
+            fflush(stderr);
+            c_draw = c_read = c_conv = c_send = 0; c_n = 0;
+            c_t0 = te; c_cpu0 = cpu1;
+        }
+
+        /* Frame-rate cap (governor-adjusted): deadline pacing, one frame per
+         * budget; a late frame starts the next period now (no catch-up burst). */
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
+        double budget = 1.0 / (double)fps_eff;
         double elapsed = (now.tv_sec - frame_start.tv_sec) +
                          (now.tv_nsec - frame_start.tv_nsec) / 1e9;
-        double budget = 1.0 / (double)fps_eff;
         if (elapsed < budget) {
             struct timespec sl = { .tv_sec = 0,
                 .tv_nsec = (long)((budget - elapsed) * 1e9) };
             nanosleep(&sl, NULL);
+            long ns = frame_start.tv_nsec + (long)(budget * 1e9);
+            frame_start.tv_sec += ns / 1000000000L;
+            frame_start.tv_nsec = ns % 1000000000L;
         } else {
             frame_start = now;
         }
     }
 
     if (hack->free_cb) hack->free_cb(&mi);
+    for (int i = 0; i < FR_RING; i++) {
+        if (ring_map[i]) munmap(ring_map[i], size);
+        if (ring_fd[i] >= 0) close(ring_fd[i]);
+    }
     free(tmp);
     close(fd);
+    /* swizzle program + VAO are GL objects; free them while the context is
+     * still current. Safe even if swz_init() never ran (names stay 0). */
+    swz_fini();
     eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     eglDestroyContext(dpy, ctx);
     eglTerminate(dpy);
